@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" type="text/css" href="/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="icon" type="image/x-icon" href="/resources/favicon.png"> 
+    <title>fridge | YT Music Playlist Downloader</title>
+    <meta name="description" content="A command-line Python program for downloading YouTube Music playlists with full song metadata from Spotify.">
+</head>
+
+<body>
+<div class="container">
+<script src="/theme.js"></script>
+<button id="change-theme"><i class="fas fa-sun"></i></button>
+    <center>
+    <img src="icon.png"><a href="/index.html"></a></img><br>
+    <a href="/blog">blog</a>
+    <a href="/about">about</a>
+    <a href="/contact">contact</a>
+    <a href="/projects">projects</a>
+    <a href="/music">music</a>
+    </center>
+<br><br>
+<h3>YouTube Music Playlist Downloader</h3>
+<h4>Download YT Music playlists with full song metadata from Spotify!</h4>
+<img src="cover.png"><br>
+    <center>
+    <a target="_blank" href="https://github.com/ashprids/YTMusic-Playlist-Downloader/releases">download</a>
+    <a target="_blank" href="https://github.com/ashprids/YTMusic-Playlist-Downloader">source</a>
+    </center>
+    <br><br>
+    YouTube Music Playlist Downloader is a command-line Python utility for downloading 
+    YouTube Music Playlists with ID3 tagging (title, artist, album, cover, track number 
+    and release date), using Spotify as a resource for metadata.
+    <br><br>
+    <h3>Requirements</h3>
+   <h4>Spotify API</h4>
+    You are required to provide your own Spotify Client ID and Secret. To obtain these, 
+    go to https://developer.spotify.com/.
+    <ol>
+    <li>Log in, go to the dashboard and click "Create App"</li>
+    <li>Fill in mandatory fields, ensure Redirect URIs has one URL</li>
+    <li>Tick "Web API", then click "I understand..." and Save</li>
+    <li>Go to your new app and click on "Settings"</li>
+    </ol>
+    This page will contain your Client ID and Secret.
+    <br><br>
+    <h3>Python setup</h3>
+    <h4>(Don't worry about this unless you're running this from source code)</h4>
+    Ensure the latest version of Python 3 is installed. To install required libraries, 
+    clone the repository and run the following command:<br>
+    <code>
+    pip install -r requirements.txt
+    </code><br><br>
+    <h3>FFmpeg</h3>
+    <h4>...is where the magic happens!</h4>
+    FFmpeg comes with the Windows version of the software. Nothing to worry about!
+    <br><br>
+    If you're using Linux or running from source, you'll need to download it yourself.
+    <ul>
+        <li>On Linux, install FFmpeg through your package manager (e.g. <code>sudo apt 
+        install ffmpeg</code>.)</li>
+    </ul>
+    <br>
+    For Python, download FFmpeg from the official website https://ffmpeg.org/. You'll be 
+    prompted to specify the path for the executable.
+    <br><br>
+    <h3>Installation</h3>
+    <h4>For Windows and Linux executables</h4>
+    On Windows, go to Releases, then download and run the install.exe file.
+    <br><br>
+    On Linux, go to Releases and download the .tar.gz file. Extract it, then run the 
+    install.sh script as sudo.
+    <code><br>
+    ~$ sudo sh ./install.sh
+    </code><br><br>
+    This will copy the executable to /usr/bin, and copy a shortcut to 
+    /usr/share/applications.
+    <br><br>
+    <h3>Usage</h3>
+    <h4>How to get set up!</h4>
+    On first run, the program will ask you for your Spotify Client ID and Client Secret. 
+    Provide these as prompted. You can also specify a custom directory for playlists to be 
+    placed.
+    <br><br>
+    You can then paste the URL for a YouTube or YouTube Music playlist. Specify a target
+     bitrate in Kbps (e.g. 192, 320, etc.) and the program will do the rest.
+    <li> For best quality (but larger file size), choose 320Kbps.</li>
+    <br>
+    In the event that the program cannot find the song on Spotify, you'll be notified and 
+    only the title and artist metadata will be saved.
+    <br><br>
+    The program will generate a .m3u file as it downloads songs, this can be imported into 
+    most music players to create the playlist automatically.
+    <br><br>
+    <img src="1.png"><br>
+    <h3>Configuration</h3>
+    <h4>Where your settings are stored</h4>
+    Your settings (preferred download directory, API token, etc.) are saved in a location 
+    depending on your OS.
+    <ul>
+    <li>Windows: <code>C:\Users\YourName\AppData\Local\YTMusic-Playlist-Downloader</code></li>
+    <li>Linux: <code>/home/YourName/.config/YTMusic-Playlist-Downloader</code></li>
+    </ul>
+    If you run the program without going through first-time setup, you'll be unable to run 
+    the program again. Delete the YTMusic-Playlist-Downloader directory in these locations, 
+    and try again.
+    <br><br>
+    <h3>Uninstall</h3>
+    <h4>How to remove the program.. :(</h4>
+    Linux users can uninstall the program by running <code>uninstall.sh</code> as root.
+    <br><br>
+    Windows users can uninstall by navigating to the install location (typically 
+    <code>C:\Program Files\fridg3.org\YTMusic-Playlist-Downloader\uninstall.exe</code>).
+    <br><br>
+    <b>WARNING:</b> Your configuration file will not be deleted on uninstall! For security, 
+    you should navigate to your configuration folder and delete it manually.
+</div>
+</body>
+</html>

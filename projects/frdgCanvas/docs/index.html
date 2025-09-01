@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" type="text/css" href="/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="icon" type="image/x-icon" href="/resources/favicon.png"> 
+    <title>fridge | frdgCanvas Docs</title>
+</head>
+
+<body>
+<div class="container">
+<script src="/theme.js"></script>
+<button id="change-theme"><i class="fas fa-sun"></i></button>
+    <center>
+    <h1><a href="/index.html">fridge</a></h1>
+    <a href="/blog">blog</a>
+    <a href="/about">about</a>
+    <a href="/contact">contact</a>
+    <a href="/projects">projects</a>
+    <a href="/music">music</a>
+    </center>
+<br><br>
+<h3>frdgCanvas</h3>
+<h4>Documentation</h4>
+If you have any questions about the software that aren't answered here, feel free to contact me!
+<br><br>
+<h3>Installation</h3>
+The precompiled executables and directory for brushes are highlighted on the Downloads page.
+<br><br>
+The Windows installer will automatically create a desktop shortcut for you, but the Linux option 
+only comes with the executable.
+<br><br>
+<h3>Building</h3>
+If your system isn't x86 Windows or Linux, you can instead compile the program to work on your system or run the Python script without compiling.
+<ol>
+    <li>Install the required dependencies.</li>
+        <ul>
+            <li><a target="_blank" href="https://www.python.org/downloads/">Python 3.8 or above</a></li>
+            <li><a target="_blank" href="https://www.gtk.org/">GTK3</a></li>
+        </ul>
+    <br>
+    <li>Clone the repository.</li>
+    <ul>
+        <li><code>git clone https://github.com/ashprids/frdgCanvas.git</code></li>
+    </ul>
+    <br>
+    <li>Within the cloned repository, install the pip requirements.</li>
+    <ul>
+        <li><code>pip install -r requirements.txt</code></li>
+    </ul>
+    <br>
+    <li>You should now be able to run the script. If you wish to build an executable, run the Python file in the build/ directory.</li>
+    <ul>
+        <li><code>python3 build/build.py</code></li>
+        <li>The executable can be found in the newly created 'dist' directory in build/.</li>
+</ol>
+<br><br>
+<h3>Usage</h3>
+When you open the program, the New Project UI will appear. From here, you have a few options:
+<ul>
+    <li><b>Create</b></li>
+    <ul>
+        <li>Project Name. Must only contain alphanumeric characters.</li>
+        <li>Canvas size. The width and height of the canvas in pixels.</li>
+        <li>Background colour.</li>
+        <li>Fullscreen. Makes the canvas the size of your display.</li>
+    </ul>
+    <li><b>Grid Mode</b></li>
+    <ul>
+        <li>Grid mode. Turns the canvas into a grid of squares, and uses pixels instead of brushes.</li>
+        <li>Pixel size. The visual size of each pixel in the grid.</li>
+        <li>Grid colour. The colour of the grid, can be turned off after creation.</li>
+        <li><b>Larger pixel size to canvas size ratios result in poor performance, this feature is not optimized!</b></li>
+    </ul>
+    <li><b>Install</b></li>
+    <ul>
+        <li>Install brush. Select a .frdgbrush file and it'll be installed!</li>
+    </ul>
+    <br>
+</ul>
+    For more information, hover over any of the options in the UI.
+    <br><br>
+In the canvas, you can press CTRL + Z to undo the last action, and Right Click to erase. All of the options in your project are self-explanatory.
+<br><br>
+<h3>Custom Brushes</h3>
+Custom brushes (.frdgbrush) are zip archives that contain a properties.json file and any textures. With the custom brushes provided, you can see the structure of the properties.json file.
+<br><br>
+Here's the full properties.json file structure, with explanations:<br><br>
+<code>
+    {<br>
+        "name": "Charcoal",<br>
+        "author": "fridge",<br>
+        "description": "A charcoal stick brush.",<br>
+        <br>
+        "textureAmount": 4,<br>
+        "useColour": true,<br>
+        "rotate": false,<br>
+        "drawLine": false,<br>
+        "lineSize": -24<br>
+    }<br>
+</code><br>
+<ul>
+    <li>textureAmount is the amount of textures for the brush. If there's 1 texture, the texture should be called texture.png, otherwise they're numbered (texture1.png, texture2.png, etc.) The texture is randomly chosen on each stroke.</li>
+    <li>useColour is whether the brush uses the colour of the brush or not. If false, the brush will use the colour of the texture. When true, use a white texture for best results.</li>
+    <li>rotate is whether the brush rotates randomly on each stroke.</li>
+    <li>drawLine is whether the brush draws a line between the last and current position.</li>
+    <li>lineSize is the size of the line drawn if drawLine is true. Values are relative to the brush size.</li>
+</ul>
+<br><br>
+If this seems confusing, you can refer to the brushes I've made.
+<br><br>
+To create a .frdgbrush file, simply zip the properties.json file and any textures together, and rename the file to the name of the brush as stated in properties.txt (IMPORTANT!). Change the file extension to .frdgbrush.
+</div>
+</body>
+</html>

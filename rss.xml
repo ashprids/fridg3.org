@@ -1,0 +1,192 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<rss version="2.0">
+    <channel>
+        <title>fridg3.org</title>
+        <link>https://fridg3.org/blog</link>
+        <description>Latest posts and news from fridg3.org</description>
+        <language>en-us</language>
+        <lastBuildDate>Sat, 30 Aug 2025 17:08:00 GMT</lastBuildDate>
+
+        <image>
+        <url>https://fridg3.org/resources/favicon.png</url>
+        <title>fridg3.org</title>
+        <link>https://fridg3.org/blog</link>
+        </image>
+
+<item>
+            <title>fridgePack - Minecraft Hardcore on an already difficult modpack</title>
+            <link>https://fridg3.org/blog/16</link>
+            <description>Here's what I learnt playing my modpack. This is a guide for anyone looking to play the modpack in Hardcore!</description>
+            <pubDate>Sat, 30 Aug 2025 17:08:00 GMT</pubDate>
+            <guid>https://fridg3.org/blog/14</guid>
+        </item>
+
+	<item>
+            <title>Treating a ThinkPad like a Project Car (and why you should too)</title>
+            <link>https://fridg3.org/blog/15</link>
+            <description>ThinkPads are DIY project cars for broke people. Here's how I upgraded one I received as a gift!</description>
+            <pubDate>Mon, 21 Jul 2025 15:10:00 GMT</pubDate>
+            <guid>https://fridg3.org/blog/15</guid>
+        </item>
+
+        <item>
+            <title>I wrote this blog post while drunk</title>
+            <link>https://fridg3.org/blog/14</link>
+            <description>Can't guarantee that anything I wrote is comprehensible, but I think I talked about learning or something.</description>
+            <pubDate>Fri, 11 Jul 2025 15:40:00 GMT</pubDate>
+            <guid>https://fridg3.org/blog/14</guid>
+        </item>
+
+        <item>
+            <title>The Microblog has been released!</title>
+            <link>https://fridg3.org/microblog</link>
+            <description>Check out on small updates and quick snippets that are too big to be blog posts! It's essentially a Twitter that only I can post to!</description>
+            <pubDate>Tue, 17 Jun 2025 16:09:00 GMT</pubDate>
+            <guid>https://fridg3.org/microblog</guid>
+        </item>
+
+        <item>
+            <title>New music: Digital Pirates (frdg3 Remix) - Cactile</title>
+            <link>https://fridg3.org/music/frdg3/digitalpirates/</link>
+            <description>A remix of one of my earlier songs, fit to the style of frdg3 music.</description>
+            <pubDate>Tue, 20 May 2025 15:00:00 GMT</pubDate>
+            <guid>https://fridg3.org/music/frdg3/digitalpirates/</guid>
+        </item>
+
+        <item>
+            <title>New music: how do we connect? - frdg3</title>
+            <link>https://fridg3.org/music/frdg3/howdoweconnect/</link>
+            <description>A new single by frdg3!</description>
+            <pubDate>Thu, 9 May 2025 12:00:00 GMT</pubDate>
+            <guid>https://fridg3.org/music/frdg3/howdoweconnect/</guid>
+        </item>
+
+        <item>
+            <title>I bought an MP3 player</title>
+            <link>https://fridg3.org/blog/13</link>
+            <description>In the year of our lord 2025? I must be insane. Follow me and my journey to finding a portable digital audio player!</description>
+            <pubDate>Mon, 14 Apr 2025 18:30:00 GMT</pubDate>
+            <guid>https://fridg3.org/blog/13</guid>
+        </item>
+
+        <item>
+            <title>New project released: fridgePack - A Minecraft Modpack</title>
+            <link>https://fridg3.org/projects/fridgePack</link>
+            <description>A Forge modpack for 1.20.1 Minecraft, focused on survival, exploration, parkour and difficulty.</description>
+            <pubDate>Fri, 28 Feb 2025 15:28:00 GMT</pubDate>
+            <guid>https://fridg3.org/projects/fridgePack</guid>
+        </item>
+
+        <item>
+            <title>New music: Andiamo (frdg3 Remix) - Michael e</title>
+            <link>https://fridg3.org/music/frdg3/andiamo/</link>
+            <description>An atmospheric DnB/jungle remix of Andiamo by Michael e - officially released on streaming platforms!</description>
+            <pubDate>Thu, 13 Feb 2025 05:12:00 GMT</pubDate>
+            <guid>https://fridg3.org/music/frdg3/andiamo/</guid>
+        </item>
+
+        <item>
+            <title>New project released: YouTube Music Playlist Downloader!</title>
+            <link>https://fridg3.org/projects/ytmusic-playlist-downloader</link>
+            <description>A command-line Python program for downloading YouTube Music playlists with full song metadata from Spotify.</description>
+            <pubDate>Wed, 22 Jan 2025 13:15:00 GMT</pubDate>
+            <guid>https://fridg3.org/projects/ytmusic-playlist-downloader</guid>
+        </item>
+
+        <item>
+            <title>A world without bias</title>
+            <link>https://fridg3.org/blog/12</link>
+            <description>Is it truely possible to produce a random outcome, or is randomness a human construct?</description>
+            <pubDate>Mon, 20 Jan 2025 06:52:00 GMT</pubDate>
+            <guid>https://fridg3.org/blog/12</guid>
+        </item>
+
+        <item>
+            <title>Embracing criticism and staying authentic</title>
+            <link>https://fridg3.org/blog/11</link>
+            <description>Reflecting on my experience sharing fridg3.org on 4chan, and exploring what really matters to me.</description>
+            <pubDate>Mon, 06 Jan 2025 21:48:00 GMT</pubDate>
+            <guid>https://fridg3.org/blog/11</guid>
+        </item>
+
+        <item>
+            <title>I make music btw (new Music page!)</title>
+            <link>https://fridg3.org/blog/10</link>
+            <description>Discussing the longevity and impact of music to the human world (and announcing the new Music page).</description>
+            <pubDate>Fri, 27 Dec 2024 00:00:00 GMT</pubDate>
+            <guid>https://fridg3.org/blog/10</guid>
+        </item>
+
+        <item>
+            <title>Learn about me and fridg3.org!</title>
+            <link>https://fridg3.org/blog/09</link>
+            <description>I've (finally) finished the about page, learn about the changes here (and Merry Christmas!)</description>
+            <pubDate>Wed, 25 Dec 2024 00:09:00 GMT</pubDate>
+            <guid>https://fridg3.org/blog/09</guid>
+        </item>
+
+        <item>
+            <title>Reclaiming The Desktop</title>
+            <link>https://fridg3.org/blog/08</link>
+            <description>Taking back what's mine by fully customizing my desktop with i3, Polybar and many other Linux applications.</description>
+            <pubDate>Sun, 03 Nov 2024 16:00:00 GMT</pubDate>
+            <guid>https://fridg3.org/blog/08</guid>
+        </item>
+
+        <item>
+            <title>The Devil's Laundry Service</title>
+            <link>https://fridg3.org/blog/07</link>
+            <description>A rant about Circuit Laundry and probably one of the worst user experiences I've ever experienced in my life.</description>
+            <pubDate>Fri, 18 Oct 2024 16:00:00 GMT</pubDate>
+            <guid>https://fridg3.org/blog/07</guid>
+        </item>
+
+        <item>
+            <title>Website redesign!</title>
+            <link>https://fridg3.org/blog/06</link>
+            <description>Introducing: fridg3.org with a new, minimalistic and easier-to-read design!</description>
+            <pubDate>Fri, 02 Aug 2024 16:00:00 GMT</pubDate>
+            <guid>https://fridg3.org/blog/06</guid>
+        </item>
+
+        <item>
+            <title>I bought a compact digital camera</title>
+            <link>https://fridg3.org/blog/05</link>
+            <description>Desperate for a creative outlet, I purchased a compact digital camera made in 2010.</description>
+            <pubDate>Sun, 09 Jun 2024 16:00:00 GMT</pubDate>
+            <guid>https://fridg3.org/blog/05</guid>
+        </item>
+
+        <item>
+            <title>Does my brain have its own conscience?</title>
+            <link>https://fridg3.org/blog/04</link>
+            <description>Thinking about why we do things on a low-level, because half the time we don't even know.</description>
+            <pubDate>Sun, 24 Mar 2024 16:00:00 GMT</pubDate>
+            <guid>https://fridg3.org/blog/04</guid>
+        </item>
+
+        <item>
+            <title>Legally streaming is overrated</title>
+            <link>https://fridg3.org/blog/03</link>
+            <description>I love tiny computers, so I impulse-bought one to use as a TV/film streaming box.</description>
+            <pubDate>Tue, 20 Feb 2024 16:00:00 GMT</pubDate>
+            <guid>https://fridg3.org/blog/03</guid>
+        </item>
+
+        <item>
+            <title>My New GPU: AMD Radeon RX 6700 XT</title>
+            <link>https://fridg3.org/blog/02</link>
+            <description>I politely asked my parents to buy me a new graphics card for my birthday...</description>
+            <pubDate>Sat, 27 Jan 2024 16:00:00 GMT</pubDate>
+            <guid>https://fridg3.org/blog/02</guid>
+        </item>
+
+        <item>
+            <title>Christmas PC Build 2023</title>
+            <link>https://fridg3.org/blog/01</link>
+            <description>For Christmas, I asked Santa for new computer parts to migrate from a crappy pre-built.</description>
+            <pubDate>Fri, 12 Jan 2024 16:00:00 GMT</pubDate>
+            <guid>https://fridg3.org/blog/01</guid>
+        </item>
+    </channel>
+</rss>
