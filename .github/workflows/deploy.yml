@@ -31,7 +31,7 @@ jobs:
           DEPLOY_DIR: .   
         run: |
           rsync -az --delete \
-            --exclude-from='.rsyncignore' \
+            --filter='merge .rsyncignore' \
             --exclude ".git" \
             --exclude ".github" \
             --exclude "README.md" \

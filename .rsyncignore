@@ -1,17 +1,23 @@
-## -- Universal file extensions -- ##
-*.png
-*.jpg
-*.JPG
-*.jpeg
-*.gif
-*.mp3
-*.wav
-*.osk
-*.zip
+## -- Always include resources --
++ /resources/**
++ /resources/**/**
 
-## -- Specific directories -- ##
-!/resources/**/*
-/microblog/posts/**/*
-/admin/discord/**/*
-/admin/microblog/**/*
-/projects/frdgCanvas/download/**/*
+## -- Universal excludes --
+- *.png
+- *.jpg
+- *.JPG
+- *.jpeg
+- *.gif
+- *.mp3
+- *.wav
+- *.osk
+- *.zip
+
+## -- Specific directories to exclude --
+- /microblog/posts/**
+- /admin/discord/**
+- /admin/microblog/**
+- /projects/frdgCanvas/download/**
+
+## -- Everything else is allowed --
++ *
