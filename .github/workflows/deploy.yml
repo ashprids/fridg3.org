@@ -1,0 +1,39 @@
+name: deploy to fridg3.org
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: checkout repo
+        uses: actions/checkout@v4
+
+      # build step goes here if/when applicable
+
+      - name: install rsync + ssh
+        run: sudo apt-get update && sudo apt-get install -y rsync openssh-client
+
+      - name: set up ssh
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.DEPLOY_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H your.server.ip >> ~/.ssh/known_hosts
+
+      - name: deploy with rsync
+        env:
+          REMOTE: deploy@your.server.ip
+          TARGET: /var/www/fridg3.org
+          DEPLOY_DIR: .   
+        run: |
+          rsync -az --delete \
+            --exclude ".git" \
+            --exclude ".github" \
+            --exclude "README.md" \
+            --exclude "LICENSE" \
+            --exclude ".gitignore" \
+            "$DEPLOY_DIR"/ "$REMOTE":"$TARGET"/
