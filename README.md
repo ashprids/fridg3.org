@@ -9,4 +9,6 @@ Any content within the /resources/ directory is not affected by this rule (with 
 ## .gitignore
 Any large files added to a clone of the repository should be marked out with the .gitignore file. If a file type is frequently used, feel free to mark the file extension instead of the file directory.
 
+Anything that updates via the website itself or externally (e.g. /microblog/) should be marked out to prevent content from being deleted.
+
 Make sure you're not excluding anything important whenever changes to .gitignore are made.
