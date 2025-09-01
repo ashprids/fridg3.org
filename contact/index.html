@@ -29,6 +29,8 @@
         
         <input type="hidden" name="_captcha" value="false">
         <input type="hidden" name="_next" value="https://fridg3.org/contact/thanks.html">
+        
+        <input type="text" name="website" id="website" style="display:none" autocomplete="off">
       
         <label for="name">Name</label>
         <input type="text" id="name" name="name" required>
@@ -39,6 +41,14 @@
         <button type="submit">Send</button>
       </form>
 </center>
+<script>
+document.querySelector('.contact-form').addEventListener('submit', function(e) {
+    var x = document.getElementById('website');
+    if (x && x.value) {
+        e.preventDefault();
+    }
+});
+</script>
 <br>
 <h4>Emails are sent directly to me@fridg3.org.</h4>
 </div>

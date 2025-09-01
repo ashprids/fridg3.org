@@ -630,6 +630,17 @@ body.dark .contact-form textarea {
     background-color: #9576a7;
 }
 
+@media (max-width: 600px) {
+    .contact-form input,
+    .contact-form textarea,
+    .contact-form button {
+        margin-left: 0;
+        margin-right: 0;
+        width: 100%;
+        box-sizing: border-box;
+    }
+}
+
 
 .confetti {
     position: fixed;
