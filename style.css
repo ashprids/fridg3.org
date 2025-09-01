@@ -595,6 +595,19 @@ body.dark .contact-form {
 .contact-form input,
 .contact-form textarea {
     font-family: "MainRegular", monospace;
+    font-size: 0.8rem;
+    background-color: #dbdbdb;
+    color: #3b3b3b;
+    border: 2px solid #9a9a9a;
+    padding: 6px;
+    border-radius: 0px;
+    transition: background-color 0.35s, color 0.35s, border-color 0.35s;
+    margin-left: 52px;
+    margin-right: 52px;
+}
+.contact-form input {
+    font-family: "MainRegular", monospace;
+    font-size: 0.8rem;
     background-color: #dbdbdb;
     color: #3b3b3b;
     border: 2px solid #9a9a9a;
