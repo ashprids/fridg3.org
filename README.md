@@ -1,3 +1,6 @@
+![Uptime Robot status](https://img.shields.io/uptimerobot/status/m801281114-5271d29b1c5b60b9f7c1d275?label=fridg3.org)
+[![deploy to fridg3.org](https://github.com/ashprids/fridg3.org/actions/workflows/deploy.yml/badge.svg?branch=main)](https://github.com/ashprids/fridg3.org/actions/workflows/deploy.yml)
+
 # fridg3.org
 This repository serves as a method to implement version control for the website, as well as allowing for a more modular workflow when creating future updates.
 
