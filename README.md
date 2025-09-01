@@ -11,4 +11,6 @@ Any large files added to a clone of the repository should be marked out with the
 
 Anything that updates via the website itself or externally (e.g. /microblog/) should be marked out to prevent content from being deleted.
 
+/admin/ may be pushed to the repository, but remember to mark out any sensitive information (e.g. index.php files containing Discord Webhook URLs).
+
 Make sure you're not excluding anything important whenever changes to .gitignore are made.
