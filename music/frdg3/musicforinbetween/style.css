@@ -1,3 +1,6 @@
+/* This CSS file was taken from /projects/fridgePack, 
+   hence the font names being called "mc" */
+
 @font-face {
     font-family: "mc";
     src: url(/resources/nk57-cdrg.otf);
@@ -33,9 +36,10 @@ body {
     align-items: center;
     min-height: 100vh;
     transition: background-color 0.35s, color 0.35s;
-    background-image: url('background.jpg');
+    background-image: url('background.png');
     background-attachment: fixed;
     background-size: cover;
+    background-position: center;
 }
 
 body.dark {
@@ -108,7 +112,6 @@ body.dark {
 h1 a {
     text-align: center;
     margin-bottom: 15px;
-    text-emphasis: bold;
     text-decoration: none;
     color: inherit;
     font-family: "mcbold", monospace;
