@@ -26,19 +26,6 @@ document.addEventListener('DOMContentLoaded', function() {
         themeButton.classList.add('dark');
     }
 
-    // tooltip logic
-    if (!popupClicked && document.querySelector('.speech-bubble')) {
-        setTimeout(() => themeTooltip.classList.add('show-tooltip'), 1000);
-        setTimeout(() => themeTooltip.classList.remove('show-tooltip'), 8000);
-    }
-
-    if (themeTooltip) {
-        themeTooltip.addEventListener('click', function() {
-            themeTooltip.classList.remove('show-tooltip');
-            localStorage.setItem('popup1', true);
-        });
-    }
-
     themeButton.addEventListener('click', function() {
         document.body.classList.toggle('light');
         document.querySelector('.container').classList.toggle('light');
