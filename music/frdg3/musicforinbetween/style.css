@@ -89,14 +89,13 @@ body.dark {
     padding: 20px;
     padding-bottom: 40px;
     box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
-    border-radius: 5px;
     transition: background-color 0.35s, color 0.35s;
     margin: auto;
     margin-top: 40px;
     margin-bottom: 40px;
     overflow: auto;
     z-index: 1;
-    border: #000000 2px solid;
+    border: #00000038 2px solid;
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
 }
