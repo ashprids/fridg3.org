@@ -22,38 +22,11 @@
 <br><br>
 
 <h3>music for the in-between</h3>
-<h4>an album by frdg3<br>releasing on September 5th</h4>
-<center><div id="countdown" style="font-size:1.5em; font-weight:bold;">DD:HH:MM:SS</div></center><br><br>
-<script>
-function updateCountdown() {
-    const targetDate = new Date('2025-09-05T00:00:00Z');
-    const now = new Date();
-    let diff = targetDate - now;
-
-    if (diff <= 0) {
-        document.getElementById('countdown').textContent = "Released!";
-        return;
-    }
-
-    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-    diff -= days * (1000 * 60 * 60 * 24);
-    const hours = Math.floor(diff / (1000 * 60 * 60));
-    diff -= hours * (1000 * 60 * 60);
-    const minutes = Math.floor(diff / (1000 * 60));
-    diff -= minutes * (1000 * 60);
-    const seconds = Math.floor(diff / 1000);
-
-    document.getElementById('countdown').textContent =
-        `${days.toString().padStart(2,'0')}:${hours.toString().padStart(2,'0')}:${minutes.toString().padStart(2,'0')}:${seconds.toString().padStart(2,'0')}`;
-}
-
-updateCountdown();
-setInterval(updateCountdown, 1000);
-</script>
+<h4>an album by frdg3</h4>
 <img src="cover.png" alt="Cover art">
 <br>
 <div class="audio-player">
-    <audio id="audio" src="preview.mp3"></audio>
+    <audio id="audio" src="audio.wav"></audio>
     <button id="play-pause" class="play">
         <i id="play-icon" class="fa-solid fa-circle-play"></i>
         <i id="pause-icon" class="fa-solid fa-circle-pause" style="display: none;"></i>
@@ -63,21 +36,45 @@ setInterval(updateCountdown, 1000);
 </div>
 <script src="/music/audioplayer.js"></script>
 <br>
+<span id="iconlist">
+    <a target="_blank" href="https://open.spotify.com/album/5aGN88FrIttcNzjf5VO4FC?si=H21eM3wGSHuYNiQY7uX4mQ"><img src="/resources/spotify.png"></a>
+    <a target="_blank" href="https://music.youtube.com/playlist?list=OLAK5uy_kH7lTrHwhu6Vq64uF0TdmpuBbqXj7nsFI"><img src="/resources/youtube.png"></a>
+    <a target="_blank" href="https://music.amazon.co.uk/albums/B0FMGM5KLP"><img src="/resources/amazon-music.png"></a>
+    <a target="_blank" href="https://music.apple.com/us/album/music-for-the-in-between-ep/1833526045"><img src="/resources/apple-music.png"></a>
+    <a><img src="/resources/more.png"></a>
+</span>
+
+<br>
 
 <h3>tracklist</h3>
-<h4>song pages will become available on release</h4>
+<h4>click on each song for more info</h4>
 <center>
-1. how do we connect? (extended)<br><br>
-2. andiamo (remastered)<br><br>
-3. music is my first love<br><br>
-4. song 4<br><br>
-5. breakbeat me<br><br>
+<a href="howdoweconnect/">1. how do we connect? (extended)</a><br><br>
+<a href="andiamo/">2. andiamo (remastered)</a><br><br>
+<a href="musicisfirstlove/">3. music is my first love</a><br><br>
+<a href="song4/">4. song 4</a><br><br>
+<a href="breakbeatme/">5. breakbeat me</a><br><br>
 </center>
 
-<h3>pre-order</h3>
-<h4>pre-order a copy now!<br>links will take you to third party sites</h4>
+<h3>merch</h3>
+<h4>links will take you to third party sites</h4>
 
 <div class="grid-container">
+    <div class="grid-item">
+        <a href="https://fridg3.creator-spring.com/listing/music-for-the-in-between?product=117&variation=5802"><img src="/merch/images/mfti-vest.png" alt="preview"></a>
+        <p>music for the in-between</p>
+        <p id="subp">vest | $19.00</p>
+    </div>
+    <div class="grid-item">
+        <a href="https://fridg3.creator-spring.com/listing/music-for-the-in-between?product=227&variation=2661"><img src="/merch/images/mfti-hoodie.png" alt="preview"></a>
+        <p>music for the in-between</p>
+        <p id="subp">hoodie | $33.99</p>
+    </div>
+    <div class="grid-item">
+        <a href="https://fridg3.creator-spring.com/listing/music-for-the-in-between?product=369&variation=6514"><img src="/merch/images/mfti-shirt.png" alt="preview"></a>
+        <p>music for the in-between</p>
+        <p id="subp">shirt | $23.99</p>
+    </div>
 <div class="grid-item">
         <a href="https://elasticstage.com/frdg3/releases/music-for-the-in-between-album"><img src="/merch/images/mfti-vinyl.png" alt="preview"></a>
         <p>Vinyl</p>
@@ -87,33 +84,6 @@ setInterval(updateCountdown, 1000);
         <a href="https://elasticstage.com/frdg3/releases/music-for-the-in-between-album"><img src="/merch/images/mfti-cd.png" alt="preview"></a>
         <p>CD</p>
         <p id="subp">$15.90</p>
-    </div>
-    <div class="grid-item">
-        <a href="https://distrokid.com/hyperfollow/frdg3/music-for-the-in-between"><img src="spotify-presave.png" alt="preview"></a>
-        <p>Spotify</p>
-        <p id="subp">pre-save the album on spotify!</p>
-    </div>
-</div>
-
-<br><br>
-<h3>merch</h3>
-<h4>get your swag on!<br>links will take you to third party sites</h4>
-
-<div class="grid-container">
-<div class="grid-item">
-        <a href="https://fridg3.creator-spring.com/listing/music-for-the-in-between?product=117&variation=5802"><img src="/merch/images/mfti-vest.png" alt="preview"></a>
-        <p>Vest</p>
-        <p id="subp">$19.00</p>
-    </div>
-    <div class="grid-item">
-        <a href="https://fridg3.creator-spring.com/listing/music-for-the-in-between?product=227&variation=2661"><img src="/merch/images/mfti-hoodie.png" alt="preview"></a>
-        <p>Hoodie</p>
-        <p id="subp">$33.99</p>
-    </div>
-    <div class="grid-item">
-        <a href="https://fridg3.creator-spring.com/listing/music-for-the-in-between?product=369&variation=6514"><img src="/merch/images/mfti-shirt.png" alt="preview"></a>
-        <p>Shirt</p>
-        <p id="subp">$23.99</p>
     </div>
 </div>
 </div>
