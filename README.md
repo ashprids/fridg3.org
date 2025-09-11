@@ -21,10 +21,12 @@ sudo chown -R deploy:http /var/www/fridg3.org
 find /var/www/fridg3.org -type d -exec chmod 755 {} \;
 find /var/www/fridg3.org -type f -exec chmod 644 {} \;
 ```
-If you can't publish microblog posts after an update, ensure the /microblog/posts/ directory has permissions set up for the "http" user:
+If you can't publish microblog posts after an update, ensure the /microblog/ directories have permissions set up for the "http" user:
 ```bash
 sudo chown -R http:http /var/www/fridg3.org/microblog/posts
 sudo chmod -R 755 /var/www/fridg3.org/microblog/posts
+sudo chown -R http:http /var/www/fridg3.org/microblog/images
+sudo chmod -R 755 /var/www/fridg3.org/microblog/images
 ```
 ## Media (images, music, videos)
 Any media to be added to the website should be moved directly onto the webserver itself, and not pushed to this repository. This rule is in place to ensure that the repository aligns with GitHub's file size restrictions, and for confidentiality should any content have a later planned release date.
