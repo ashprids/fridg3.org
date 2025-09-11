@@ -32,7 +32,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     if ($httpcode == 204) {
     header("Location: success.php" . urlencode($post_link));
     exit;
-}
+}}
 ?>
 
 <!DOCTYPE html>
