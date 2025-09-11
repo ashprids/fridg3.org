@@ -8,10 +8,9 @@
 *.wav
 *.osk
 *.zip
+*.env
 
 ## -- Specific directories -- ##
 !/resources/**/*
 /microblog/posts/**/*
-/admin/discord/**/*
-/admin/microblog/**/*
 /projects/frdgCanvas/download/**/*
