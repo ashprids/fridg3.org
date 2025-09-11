@@ -12,11 +12,10 @@
 - *.wav
 - *.osk
 - *.zip
+- *.env
 
 ## -- Specific directories to exclude --
 - /microblog/posts/**
-- /admin/discord/**
-- /admin/microblog/**
 - /projects/frdgCanvas/download/**
 
 ## -- Everything else is allowed --
