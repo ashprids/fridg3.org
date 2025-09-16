@@ -59,7 +59,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     header("Location: success.php?post_url=" . urlencode($post_link) . "&webhook_failed=1");
     exit;
     }
-    exit;
 }
 ?>
 
