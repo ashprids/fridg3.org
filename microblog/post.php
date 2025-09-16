@@ -72,7 +72,7 @@ $title = "fridge | microblog post from $date";
     <button id="change-theme"><i class="fas fa-sun"></i></button>
     <center>
         <h1><a href="https://fridg3.org">fridge</a></h1>
-        <a href="https://fridg3.org/blog">blog</a>
+        <a href="https://fridg3.org/microblog">[micro]</a><a href="https://fridg3.org/blog">blog</a>
         <a href="https://fridg3.org/about">about</a>
         <a href="https://fridg3.org/contact">contact</a>
         <a href="https://fridg3.org/projects">projects</a>
@@ -80,7 +80,7 @@ $title = "fridge | microblog post from $date";
     </center>
 <br>
 <h3>microblog</h3>
-<h4><a href='/microblog'>go to home</a></h4>
+<h4><a href='/microblog'>back to /microblog/</a></h4>
 <br>
     <div class="microblog-post">
         <b><?php echo $user; ?></b> <span id="microblog-date"><?php echo $date; ?></span><br>

@@ -59,7 +59,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     header("Location: success.php?post_url=" . urlencode($post_link) . "&webhook_failed=1");
     exit;
     }
-    exit;
 }
 ?>
 
@@ -78,13 +77,13 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 <script src="/theme.js"></script>
 <button id="change-theme"><i class="fas fa-sun"></i></button>
     <center>
-    <h1><a href="/index.html">fridge</a></h1>
-    <a href="/blog">blog</a>
+    <h1><a href="/">fridge</a></h1>
+    <a href="/microblog">[micro]</a><a href="/blog">blog</a>
     <a href="/about">about</a>
     <a href="/contact">contact</a>
     <a href="/projects">projects</a>
     <a href="/music">music</a>
-    </center>
+</center>
 <br><br>
 <h3>Upload a Post</h3>
 <br>
