@@ -57,7 +57,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // confetti generator
     function createConfetti() {
         const colors = ['#fff'];
-        const shapes = ["*"];
+        const shapes = ["🎃", "👻", "🕸️", "🍬", "🍭", "🦇", "🌕"];
         const confetti = document.createElement('div');
         confetti.className = 'confetti';
         confetti.innerHTML = shapes[Math.floor(Math.random() * shapes.length)];
@@ -72,5 +72,5 @@ document.addEventListener('DOMContentLoaded', function() {
         setTimeout(() => confetti.remove(), duration * 1000);
     }
 
-    //setInterval(createConfetti,160);
+    setInterval(createConfetti,160);
 });
