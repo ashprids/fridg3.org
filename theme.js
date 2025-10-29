@@ -57,7 +57,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // confetti generator
     function createConfetti() {
         const colors = ['#fff'];
-        const shapes = ["🎃", "👻", "🕸️", "🍬", "🍭", "🦇", "🌕"];
+        const shapes = ["<i class='fa-solid fa-ghost'></i>"];
         const confetti = document.createElement('div');
         confetti.className = 'confetti';
         confetti.innerHTML = shapes[Math.floor(Math.random() * shapes.length)];
