@@ -25,7 +25,8 @@ html, body { margin: 0; padding: 0; }
 
 body {
   font-family: "MainRegular", monospace;
-  background-color: #181818; /* dark default */
+  /*background-color: #181818; /* dark default */
+  background-color: #121212; /* dark default */
   color: #cfcfcf;            /* default text */
   display: flex;
   flex-direction: column;

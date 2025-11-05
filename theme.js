@@ -406,4 +406,3 @@ document.addEventListener('DOMContentLoaded', function() {
     window.stopAsciiFireworks();
   };
 })();
-/* ======================= /ASCII FIREWORKS AUTO-INIT ======================= */
