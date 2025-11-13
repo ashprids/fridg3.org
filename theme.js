@@ -55,10 +55,7 @@ document.addEventListener('DOMContentLoaded', function() {
   // create / locate appended style element
   async function applyThemeById(id) {
     const theme = THEMES.find(t => t.id === id) || THEMES[0];
-    // remove existing appended style
-    const existing = document.getElementById('appended-theme-css');
-    if (existing) existing.remove();
-
+    
     // remove any previous injected style or link
     const existingStyle = document.getElementById('appended-theme-css');
     if (existingStyle) existingStyle.remove();
