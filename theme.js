@@ -342,6 +342,9 @@ document.addEventListener('DOMContentLoaded', function () {
     { id: 'fireworks', title: 'Fireworks', icon: 'fa-bomb', file: 'fireworks.js' }
   ];
 
+  // track the polling interval for snow script loading to prevent memory leaks
+  let snowLoadPollInterval = null;
+
   // use the existing theme button as the trigger for the script overlay
   // so the script menu appears when the theme button is pressed
   let scriptButton = document.getElementById('script-menu-button');
@@ -490,6 +493,11 @@ document.addEventListener('DOMContentLoaded', function () {
   function applyScriptById(id) {
     const script = SCRIPTS.find(s => s.id === id) || SCRIPTS[0];
 
+  // clear any pending snow load polling interval to prevent memory leaks
+  if (snowLoadPollInterval) {
+    clearInterval(snowLoadPollInterval);
+    snowLoadPollInterval = null;
+  }
   // attempt to stop any running effects from previously loaded scripts
   try { if (window.__frdg3_snow && window.__frdg3_snow.stop) window.__frdg3_snow.stop(); } catch (e) {}
   // rain API (vanilla rain script)
@@ -540,17 +548,19 @@ document.addEventListener('DOMContentLoaded', function () {
           const max = 1500; // ms
           const interval = 80;
           let waited = 0;
-          const t = setInterval(() => {
+          snowLoadPollInterval = setInterval(() => {
             try {
               if (window.__frdg3_snow && window.__frdg3_snow.start) {
                 window.__frdg3_snow.start();
-                clearInterval(t);
+                clearInterval(snowLoadPollInterval);
+                snowLoadPollInterval = null;
                 return;
               }
             } catch (e) {}
             waited += interval;
             if (waited >= max) {
-              clearInterval(t);
+              clearInterval(snowLoadPollInterval);
+              snowLoadPollInterval = null;
               try { console.warn('script-loader: timed out waiting for', script.id); } catch (e) {}
             }
           }, interval);
