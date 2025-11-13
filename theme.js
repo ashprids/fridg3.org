@@ -287,37 +287,6 @@ document.addEventListener('DOMContentLoaded', function () {
   // saved overflow values so we can restore the page's horizontal scroll state
   let __saved_overflow_x = { html: null, body: null };
 
-  // small on-page status helper (useful when console is closed)
-  function showStatus(msg, ms = 3000) {
-    try {
-      const id = 'script-loader-status';
-      let el = document.getElementById(id);
-      if (!el) {
-        el = document.createElement('div');
-        el.id = id;
-        Object.assign(el.style, {
-          position: 'fixed',
-          left: '50%',
-          transform: 'translateX(-50%)',
-          top: '12px',
-          zIndex: 2147483647,
-          background: 'rgba(0,0,0,0.8)',
-          color: 'white',
-          padding: '6px 10px',
-          borderRadius: '6px',
-          fontSize: '13px',
-          fontFamily: 'system-ui,Segoe UI,Roboto,Arial,sans-serif',
-          pointerEvents: 'none'
-        });
-        document.body.appendChild(el);
-      }
-      el.textContent = msg;
-      el.style.opacity = '1';
-      if (el._hideTimer) clearTimeout(el._hideTimer);
-      el._hideTimer = setTimeout(() => { try { el.style.opacity = '0'; } catch (e) {} }, ms);
-    } catch (e) { /* ignore */ }
-  }
-
   // reuse cookie helpers from above by redefining (safe if this file is included once)
   function setCookie(name, value, days) {
     let expires = "";
