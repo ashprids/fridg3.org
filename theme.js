@@ -266,7 +266,12 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 
   // close on outside click or Esc
-  window.addEventListener('click', function () { hideOverlay(); });
+  window.addEventListener('click', function (e) {
+    const ov = overlay; // capture current overlay reference
+    if (ov && ov.style.display === 'flex' && !ov.contains(e.target) && e.target !== themeButton && !themeButton.contains(e.target)) {
+      hideOverlay();
+    }
+  });
   window.addEventListener('keydown', function (e) { if (e.key === 'Escape') hideOverlay(); });
 
   // on load, see if cookie exists and apply
@@ -572,7 +577,11 @@ document.addEventListener('DOMContentLoaded', function () {
   if (savedScript) applyScriptById(savedScript);
 
   // hide on outside click / esc
-  window.addEventListener('click', () => { hideScriptOverlay(); });
+  window.addEventListener('click', (e) => {
+    if (scriptOverlay && scriptOverlay.style.display === 'flex' && !scriptOverlay.contains(e.target) && e.target !== scriptButton && !scriptButton.contains(e.target)) {
+      hideScriptOverlay();
+    }
+  });
   window.addEventListener('keydown', (e) => { if (e.key === 'Escape') hideScriptOverlay(); });
 
   // reposition on resize
