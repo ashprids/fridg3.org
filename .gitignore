@@ -12,5 +12,6 @@
 
 ## -- Specific directories -- ##
 !/resources/**/*
+!/themes/**/*
 /microblog/posts/**/*
 /projects/frdgCanvas/download/**/*

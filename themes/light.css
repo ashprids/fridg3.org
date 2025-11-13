@@ -1,0 +1,58 @@
+
+/* 1) Base */
+body { background-color: #c2c2c2; color: #3b3b3b; }
+
+/* Theme switcher button */
+#change-theme { color: #3b3b3b; }
+
+/* 4) Container */
+.container { background-color: #cfcfcf; color: #3b3b3b; }
+
+/* 7) RSS badge */
+.rss { background-color: #d8d8d8; color: #3b3b3b; }
+.rss:hover { background-color: #adbecb; }
+
+/* 8) Post cards */
+.post { background-color: #d4d4d4; color: #3b3b3b; }
+.post:hover { background-color: #5580ab32; }
+
+/* per-post date */
+#date { color: #9f9f9f; }
+
+/* 9) Code blocks */
+code { background-color: #dfdfdf; color: #60855f; }
+
+/* 11) Avatar image border */
+#avatar { border: 3px solid #3b3b3b; }
+
+/* 12) Tabs */
+.tab { background-color: #aaaaaa; border-bottom: 2px solid #9a9a9a; }
+.tab button { color: #3b3b3b; }
+.tab button:hover { background-color: #bcbcbc; }
+.tab button.active { background-color: #c4c4c4; color: #000; }
+.tabcontent { color: #3b3b3b; background-color: #c4c4c4; }
+
+/* 13) Grid gallery */
+.grid-container { background-color: #c4c4c4; }
+.grid-item img { outline: 0 solid #9c9c9c; }
+.grid-item img:hover { outline: 4px solid #9c9c9c; }
+.grid-item p { color: #3b3b3b; }
+#subp { color: #7a7a7a; }
+
+/* 14) Audio player */
+.audio-player button { color: #3b3b3b; }
+.audio-player input[type="range"] { background: #aaaaaa; }
+.audio-player input[type="range"]::-webkit-slider-thumb { background: #3b3b3b; }
+.audio-player span { color: #3b3b3b; }
+
+/* 16) Contact form */
+.contact-form { color: #3b3b3b; }
+.contact-form input,
+.contact-form textarea {
+  background-color: #dbdbdb;
+  color: #3b3b3b;
+  border: 2px solid #9a9a9a;
+}
+
+/* 18) Microblog post */
+.microblog-post { background-color: #d4d4d4; color: #3b3b3b; }

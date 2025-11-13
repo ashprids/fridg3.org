@@ -46,7 +46,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 <body>
 <div class="container">
 <script src="/theme.js"></script>
-<button id="change-theme"><i class="fas fa-sun"></i></button>
+<button id="change-theme"><i class="fa-solid fa-palette"></i></button>
     <center>
     <h1><a href="/">fridge</a></h1>
     <a href="/microblog">[micro]</a><a href="/blog">blog</a>

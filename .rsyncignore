@@ -1,6 +1,8 @@
 ## -- Always include resources --
 + /resources/**
 + /resources/**/**
++ /themes/**
++ /themes/**/**
 
 ## -- Universal excludes --
 - *.png

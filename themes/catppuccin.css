@@ -1,0 +1,161 @@
+/*
+   palette: https://catppuccin.com/palette
+*/
+
+/* tokens */
+:root{
+  /* core surfaces */
+  --ctp-crust:   #11111b;
+  --ctp-mantle:  #181825;
+  --ctp-base:    #1e1e2e;
+  --ctp-surface0:#313244;
+  --ctp-surface1:#45475a;
+  --ctp-surface2:#585b70;
+
+  /* text */
+  --ctp-text:     #cdd6f4;
+  --ctp-subtext1: #bac2de;
+  --ctp-subtext0: #a6adc8;
+  --ctp-overlay2: #9399b2;
+
+  /* accents */
+  --ctp-rosewater:#f5e0dc;
+  --ctp-flamingo: #f2cdcd;
+  --ctp-pink:     #f5c2e7;
+  --ctp-mauve:    #cba6f7;
+  --ctp-red:      #f38ba8;
+  --ctp-maroon:   #eba0ac;
+  --ctp-peach:    #fab387;
+  --ctp-yellow:   #f9e2af;
+  --ctp-green:    #a6e3a1;
+  --ctp-teal:     #94e2d5;
+  --ctp-sky:      #89dceb;
+  --ctp-sapphire: #74c7ec;
+  --ctp-blue:     #89b4fa;
+  --ctp-lavender: #b4befe;
+
+  /* site mapping */
+  --bg-page:      var(--ctp-crust);
+  --bg-container: var(--ctp-base);
+  --bg-elev:      var(--ctp-surface0);
+  --bg-hover:     var(--ctp-surface1);
+  --outline:      rgba(0,0,0,.45);
+
+  --fg:           var(--ctp-text);
+  --fg-weak:      var(--ctp-subtext1);
+  --fg-muted:     var(--ctp-overlay2);
+
+  --link:         var(--ctp-blue);
+  --link-visited: var(--ctp-mauve);
+  --link-hover:   var(--ctp-peach);
+}
+
+/* base */
+body{
+  background: var(--bg-page);
+  color: var(--fg);
+}
+::selection{ background: var(--ctp-lavender); color:#0b0b12; }
+
+/* links */
+a{ color: var(--link); }
+a:visited{ color: var(--link-visited); }
+a:hover{ color: var(--link-hover); }
+
+/* container shell */
+.container{
+  background: var(--bg-container);
+  color: var(--fg);
+  box-shadow: 0 0 0 1px var(--outline), 0 10px 40px rgba(0,0,0,.55);
+  border-radius: 12px;
+}
+
+/* headings: soft rainbow sweep */
+h1 a{
+  background-image: linear-gradient(
+    90deg,
+    var(--ctp-lavender),
+    var(--ctp-blue),
+    var(--ctp-sapphire),
+    var(--ctp-teal),
+    var(--ctp-green),
+    var(--ctp-yellow),
+    var(--ctp-peach),
+    var(--ctp-mauve)
+  );
+}
+h4{ color: var(--fg-muted); }
+
+/* rss badge */
+.rss{ background: var(--bg-elev); color: var(--fg); }
+.rss:hover{ background: var(--bg-hover); }
+
+/* posts/cards */
+.post{
+  background: var(--bg-elev);
+  color: var(--fg);
+  box-shadow: 0 0 0 1px var(--outline);
+}
+.post:hover{
+  background: color-mix(in oklch, var(--ctp-blue) 16%, var(--bg-elev));
+}
+#date{ color: var(--fg-muted); }
+
+/* code */
+code{
+  background: var(--ctp-mantle);
+  color: var(--ctp-green);
+  border: 1px solid var(--bg-hover);
+  border-radius: 6px;
+}
+pre code{ display:block; padding:.75rem 1rem; overflow:auto; }
+
+/* tabs */
+.tab{ background: var(--ctp-mantle); border-bottom-color: var(--bg-hover); }
+.tab button{ color: var(--fg); }
+.tab button:hover{ background: var(--bg-hover); }
+.tab button.active{ background: var(--bg-elev); color: var(--fg); }
+.tabcontent{ background: var(--bg-container); color: var(--fg-weak); }
+
+/* gallery */
+.grid-container{ background: var(--bg-container); }
+.grid-item img{ outline-color: var(--bg-hover); }
+.grid-item img:hover{ outline-color: var(--ctp-mauve); }
+.grid-item p{ color: var(--fg-weak); }
+#subp{ color: var(--fg-muted); }
+
+/* audio player */
+.audio-player button{ color: var(--fg-weak); }
+.audio-player button:hover{ color: var(--ctp-peach); }
+.audio-player input[type="range"]::-webkit-slider-thumb{ background: var(--fg-weak); }
+
+/* avatar */
+#avatar{ border-color: var(--bg-hover); }
+
+/* contact form */
+.contact-form{ color: var(--fg); }
+.contact-form input,
+.contact-form textarea{
+  background: var(--bg-elev);
+  color: var(--fg);
+  border: 1px solid var(--bg-hover);
+}
+.contact-form button{
+  background: linear-gradient(90deg, var(--ctp-blue), var(--ctp-mauve));
+  color: #0b0b12;
+  border: none;
+}
+.contact-form button:hover{
+  background: linear-gradient(90deg, var(--ctp-peach), var(--ctp-yellow));
+  color: #0b0b12;
+}
+
+/* microblog */
+.microblog-post{ background: var(--bg-elev); color: var(--fg); }
+#microblog-date{ color: var(--fg-muted); }
+
+/* confetti / misc */
+.confetti{ color: var(--fg-weak); }
+
+/* ascii fireworks (if present) */
+#fridge-ascii-fireworks{ color: var(--ctp-peach); }

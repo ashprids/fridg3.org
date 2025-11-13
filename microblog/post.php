@@ -69,7 +69,7 @@ $title = "fridge | microblog post from $date";
 <body>
 <div class="container">
     <script src="/theme.js"></script>
-    <button id="change-theme"><i class="fas fa-sun"></i></button>
+    <button id="change-theme"><i class="fa-solid fa-palette"></i></button>
     <center>
         <h1><a href="https://fridg3.org">fridge</a></h1>
         <a href="https://fridg3.org/microblog">[micro]</a><a href="https://fridg3.org/blog">blog</a>
