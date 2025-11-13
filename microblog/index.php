@@ -31,7 +31,12 @@ function build_posts_index($postsDir, $indexPath) {
 
         // build searchable text (lowercased) and excerpt
         $fulltext = mb_strtolower(implode(' ', array_merge([$user, $date], $bodyLines)));
-        $excerpt = htmlspecialchars(implode(' ', array_slice($bodyLines, 0, 5)), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        // preserve line breaks in excerpts while escaping content for safety
+        $excerptLines = array_slice($bodyLines, 0, 5);
+        $safeExcerptLines = array_map(function($line) {
+            return htmlspecialchars($line, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        }, $excerptLines);
+        $excerpt = implode('<br>', $safeExcerptLines);
 
         $id = basename($file, '.txt');
         $index[] = [
