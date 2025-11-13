@@ -87,12 +87,14 @@ $posts_html = loadPosts(5, $page, $query);
 $safeQ = $query !== null ? htmlspecialchars($query, ENT_QUOTES) : '';
 $scriptPath = isset($_SERVER['SCRIPT_NAME']) ? htmlspecialchars($_SERVER['SCRIPT_NAME'], ENT_QUOTES) : 'index.php';
 $search_html = "<div id='microblog-search' style='margin:10px 0 18px; text-align:center;'>";
-$search_html .= "<form method='get' action='" . $scriptPath . "' style='display:inline-block;'>";
-$search_html .= "<input type='search' name='q' placeholder='Search posts...' value='" . $safeQ . "' style='width:60%;max-width:520px;padding:8px 10px;border:1px solid #ccc;border-radius:6px;' />";
-$search_html .= "<button type='submit' style='margin-left:8px;padding:8px 10px;border-radius:6px;'>Search</button>";
-if ($safeQ !== '') {
-    $search_html .= "&nbsp;<a href='" . $scriptPath . "' style='margin-left:10px;color:#333'>Clear</a>";
-}
+$search_html .= "<form method='get' action='" . $scriptPath . "' style='display:flex;justify-content:center;'>";
+// Wrap controls in a .contact-form container so theme rules targeting
+// `.contact-form input` and `.contact-form button` apply. Use flex so
+// the control group can be centered and the input can grow to fill space.
+ $search_html .= "<div class='contact-form' style='display:flex;align-items:center;gap:0;flex-direction:row;padding:0;margin:0;width:100%;box-sizing:border-box;'>";
+ $search_html .= '<input type="search" name="q" placeholder="search /microblog/ for.." value="' . $safeQ . '" style="font-family: \'MainRegular\', monospace; font-size:0.8rem; flex:1; width:85%; min-width:0; box-sizing:border-box; height:32px; line-height:1.1; margin-left:0; margin-right:0;" />';
+ $search_html .= '<button type="submit" style="margin-left:0; margin-right:0; padding:6px 10px; border-radius:0; font-family: \'MainBold\', monospace; font-size:1rem; cursor:pointer; width:15%; height:32px; display:inline-flex; align-items:center; justify-content:center; box-sizing:border-box;">search</button>';
+$search_html .= "</div>";
 $search_html .= "</form></div>";
 
 // inject into template
