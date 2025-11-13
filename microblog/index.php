@@ -29,14 +29,16 @@ function build_posts_index($postsDir, $indexPath) {
             if ($has_image === '') $has_image = null;
         }
 
-        // build searchable text (lowercased) and excerpt
+        // build searchable text (lowercased) and excerpts/body HTML
         $fulltext = mb_strtolower(implode(' ', array_merge([$user, $date], $bodyLines)));
-        // preserve line breaks in excerpts while escaping content for safety
-        $excerptLines = array_slice($bodyLines, 0, 5);
-        $safeExcerptLines = array_map(function($line) {
+        // safe full body with line breaks preserved
+        $safeBodyLines = array_map(function($line) {
             return htmlspecialchars($line, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-        }, $excerptLines);
-        $excerpt = implode('<br>', $safeExcerptLines);
+        }, $bodyLines);
+        $body_html = implode('<br>', $safeBodyLines);
+        // short excerpt (first 5 lines) for non-search listings
+        $excerptLines = array_slice($safeBodyLines, 0, 5);
+        $excerpt = implode('<br>', $excerptLines);
 
         $id = basename($file, '.txt');
         $index[] = [
@@ -44,6 +46,7 @@ function build_posts_index($postsDir, $indexPath) {
             'user' => $user,
             'date' => $date,
             'excerpt' => $excerpt,
+            'body_html' => $body_html,
             'image' => $has_image,
             'text' => $fulltext,
             'mtime' => filemtime($file)
@@ -102,7 +105,13 @@ function loadPosts($limit = 5, $page = 1, $query = null) {
         $date = htmlspecialchars($item['date'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
         $excerpt = $item['excerpt']; // already escaped when building index
 
-        $body_html = '<p>' . $excerpt;
+        // If this request is a search (query provided), show the full safe body_html;
+        // otherwise show the shorter excerpt to keep list compact.
+        if (!empty($query) && !empty($item['body_html'])) {
+            $body_html = '<p>' . $item['body_html'];
+        } else {
+            $body_html = '<p>' . $excerpt;
+        }
         if (!empty($item['image'])) {
             $imgUrl = '/microblog/images/' . rawurlencode($item['image']);
             $body_html .= "<br><br><a href='" . $imgUrl . "'><img id='microblog-image' src='" . $imgUrl . "' style='max-width: 100%; border-radius: 0px;'></a>";
