@@ -1,0 +1,146 @@
+/* ===
+   palette: https://draculatheme.com
+*/
+:root{
+  /* Core Dracula */
+  --dr-bg:        #282a36; /* background */
+  --dr-surface:   #303241; /* slightly lifted surface (derived) */
+  --dr-surface2:  #3a3d4f; /* cards */
+  --dr-hover:     #44475a; /* current line / hover */
+  --dr-text:      #f8f8f2; /* foreground */
+  --dr-subtext:   #cdd1e6; /* softened text (derived) */
+  --dr-muted:     #a6accd; /* comments-ish */
+
+  /* Accents */
+  --dr-cyan:   #8be9fd;
+  --dr-green:  #50fa7b;
+  --dr-orange: #ffb86c;
+  --dr-pink:   #ff79c6;
+  --dr-purple: #bd93f9;
+  --dr-red:    #ff5555;
+  --dr-yellow: #f1fa8c;
+
+  /* Site mapping */
+  --bg-page:      var(--dr-bg);
+  --bg-container: var(--dr-surface);
+  --bg-elev:      var(--dr-surface2);
+  --bg-hover:     var(--dr-hover);
+  --fg:           var(--dr-text);
+  --fg-weak:      var(--dr-subtext);
+  --fg-muted:     var(--dr-muted);
+
+  --link:         var(--dr-purple);
+  --link-visited: var(--dr-pink);
+  --link-hover:   var(--dr-orange);
+}
+
+/* base */
+body{
+  background: var(--bg-page);
+  color: var(--fg);
+}
+::selection{ background: var(--dr-hover); color: #0e0f16; }
+
+/* links */
+a{ color: var(--link); }
+a:visited{ color: var(--link-visited); }
+a:hover{ color: var(--link-hover); }
+
+/* container shell */
+.container{
+  background: var(--bg-container);
+  color: var(--fg);
+  box-shadow: 0 0 0 1px rgba(0,0,0,.45), 0 10px 40px rgba(0,0,0,.55);
+  border-radius: 12px;
+}
+
+/* headings: neon sweep */
+h1 a{
+  background-image: linear-gradient(
+    90deg,
+    var(--dr-purple),
+    var(--dr-pink),
+    var(--dr-red),
+    var(--dr-orange),
+    var(--dr-yellow),
+    var(--dr-green),
+    var(--dr-cyan)
+  );
+}
+h4{ color: var(--fg-muted); }
+
+/* rss */
+.rss{ background: var(--bg-elev); color: var(--fg); }
+.rss:hover{ background: var(--bg-hover); }
+
+/* posts/cards */
+.post{
+  background: var(--bg-elev);
+  color: var(--fg);
+  box-shadow: 0 0 0 1px rgba(0,0,0,.35);
+}
+.post:hover{
+  background: color-mix(in oklch, var(--dr-purple) 18%, var(--bg-elev));
+}
+#date{ color: var(--fg-muted); }
+
+/* code */
+code{
+  background: #1f2130;
+  color: var(--dr-green);
+  border: 1px solid var(--bg-hover);
+  border-radius: 6px;
+}
+pre code{
+  display:block; padding:.75rem 1rem; overflow:auto;
+}
+
+/* tabs */
+.tab{ background: var(--bg-hover); border-bottom-color: var(--bg-hover); }
+.tab button{ color: var(--fg); }
+.tab button:hover{ background: var(--bg-elev); }
+.tab button.active{ background: var(--bg-container); color: var(--fg); }
+.tabcontent{ background: var(--bg-container); color: var(--fg-weak); }
+
+/* gallery */
+.grid-container{ background: var(--bg-container); }
+.grid-item img{ outline-color: var(--bg-hover); }
+.grid-item img:hover{ outline-color: var(--dr-pink); }
+.grid-item p{ color: var(--fg-weak); }
+#subp{ color: var(--fg-muted); }
+
+/* audio player */
+.audio-player button{ color: var(--fg-weak); }
+.audio-player button:hover{ color: var(--dr-cyan); }
+.audio-player input[type="range"]::-webkit-slider-thumb{ background: var(--fg-weak); }
+
+/* avatar */
+#avatar{ border-color: var(--bg-hover); }
+
+/* contact form */
+.contact-form{ color: var(--fg); }
+.contact-form input,
+.contact-form textarea{
+  background: var(--bg-elev);
+  color: var(--fg);
+  border: 1px solid var(--bg-hover);
+}
+.contact-form button{
+  background: linear-gradient(90deg, var(--dr-purple), var(--dr-pink));
+  color: #0e0f16;
+  border: none;
+}
+.contact-form button:hover{
+  background: linear-gradient(90deg, var(--dr-orange), var(--dr-yellow));
+  color: #0e0f16;
+}
+
+/* microblog */
+.microblog-post{ background: var(--bg-elev); color: var(--fg); }
+#microblog-date{ color: var(--fg-muted); }
+
+/* confetti / misc */
+.confetti{ color: var(--fg-weak); }
+
+/* ascii fireworks (if present) */
+#fridge-ascii-fireworks{ color: var(--dr-yellow); }

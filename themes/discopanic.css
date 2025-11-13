@@ -1,0 +1,130 @@
+/* === Fever (Soft Edition) ===
+   mellowed variant of the Panic! theme for comfy readability
+*/
+
+:root {
+  --fever-bg:       #2b161a;   /* deep muted burgundy */
+  --fever-surface:  #3b1e23;   /* panels/cards */
+  --fever-surface2: #49262b;   /* lighter elevation */
+  --fever-hover:    #552c31;   /* subtle hover highlight */
+
+  --fever-gold:     #d9b970;   /* antique gold accent */
+  --fever-cream:    #efe9d2;   /* off-white text */
+  --fever-muted:    #c8bba4;   /* secondary text */
+
+  --fever-emerald:  #3ab47b;   /* hint of green for pop */
+  --fever-lip:      #d05b63;   /* muted red accent */
+
+  --bg-page:        var(--fever-bg);
+  --bg-container:   var(--fever-surface);
+  --bg-elev:        var(--fever-surface2);
+  --bg-hover:       var(--fever-hover);
+  --fg:             var(--fever-cream);
+  --fg-weak:        #e4d9c2;
+  --fg-muted:       var(--fever-muted);
+  --link:           var(--fever-gold);
+  --link-hover:     var(--fever-lip);
+  --link-visited:   var(--fever-emerald);
+}
+
+/* background */
+body {
+  background: radial-gradient(
+      1200px 800px at 30% -10%,
+      #3a1d22 0%,
+      var(--fever-bg) 70%
+    )
+    fixed;
+  color: var(--fg);
+}
+
+/* text selection */
+::selection { background: var(--fever-gold); color: #2b1a10; }
+
+/* containers */
+.container {
+  background: var(--bg-container);
+  border: 1px solid rgba(217,185,112,.3);
+  border-radius: 10px;
+  box-shadow: 0 0 12px rgba(0,0,0,.4);
+}
+
+#avatar {
+  background-image: url('/themes/discopanic.jpg');
+}
+
+/* headings */
+h1 a {
+  background-image: linear-gradient(
+    90deg,
+    var(--fever-gold),
+    var(--fever-lip),
+    var(--fever-emerald)
+  );
+}
+h2,h3,h4 {
+  color: var(--fg-weak);
+  border-bottom: 1px solid rgba(217,185,112,.25);
+  padding-bottom: .25rem;
+}
+
+/* links */
+a { color: var(--link); text-decoration-color: rgba(217,185,112,.4); }
+a:hover { color: var(--link-hover); text-decoration-color: currentColor; }
+a:visited { color: var(--link-visited); }
+
+/* posts */
+.post {
+  background: var(--bg-elev);
+  border: 1px solid rgba(217,185,112,.25);
+  box-shadow: 0 0 8px rgba(0,0,0,.3);
+}
+.post:hover {
+  background: color-mix(in oklch, var(--fever-hover) 20%, var(--bg-elev));
+}
+#date { color: var(--fg-muted); }
+
+/* code blocks */
+code {
+  background: #231315;
+  color: var(--fever-emerald);
+  border: 1px solid rgba(217,185,112,.25);
+  border-radius: 5px;
+}
+pre code { display:block; padding:.75rem 1rem; overflow:auto; }
+
+/* forms + buttons */
+.contact-form input,
+.contact-form textarea {
+  background: #30191d;
+  border: 1px solid rgba(217,185,112,.3);
+  color: var(--fg);
+}
+.contact-form button {
+  background: var(--fever-gold);
+  color: #2b1a10;
+  border: none;
+  border-radius: 6px;
+}
+.contact-form button:hover {
+  background: var(--fever-emerald);
+  color: #0e1210;
+}
+
+/* tabs, gallery, microblog, audio player */
+.tab,
+.grid-container,
+.microblog-post,
+.audio-player {
+  background: var(--bg-elev);
+  border: 1px solid rgba(217,185,112,.3);
+}
+.tab button:hover,
+.audio-player button:hover {
+  color: var(--fever-gold);
+}
+.grid-item img:hover { outline: 2px solid var(--fever-gold); }
+
+/* misc accents */
+.confetti,
+#fridge-ascii-fireworks { color: var(--fever-gold); }
