@@ -177,7 +177,7 @@ code { font-family: "MonospaceFont"; border-radius: 3px; background-color: #1111
   11) Avatar image
   ========================================================================= */
 
-#avatar { width: 300px; height: 300px; border: 3px solid #515151; background-image: url('/resources/cover.jpg'); background-size: cover; background-position: center; background-repeat: no-repeat; pointer-events: none; -webkit-user-drag: none; user-select: none; transition: color 0.35s; }
+#avatar { width: 300px; height: 300px; border: 3px solid #515151; background-image: url('/resources/cover.png'); background-size: cover; background-position: center; background-repeat: no-repeat; pointer-events: none; -webkit-user-drag: none; user-select: none; transition: color 0.35s; }
 
 /* ==========================================================================
   12) Tabs

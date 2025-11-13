@@ -1,7 +1,7 @@
 let OPT = {
     selector: "#sparks",
       amount: 5000,
-       speed: 0.05, // pixels per frame
+       speed: 0.05, // pixels per frame
     lifetime: 200,
    direction: {x: -0.5, y: 1},
         size: [3, 3],
