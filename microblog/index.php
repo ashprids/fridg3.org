@@ -72,10 +72,11 @@ function loadPosts($limit = 5, $page = 1, $query = null) {
         }
     }
     if ($needBuild) {
-        build_posts_index($postsDir, $indexPath);
+        // build_posts_index returns the array it built; use it directly
+        $index = build_posts_index($postsDir, $indexPath);
+    } else {
+        $index = @json_decode(@file_get_contents($indexPath), true) ?: [];
     }
-
-    $index = @json_decode(@file_get_contents($indexPath), true) ?: [];
 
     // apply search filter on index (text field). limit query length to 200 chars
     if ($query) {
