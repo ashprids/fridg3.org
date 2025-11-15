@@ -38,6 +38,7 @@ document.addEventListener('DOMContentLoaded', function() {
     { id: 'dracula', title: 'Dracula', icon: 'fa-ghost', file: 'dracula.css' },
     { id: 'partyattack', title: 'Disco Panic', icon: 'fa-star', file: 'discopanic.css' },
     { id: 'kumo', title: 'Kumo', icon: 'fa-cloud', file: 'kumo.css' },
+    { id: 'prettyodd', title: 'Pretty Odd', icon: 'fa-fan', file: 'prettyodd.css' },
   ];
 
   // glow colors per theme for hover effect
@@ -49,7 +50,8 @@ document.addEventListener('DOMContentLoaded', function() {
     gruvbox: '#d4a373',
     catppuccin: '#b4befe',
     partyattack: '#7a2424ff',
-    kumo: '#923878ff'
+    kumo: '#923878ff',
+    prettyodd: '#977D63ff',
   };
 
   // create / locate appended style element
