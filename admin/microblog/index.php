@@ -37,150 +37,19 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $filename = $posts_dir . "/$timestamp.txt";
     $content = $author . "\n" . date("d/m/y H:i") . "\n" . $_POST["text"];
 
-    // handle image upload
+    // handle image upload: simply move uploaded file to images directory without compression
     if (isset($_FILES["image"]) && $_FILES["image"]["error"] === UPLOAD_ERR_OK) {
         $tmpPath = $_FILES["image"]["tmp_name"];
-        $uploadSize = (int) ($_FILES["image"]["size"] ?? 0);
-        // if file is larger than 1MB, force compression/re-encoding even if dimensions are small
-        $forceCompress = ($uploadSize > 1048576);
-        // try to read image info
-        $info = @getimagesize($tmpPath);
-        if ($info !== false) {
-            list($width, $height, $type) = $info;
-
-            // create image resource from uploaded file
-            $src = null;
-            switch ($type) {
-                case IMAGETYPE_JPEG:
-                    if (function_exists('imagecreatefromjpeg')) {
-                        $src = @imagecreatefromjpeg($tmpPath);
-                    } else {
-                        $src = null;
-                    }
-                    break;
-                case IMAGETYPE_PNG:
-                    if (function_exists('imagecreatefrompng')) {
-                        $src = @imagecreatefrompng($tmpPath);
-                    } else {
-                        $src = null;
-                    }
-                    break;
-                case IMAGETYPE_GIF:
-                    if (function_exists('imagecreatefromgif')) {
-                        $src = @imagecreatefromgif($tmpPath);
-                    } else {
-                        $src = null;
-                    }
-                    break;
-                case IMAGETYPE_WEBP:
-                    if (function_exists('imagecreatefromwebp')) {
-                        $src = @imagecreatefromwebp($tmpPath);
-                    } else {
-                        $src = null;
-                    }
-                    break;
-            }
-
-            if ($src !== null) {
-                // optional: fix orientation for JPEGs if EXIF data exists
-                if ($type === IMAGETYPE_JPEG && function_exists('exif_read_data')) {
-                    $exif = @exif_read_data($tmpPath);
-                    if (!empty($exif['Orientation'])) {
-                        switch ($exif['Orientation']) {
-                            case 3: $src = imagerotate($src, 180, 0); break;
-                            case 6: $src = imagerotate($src, -90, 0); break;
-                            case 8: $src = imagerotate($src, 90, 0); break;
-                        }
-                        // update width/height after rotation
-                        $width = imagesx($src);
-                        $height = imagesy($src);
-                    }
-                }
-
-                // compute new size preserving aspect ratio with max dimension 1000px
-                $maxDim = 1000;
-                $scale = 1.0;
-                if ($width > $maxDim || $height > $maxDim) {
-                    $scale = $maxDim / max($width, $height);
-                }
-                $newW = max(1, (int) round($width * $scale));
-                $newH = max(1, (int) round($height * $scale));
-
-                $dst = imagecreatetruecolor($newW, $newH);
-                // fill with white to avoid black background for transparent PNG/GIF
-                $white = imagecolorallocate($dst, 255, 255, 255);
-                imagefill($dst, 0, 0, $white);
-
-                imagecopyresampled($dst, $src, 0, 0, 0, 0, $newW, $newH, $width, $height);
-
-                $img_name = "$timestamp.jpg";
-                $target = $images_dir . "/$img_name";
-
-                // We'll attempt to re-encode to JPEG. If the original upload was >1MB, reduce quality until under the threshold.
-                $saved = false;
-                $tmpOut = null;
-                if (function_exists('imagejpeg')) {
-                    // start quality at 85 and decrease until under 1MB or quality floor 50
-                    $quality = 85;
-                    $minQuality = 50;
-                    $maxBytes = 1048576; // 1MB
-                    // Try saving to a temp file first
-                    do {
-                        $tmpOut = tempnam(sys_get_temp_dir(), 'mbimg');
-                        @imagejpeg($dst, $tmpOut, $quality);
-                        clearstatcache(true, $tmpOut);
-                        $outSize = @filesize($tmpOut) ?: PHP_INT_MAX;
-                        if ($outSize <= $maxBytes || $quality <= $minQuality || !$forceCompress) {
-                            // accept this file
-                            $saved = @rename($tmpOut, $target);
-                            if (!$saved) {
-                                // attempt copy
-                                $saved = @copy($tmpOut, $target);
-                                if ($saved) @unlink($tmpOut);
-                            }
-                            break;
-                        }
-                        // lower quality and try again
-                        $quality -= 5;
-                        // cleanup and loop
-                        @unlink($tmpOut);
-                        $tmpOut = null;
-                    } while ($quality >= $minQuality);
-                }
-
-                // cleanup dst/src resources
-                imagedestroy($src);
-                imagedestroy($dst);
-
-                // If re-encoding failed for any reason, fallback to moving original uploaded file
-                if (!$saved) {
-                    if (@move_uploaded_file($tmpPath, $target)) {
-                        $saved = true;
-                    } else {
-                        // last resort: try copy
-                        @copy($tmpPath, $target);
-                        $saved = file_exists($target) && filesize($target) > 0;
-                    }
-                }
-
-                // add image filename as 4th line in post file
-                $content .= "\n[IMAGE:$img_name]";
-            } else {
-                // unsupported image type or failed to load - fallback to moving the file
-                $ext = pathinfo($_FILES["image"]["name"], PATHINFO_EXTENSION);
-                $img_name = "$timestamp." . ($ext ?: 'img');
-                $target = $images_dir . "/$img_name";
-                @move_uploaded_file($tmpPath, $target);
-                $content .= "\n[IMAGE:$img_name]";
-            }
-        } else {
-            // not an image or failed to read - move as-is (best-effort)
-            $ext = pathinfo($_FILES["image"]["name"], PATHINFO_EXTENSION);
-            $img_name = "$timestamp." . ($ext ?: 'img');
-            $target = $images_dir . "/$img_name";
-            @move_uploaded_file($tmpPath, $target);
-            $content .= "\n[IMAGE:$img_name]";
+        $origName = $_FILES["image"]["name"];
+        $ext = strtolower(pathinfo($origName, PATHINFO_EXTENSION));
+        if ($ext === '') $ext = 'img';
+        $img_name = "$timestamp." . $ext;
+        $target = $images_dir . "/$img_name";
+        // move uploaded file; fallback to copy if move fails
+        if (!@move_uploaded_file($tmpPath, $target)) {
+            @copy($tmpPath, $target);
         }
+        $content .= "\n[IMAGE:$img_name]";
     }
 
     file_put_contents($filename, $content);
@@ -259,6 +128,120 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     </form>
 </center>
 </div>
+
+<script>
+// Client-side image resize & compression before upload
+document.addEventListener('DOMContentLoaded', function () {
+    const form = document.querySelector('.contact-form');
+    const fileInput = document.getElementById('image');
+
+    if (!form || !fileInput) return;
+
+    form.addEventListener('submit', function (e) {
+        const file = fileInput.files[0];
+        if (!file) return; // no file, allow normal submit
+
+        // Only process image files
+        if (!file.type.startsWith('image/')) return;
+
+        e.preventDefault();
+
+        const MAX_DIM = 1000; // max px for width or height
+        const MAX_BYTES = 1048576; // 1MB target
+
+        const reader = new FileReader();
+        reader.onload = function (ev) {
+            const img = new Image();
+            img.onload = function () {
+                let {width, height} = img;
+                let scale = 1;
+                if (width > MAX_DIM || height > MAX_DIM) {
+                    scale = MAX_DIM / Math.max(width, height);
+                }
+                const canvas = document.createElement('canvas');
+                canvas.width = Math.max(1, Math.round(width * scale));
+                canvas.height = Math.max(1, Math.round(height * scale));
+                const ctx = canvas.getContext('2d');
+                // fill white to avoid transparent backgrounds turning black in JPEG
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+                // iterative quality reduction
+                let quality = 0.85;
+                const minQuality = 0.5;
+
+                function toBlobPromise(q) {
+                    return new Promise(function (res) {
+                        canvas.toBlob(function (blob) { res(blob); }, 'image/jpeg', q);
+                    });
+                }
+
+                (async function tryCompress() {
+                    let blob = await toBlobPromise(quality);
+                    while (blob && blob.size > MAX_BYTES && quality > minQuality) {
+                        quality = Math.max(minQuality, quality - 0.05);
+                        blob = await toBlobPromise(quality);
+                    }
+
+                    // Build FormData and submit via fetch
+                    const fd = new FormData();
+                    // include all other form fields
+                    for (const el of form.elements) {
+                        if (!el.name) continue;
+                        if (el === fileInput) continue; // we'll append processed blob
+                        if (el.type === 'checkbox' || el.type === 'radio') {
+                            if (!el.checked) continue;
+                        }
+                        if (el.tagName === 'SELECT') {
+                            fd.append(el.name, el.value);
+                        } else if (el.type === 'file') {
+                            // skip
+                        } else {
+                            fd.append(el.name, el.value);
+                        }
+                    }
+
+                    // create filename from original but ensure .jpg
+                    const origName = file.name || 'image';
+                    const base = origName.replace(/\.[^.]+$/, '');
+                    const filename = base + '.jpg';
+                    fd.append('image', blob, filename);
+
+                    try {
+                        const resp = await fetch(window.location.href, {
+                            method: 'POST',
+                            body: fd,
+                            credentials: 'same-origin'
+                        });
+                        // If server redirected, resp.url will be final URL
+                        if (resp.redirected && resp.url) {
+                            window.location.href = resp.url;
+                        } else {
+                            // Fallback: try to read response text for redirect anchor
+                            const text = await resp.text();
+                            const m = text.match(/success.php\?post_url=[^"'<>\s]+/);
+                            if (m) {
+                                window.location.href = m[0];
+                            } else {
+                                // as last resort, reload
+                                window.location.reload();
+                            }
+                        }
+                    } catch (err) {
+                        alert('Upload failed: ' + err.message);
+                    }
+                })();
+            };
+            img.onerror = function () { alert('Failed to load image for processing. Uploading original.'); form.submit(); };
+            img.src = ev.target.result;
+        };
+        reader.onerror = function () { alert('Failed to read file. Uploading original.'); form.submit(); };
+        reader.readAsDataURL(file);
+    });
+});
+</script>
+
 </body>
 </html>
 
