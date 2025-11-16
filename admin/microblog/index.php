@@ -168,7 +168,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $post_link = "https://fridg3.org/microblog/post.php?id=$timestamp";
     $message = "**New microblog post! <@&1408064770891972660>**\nRead here: $post_link";
 
-    if (isset($_FILES['image'])) { var_export($_FILES['image']); exit; } else { echo 'no image in $_FILES'; } 
     $payload = json_encode(["content" => $message]);
     $ch = curl_init($webhook_url);
     curl_setopt($ch, CURLOPT_POST, 1);
