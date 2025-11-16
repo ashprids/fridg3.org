@@ -50,17 +50,31 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             $src = null;
             switch ($type) {
                 case IMAGETYPE_JPEG:
-                    $src = @imagecreatefromjpeg($tmpPath);
+                    if (function_exists('imagecreatefromjpeg')) {
+                        $src = @imagecreatefromjpeg($tmpPath);
+                    } else {
+                        $src = null;
+                    }
                     break;
                 case IMAGETYPE_PNG:
-                    $src = @imagecreatefrompng($tmpPath);
+                    if (function_exists('imagecreatefrompng')) {
+                        $src = @imagecreatefrompng($tmpPath);
+                    } else {
+                        $src = null;
+                    }
                     break;
                 case IMAGETYPE_GIF:
-                    $src = @imagecreatefromgif($tmpPath);
+                    if (function_exists('imagecreatefromgif')) {
+                        $src = @imagecreatefromgif($tmpPath);
+                    } else {
+                        $src = null;
+                    }
                     break;
                 case IMAGETYPE_WEBP:
                     if (function_exists('imagecreatefromwebp')) {
                         $src = @imagecreatefromwebp($tmpPath);
+                    } else {
+                        $src = null;
                     }
                     break;
             }
