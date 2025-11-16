@@ -139,6 +139,37 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
     file_put_contents($filename, $content);
 
+    // ------ Diagnostic logging for image upload issues ------
+    // Write a compact debug entry to admin/upload-debug.log to help diagnose failed uploads
+    try {
+        $logFile = __DIR__ . '/upload-debug.log';
+        $log = [];
+        $log[] = "Time: " . date('c');
+        if (isset($_FILES['image'])) {
+            $log[] = "_FILES image: " . preg_replace('/\s+/', ' ', trim(print_r(array_intersect_key($_FILES['image'], ['name'=>0,'type'=>0,'tmp_name'=>0,'error'=>0,'size'=>0]), true)));
+            $log[] = "tmpPath: " . ($tmpPath ?? '');
+        } else {
+            $log[] = "no image uploaded";
+        }
+        $log[] = "images_dir: " . ($images_dir ?? '');
+        $log[] = "target: " . ($target ?? '');
+        $log[] = "img_name: " . ($img_name ?? '');
+        $log[] = "saved_exists: " . ((isset($target) && file_exists($target)) ? 'yes' : 'no');
+        $log[] = "saved_size: " . ((isset($target) && file_exists($target)) ? filesize($target) : 0);
+        $log[] = "imagejpeg_exists: " . (function_exists('imagejpeg') ? 'yes' : 'no');
+        $log[] = "imagecreatefromjpeg_exists: " . (function_exists('imagecreatefromjpeg') ? 'yes' : 'no');
+        $log[] = "exif_read_data_exists: " . (function_exists('exif_read_data') ? 'yes' : 'no');
+        if (function_exists('posix_geteuid') && function_exists('posix_getegid')) {
+            $log[] = "UID/GID: " . posix_geteuid() . '/' . posix_getegid();
+        } else {
+            $log[] = "UID/GID: n/a";
+        }
+        $entry = implode(" | ", $log) . "\n";
+        @file_put_contents($logFile, $entry, FILE_APPEND | LOCK_EX);
+    } catch (Throwable $e) {
+        // ignore logging errors
+    }
+
     // Load Discord webhook from /admin/webhooks.env
     $env_path = __DIR__ . '/../webhooks.env';
     if (file_exists($env_path)) {
