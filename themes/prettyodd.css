@@ -56,6 +56,10 @@ a:hover{ color: var(--link-hover); }
   box-shadow: 0 0 0 1px rgba(0,0,0,.35);
 }
 
+#avatar {
+  background-image: url('/themes/prettyodd.jpg');
+}
+
 /* headings: neon sweep */
 h1 a{
   background-image: linear-gradient(
