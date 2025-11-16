@@ -36,14 +36,89 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
     // handle image upload
     if (isset($_FILES["image"]) && $_FILES["image"]["error"] === UPLOAD_ERR_OK) {
-        $ext = pathinfo($_FILES["image"]["name"], PATHINFO_EXTENSION);
-        $img_name = "$timestamp.$ext";
-        $target = $images_dir . "/$img_name";
+        $tmpPath = $_FILES["image"]["tmp_name"];
+        // try to read image info
+        $info = @getimagesize($tmpPath);
+        if ($info !== false) {
+            list($width, $height, $type) = $info;
 
-        move_uploaded_file($_FILES["image"]["tmp_name"], $target);
+            // create image resource from uploaded file
+            $src = null;
+            switch ($type) {
+                case IMAGETYPE_JPEG:
+                    $src = @imagecreatefromjpeg($tmpPath);
+                    break;
+                case IMAGETYPE_PNG:
+                    $src = @imagecreatefrompng($tmpPath);
+                    break;
+                case IMAGETYPE_GIF:
+                    $src = @imagecreatefromgif($tmpPath);
+                    break;
+                case IMAGETYPE_WEBP:
+                    if (function_exists('imagecreatefromwebp')) {
+                        $src = @imagecreatefromwebp($tmpPath);
+                    }
+                    break;
+            }
 
-        // add image filename as 4th line in post file
-        $content .= "\n[IMAGE:$img_name]";
+            if ($src !== null) {
+                // optional: fix orientation for JPEGs if EXIF data exists
+                if ($type === IMAGETYPE_JPEG && function_exists('exif_read_data')) {
+                    $exif = @exif_read_data($tmpPath);
+                    if (!empty($exif['Orientation'])) {
+                        switch ($exif['Orientation']) {
+                            case 3: $src = imagerotate($src, 180, 0); break;
+                            case 6: $src = imagerotate($src, -90, 0); break;
+                            case 8: $src = imagerotate($src, 90, 0); break;
+                        }
+                        // update width/height after rotation
+                        $width = imagesx($src);
+                        $height = imagesy($src);
+                    }
+                }
+
+                // compute new size preserving aspect ratio with max dimension 1000px
+                $maxDim = 1000;
+                $scale = 1.0;
+                if ($width > $maxDim || $height > $maxDim) {
+                    $scale = $maxDim / max($width, $height);
+                }
+                $newW = max(1, (int) round($width * $scale));
+                $newH = max(1, (int) round($height * $scale));
+
+                $dst = imagecreatetruecolor($newW, $newH);
+                // fill with white to avoid black background for transparent PNG/GIF
+                $white = imagecolorallocate($dst, 255, 255, 255);
+                imagefill($dst, 0, 0, $white);
+
+                imagecopyresampled($dst, $src, 0, 0, 0, 0, $newW, $newH, $width, $height);
+
+                $img_name = "$timestamp.jpg";
+                $target = $images_dir . "/$img_name";
+                // quality 85 for decent compression
+                @imagejpeg($dst, $target, 85);
+
+                imagedestroy($src);
+                imagedestroy($dst);
+
+                // add image filename as 4th line in post file
+                $content .= "\n[IMAGE:$img_name]";
+            } else {
+                // unsupported image type or failed to load - fallback to moving the file
+                $ext = pathinfo($_FILES["image"]["name"], PATHINFO_EXTENSION);
+                $img_name = "$timestamp." . ($ext ?: 'img');
+                $target = $images_dir . "/$img_name";
+                @move_uploaded_file($tmpPath, $target);
+                $content .= "\n[IMAGE:$img_name]";
+            }
+        } else {
+            // not an image or failed to read - move as-is (best-effort)
+            $ext = pathinfo($_FILES["image"]["name"], PATHINFO_EXTENSION);
+            $img_name = "$timestamp." . ($ext ?: 'img');
+            $target = $images_dir . "/$img_name";
+            @move_uploaded_file($tmpPath, $target);
+            $content .= "\n[IMAGE:$img_name]";
+        }
     }
 
     file_put_contents($filename, $content);
