@@ -1,9 +1,26 @@
 <?php
+
+// get the authenticated username (try common server variables)
+$user = $_SERVER['REMOTE_USER'] ?? $_SERVER['PHP_AUTH_USER'] ?? '';
+
+// Some FastCGI deployments don't populate those; try Authorization header if needed:
+if (!$user && !empty($_SERVER['HTTP_AUTHORIZATION'])) {
+    if (preg_match('/Basic\s+(.*)$/i', $_SERVER['HTTP_AUTHORIZATION'], $m)) {
+        $creds = base64_decode($m[1]);
+        if ($creds !== false) {
+            list($u,) = explode(':', $creds, 2);
+            $user = $u;
+        }
+    }
+}
+// safe display
+$displayUser = htmlspecialchars($user, ENT_QUOTES, 'UTF-8');
+
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $text = trim($_POST["text"]);
     // author name supplied by form (defaults to 'fridge')
     $author = trim($_POST["name"] ?? "");
-    if ($author === "") $author = 'fridge';
+    if ($author === "") $author = $displayUser;
 
     if (!$text) die("empty post?");
 
