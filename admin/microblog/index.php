@@ -33,9 +33,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         $lines = file($env_path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
         foreach ($lines as $line) {
             if (strpos(trim($line), '#') === 0 || trim($line) === '') continue;
-            list($name, $value) = array_map('trim', explode('=', $line, 2));
+            list($envKey, $value) = array_map('trim', explode('=', $line, 2));
             $value = trim($value, '"');
-            putenv("$name=$value");
+            putenv("$envKey=$value");
         }
     }
     $webhook_url = getenv('MICROBLOG_WEBHOOK');
