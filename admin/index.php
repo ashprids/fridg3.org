@@ -40,10 +40,16 @@ $displayUser = htmlspecialchars($user, ENT_QUOTES, 'UTF-8');
     <a href="/music">music</a>
 </center>
 <br>
-<h3>welcome, <?php echo $displayUser; ?>!</h3>
+
+<?php if ($user === 'fridge'): ?>
+<h3>Welcome, Ashton!</h3>
+<?php endif; ?>
+
 <?php if ($user === 'freezer'): ?>
+<h3>Welcome, Yazmin!</h3>
 <h4>love you lots &lt;3</h4>
 <?php endif; ?>
+
 <div id="posts">
     <?php if ($user === 'fridge'): ?>
     <a href="discord/" id="postlink"><div class="post"><br>
