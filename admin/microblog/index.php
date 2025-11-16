@@ -18,7 +18,7 @@ $displayUser = htmlspecialchars($user, ENT_QUOTES, 'UTF-8');
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $text = trim($_POST["text"]);
-    // author name supplied by form (defaults to 'fridge')
+    // author name supplied by form (defaults to authenticated user)
     $author = trim($_POST["name"] ?? "");
     if ($author === "") $author = $displayUser;
 
@@ -67,7 +67,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     }
     $webhook_url = getenv('MICROBLOG_WEBHOOK');
     $post_link = "https://fridg3.org/microblog/post.php?id=$timestamp";
-    $message = "**New microblog post! <@&1408064770891972660>**\nRead here: $post_link";
+    $message = "<@&1408064770891972660>**\n**New microblog post by $author!\n$post_link";
 
     $payload = json_encode(["content" => $message]);
     $ch = curl_init($webhook_url);

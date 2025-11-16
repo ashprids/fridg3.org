@@ -1,4 +1,5 @@
 <?php
+
 $id = basename($_GET['id']);
 $file = __DIR__ . "/posts/$id.txt";
 
@@ -32,7 +33,7 @@ if ($has_image) {
 
 $preview = htmlspecialchars(substr(strip_tags($text), 0, 160)) . (strlen($text) > 160 ? "..." : "");
 $url = "https://fridg3.org/microblog/post.php?id=$id";
-$title = "fridge | microblog post from $date";
+$title = "$user | microblog post from $date";
 ?>
 <!DOCTYPE html>
 <html>
@@ -48,17 +49,23 @@ $title = "fridge | microblog post from $date";
     <meta property="og:title" content="<?php echo $title; ?>">
     <meta property="og:description" content="<?php echo $preview; ?>">
     <meta property="og:url" content="<?php echo $url; ?>">
-    <?php if ($has_image): ?>
-        <meta property="og:image" content="images/<?php echo $has_image; ?>">
-        <meta name="twitter:image" content="images/<?php echo $has_image; ?>">
-    <?php else: ?>
-        <meta property="og:image" content="preview.jpg">
-        <meta name="twitter:image" content="preview.jpg">
-    <?php endif; ?>
+    <?php
+        // Use absolute URLs for social preview images so crawlers (Discord, Twitter)
+        // can fetch them reliably. Prefer microblog images when present, otherwise
+        // fall back to a site preview image.
+        if ($has_image) {
+            $imgAbs = 'https://fridg3.org/microblog/images/' . rawurlencode($has_image);
+        } else {
+            $imgAbs = 'https://fridg3.org/resources/cover.png';
+        }
+    ?>
+    <meta property="og:image" content="<?php echo $imgAbs; ?>">
+    <meta name="twitter:image" content="<?php echo $imgAbs; ?>">
+    <link rel="image_src" href="<?php echo $imgAbs; ?>">
 
 
     <!-- Twitter Card -->
-    <meta name="twitter:card" content="summary">
+    <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="<?php echo $title; ?>">
     <meta name="twitter:description" content="<?php echo $preview; ?>">
     <meta name="twitter:image" content="preview.jpg">
