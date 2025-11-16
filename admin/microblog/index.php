@@ -17,8 +17,7 @@ if (!$user && !empty($_SERVER['HTTP_AUTHORIZATION'])) {
 $displayUser = htmlspecialchars($user, ENT_QUOTES, 'UTF-8');
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
-    try {
-        $text = trim($_POST["text"]);
+    $text = trim($_POST["text"]);
     // author name supplied by form (defaults to 'fridge')
     $author = trim($_POST["name"] ?? "");
     if ($author === "") $author = $displayUser;
@@ -187,16 +186,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             header("Location: success.php?post_url=" . urlencode($post_link) . "&webhook_failed=1");
             exit;
         }
-    } catch (Throwable $e) {
-        // Temporary debugging output - remove when finished
-        http_response_code(500);
-        ini_set('display_errors', '1');
-        ini_set('display_startup_errors', '1');
-        error_reporting(E_ALL);
-        echo '<h2>Server error (debug)</h2>';
-        echo '<pre>' . htmlspecialchars($e->getMessage(), ENT_QUOTES, 'UTF-8') . "\n\n" . htmlspecialchars($e->getTraceAsString(), ENT_QUOTES, 'UTF-8') . '</pre>';
-        exit;
-    }
 }
 ?>
 
