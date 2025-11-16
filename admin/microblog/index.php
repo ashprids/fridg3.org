@@ -31,6 +31,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     if (!is_dir($images_dir)) mkdir($images_dir, 0775, true);
     $posts_dir = realpath($posts_dir);
     $images_dir = realpath($images_dir);
+    // realpath can return false if something went wrong; fall back to expected paths
+    if ($posts_dir === false) $posts_dir = __DIR__ . '/../../microblog/posts';
+    if ($images_dir === false) $images_dir = __DIR__ . '/../../microblog/images';
     $filename = $posts_dir . "/$timestamp.txt";
     $content = $author . "\n" . date("d/m/y H:i") . "\n" . $_POST["text"];
 
@@ -96,10 +99,23 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 $img_name = "$timestamp.jpg";
                 $target = $images_dir . "/$img_name";
                 // quality 85 for decent compression
-                @imagejpeg($dst, $target, 85);
+                $saved = @imagejpeg($dst, $target, 85);
 
                 imagedestroy($src);
                 imagedestroy($dst);
+
+                // verify the saved file exists and is non-empty; if not, attempt fallback
+                if ($saved && file_exists($target) && filesize($target) > 0) {
+                    // good
+                } else {
+                    // fallback: try moving the original uploaded temp file
+                    if (@move_uploaded_file($tmpPath, $target)) {
+                        // moved original file
+                    } else {
+                        // last resort: try copy
+                        @copy($tmpPath, $target);
+                    }
+                }
 
                 // add image filename as 4th line in post file
                 $content .= "\n[IMAGE:$img_name]";
