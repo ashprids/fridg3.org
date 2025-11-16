@@ -1,6 +1,10 @@
 <?php
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $text = trim($_POST["text"]);
+    // author name supplied by form (defaults to 'fridge')
+    $author = trim($_POST["name"] ?? "");
+    if ($author === "") $author = 'fridge';
+
     if (!$text) die("empty post?");
 
     $timestamp = date("Y-m-d_H-i-s");
@@ -11,7 +15,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $posts_dir = realpath($posts_dir);
     $images_dir = realpath($images_dir);
     $filename = $posts_dir . "/$timestamp.txt";
-    $content = "fridge\n" . date("d/m/y H:i") . "\n" . $_POST["text"];
+    $content = $author . "\n" . date("d/m/y H:i") . "\n" . $_POST["text"];
 
     // handle image upload
     if (isset($_FILES["image"]) && $_FILES["image"]["error"] === UPLOAD_ERR_OK) {
@@ -89,6 +93,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 <br>
 <center>
     <form method="post" enctype="multipart/form-data" class="contact-form">
+        <label for="name">Name</label>
+        <input type="text" id="name" name="name" value="fridge"><br><br>
         <label for="text">Post contents</label>
         <textarea id="text" name="text" rows="5" placeholder="Full HTML syntax is supported" required></textarea>
         
