@@ -111,7 +111,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 <center>
     <form method="post" enctype="multipart/form-data" class="contact-form">
         <label for="name">Name</label>
-        <input type="text" id="name" name="name" value="fridge"><br><br>
+        <input type="text" id="name" name="name" value="<?php echo $displayUser; ?>"><br><br>
         <label for="text">Post contents</label>
         <textarea id="text" name="text" rows="5" placeholder="Full HTML syntax is supported" required></textarea>
         
