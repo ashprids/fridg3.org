@@ -1,130 +1,122 @@
-/* === Fever (Soft Edition) ===
-   mellowed variant of the Panic! theme for comfy readability
-*/
-
-:root {
-  --fever-bg:       #2b161a;   /* deep muted burgundy */
-  --fever-surface:  #3b1e23;   /* panels/cards */
-  --fever-surface2: #49262b;   /* lighter elevation */
-  --fever-hover:    #552c31;   /* subtle hover highlight */
-
-  --fever-gold:     #d9b970;   /* antique gold accent */
-  --fever-cream:    #efe9d2;   /* off-white text */
-  --fever-muted:    #c8bba4;   /* secondary text */
-
-  --fever-emerald:  #3ab47b;   /* hint of green for pop */
-  --fever-lip:      #d05b63;   /* muted red accent */
-
-  --bg-page:        var(--fever-bg);
-  --bg-container:   var(--fever-surface);
-  --bg-elev:        var(--fever-surface2);
-  --bg-hover:       var(--fever-hover);
-  --fg:             var(--fever-cream);
-  --fg-weak:        #e4d9c2;
-  --fg-muted:       var(--fever-muted);
-  --link:           var(--fever-gold);
-  --link-hover:     var(--fever-lip);
-  --link-visited:   var(--fever-emerald);
-}
-
-/* background */
+/* 1) Base – deep maroon wall */
 body {
-  background: radial-gradient(
-      1200px 800px at 30% -10%,
-      #3a1d22 0%,
-      var(--fever-bg) 70%
-    )
-    fixed;
-  color: var(--fg);
-}
-
-/* text selection */
-::selection { background: var(--fever-gold); color: #2b1a10; }
-
-/* containers */
-.container {
-  background: var(--bg-container);
-  border: 1px solid rgba(217,185,112,.3);
-  border-radius: 10px;
-  box-shadow: 0 0 12px rgba(0,0,0,.4);
+  background-color: #3b1418; /* dark wine red */
+  color: #f6e7d3;           /* warm parchment */
 }
 
 #avatar {
   background-image: url('/themes/discopanic.jpg');
 }
 
-/* headings */
-h1 a {
-  background-image: linear-gradient(
-    90deg,
-    var(--fever-gold),
-    var(--fever-lip),
-    var(--fever-emerald)
-  );
-}
-h2,h3,h4 {
-  color: var(--fg-weak);
-  border-bottom: 1px solid rgba(217,185,112,.25);
-  padding-bottom: .25rem;
+/* theme switcher button */
+#change-theme {
+  color: #f6e7d3;
 }
 
-/* links */
-a { color: var(--link); text-decoration-color: rgba(217,185,112,.4); }
-a:hover { color: var(--link-hover); text-decoration-color: currentColor; }
-a:visited { color: var(--link-visited); }
+/* 4) Container – slightly lighter, like the table/wall */
+.container {
+  background-color: #4a1c21; /* muted red-brown */
+  color: #f6e7d3;
+}
 
-/* posts */
+/* 7) RSS badge – gold text treatment */
+.rss {
+  background-color: #f4d27a; /* album-title gold */
+  color: #3b1418;            /* dark text on gold */
+}
+.rss:hover {
+  background-color: #f8e8b0; /* lighter gold on hover */
+}
+
+/* 8) Post cards – table/woody tones */
 .post {
-  background: var(--bg-elev);
-  border: 1px solid rgba(217,185,112,.25);
-  box-shadow: 0 0 8px rgba(0,0,0,.3);
+  background-color: #572128; /* rich maroon */
+  color: #f6e7d3;
 }
 .post:hover {
-  background: color-mix(in oklch, var(--fever-hover) 20%, var(--bg-elev));
+  background-color: #6a2931; /* a bit brighter, like spotlighted */
 }
-#date { color: var(--fg-muted); }
 
-/* code blocks */
+/* per-post date – muted, like old print */
+#date {
+  color: #d3b59a;
+}
+
+/* 9) Code blocks – dark with gold glow */
 code {
-  background: #231315;
-  color: var(--fever-emerald);
-  border: 1px solid rgba(217,185,112,.25);
-  border-radius: 5px;
+  background-color: #2d1013;
+  color: #f4d27a;
 }
-pre code { display:block; padding:.75rem 1rem; overflow:auto; }
 
-/* forms + buttons */
+/* 11) Avatar image border – frame vibe */
+#avatar {
+  border: 3px solid #f4d27a; /* gold frame */
+}
+
+/* 12) Tabs – upholstered booth energy */
+.tab {
+  background-color: #4a1c21;
+  border-bottom: 2px solid #2a0c0f;
+}
+.tab button {
+  color: #f6e7d3;
+}
+.tab button:hover {
+  background-color: #5b232a;
+}
+.tab button.active {
+  background-color: #6a2931;
+  color: #fff8ec;
+}
+.tabcontent {
+  color: #f6e7d3;
+  background-color: #4f1e24;
+}
+
+/* 13) Grid gallery – same wall, gold highlight on hover */
+.grid-container {
+  background-color: #4f1e24;
+}
+.grid-item img {
+  outline: 0 solid #f4d27a;
+}
+.grid-item img:hover {
+  outline: 4px solid #f4d27a;
+}
+.grid-item p {
+  color: #f6e7d3;
+}
+#subp {
+  color: #d3b59a;
+}
+
+/* 14) Audio player – chandelier shimmer */
+.audio-player button {
+  color: #f6e7d3;
+}
+.audio-player input[type="range"] {
+  background: #6a2931;
+}
+.audio-player input[type="range"]::-webkit-slider-thumb {
+  background: #f4d27a;
+}
+.audio-player span {
+  color: #f6e7d3;
+}
+
+/* 16) Contact form – dark lounge with gold trim */
+.contact-form {
+  color: #f6e7d3;
+}
 .contact-form input,
 .contact-form textarea {
-  background: #30191d;
-  border: 1px solid rgba(217,185,112,.3);
-  color: var(--fg);
-}
-.contact-form button {
-  background: var(--fever-gold);
-  color: #2b1a10;
-  border: none;
-  border-radius: 6px;
-}
-.contact-form button:hover {
-  background: var(--fever-emerald);
-  color: #0e1210;
+  background-color: #4a1c21;
+  color: #f6e7d3;
+  border: 2px solid #f4d27a;
 }
 
-/* tabs, gallery, microblog, audio player */
-.tab,
-.grid-container,
-.microblog-post,
-.audio-player {
-  background: var(--bg-elev);
-  border: 1px solid rgba(217,185,112,.3);
+/* 18) Microblog post – same as main cards */
+.microblog-post {
+  background-color: #572128;
+  color: #f6e7d3;
 }
-.tab button:hover,
-.audio-player button:hover {
-  color: var(--fever-gold);
-}
-.grid-item img:hover { outline: 2px solid var(--fever-gold); }
-
-/* misc accents */
-.confetti,
-#fridge-ascii-fireworks { color: var(--fever-gold); }
