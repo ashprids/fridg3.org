@@ -40,6 +40,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     // handle image upload
     if (isset($_FILES["image"]) && $_FILES["image"]["error"] === UPLOAD_ERR_OK) {
         $tmpPath = $_FILES["image"]["tmp_name"];
+        $uploadSize = (int) ($_FILES["image"]["size"] ?? 0);
+        // if file is larger than 1MB, force compression/re-encoding even if dimensions are small
+        $forceCompress = ($uploadSize > 1048576);
         // try to read image info
         $info = @getimagesize($tmpPath);
         if ($info !== false) {
@@ -112,22 +115,51 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
                 $img_name = "$timestamp.jpg";
                 $target = $images_dir . "/$img_name";
-                // quality 85 for decent compression
-                $saved = @imagejpeg($dst, $target, 85);
 
+                // We'll attempt to re-encode to JPEG. If the original upload was >1MB, reduce quality until under the threshold.
+                $saved = false;
+                $tmpOut = null;
+                if (function_exists('imagejpeg')) {
+                    // start quality at 85 and decrease until under 1MB or quality floor 50
+                    $quality = 85;
+                    $minQuality = 50;
+                    $maxBytes = 1048576; // 1MB
+                    // Try saving to a temp file first
+                    do {
+                        $tmpOut = tempnam(sys_get_temp_dir(), 'mbimg');
+                        @imagejpeg($dst, $tmpOut, $quality);
+                        clearstatcache(true, $tmpOut);
+                        $outSize = @filesize($tmpOut) ?: PHP_INT_MAX;
+                        if ($outSize <= $maxBytes || $quality <= $minQuality || !$forceCompress) {
+                            // accept this file
+                            $saved = @rename($tmpOut, $target);
+                            if (!$saved) {
+                                // attempt copy
+                                $saved = @copy($tmpOut, $target);
+                                if ($saved) @unlink($tmpOut);
+                            }
+                            break;
+                        }
+                        // lower quality and try again
+                        $quality -= 5;
+                        // cleanup and loop
+                        @unlink($tmpOut);
+                        $tmpOut = null;
+                    } while ($quality >= $minQuality);
+                }
+
+                // cleanup dst/src resources
                 imagedestroy($src);
                 imagedestroy($dst);
 
-                // verify the saved file exists and is non-empty; if not, attempt fallback
-                if ($saved && file_exists($target) && filesize($target) > 0) {
-                    // good
-                } else {
-                    // fallback: try moving the original uploaded temp file
+                // If re-encoding failed for any reason, fallback to moving original uploaded file
+                if (!$saved) {
                     if (@move_uploaded_file($tmpPath, $target)) {
-                        // moved original file
+                        $saved = true;
                     } else {
                         // last resort: try copy
                         @copy($tmpPath, $target);
+                        $saved = file_exists($target) && filesize($target) > 0;
                     }
                 }
 
