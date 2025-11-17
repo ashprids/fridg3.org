@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" type="text/css" href="/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="icon" type="image/x-icon" href="/resources/favicon.png"> 
+    <title>[18] Looking into site traffic (and next steps)</title>
+    <meta name="description" content="fridg3.org has seen quite a lot of site traffic over the past few months. Where is it coming from, and what are the next steps?">
+</head>
+
+<body>
+<div class="container">
+<script src="/theme.js"></script>
+<button id="change-theme"><i class="fa-solid fa-palette"></i></button>
+    <center>
+    <h1><a href="/">fridge</a></h1>
+    <a href="/microblog">[micro]</a><a href="/blog">blog</a>
+    <a href="/about">about</a>
+    <a href="/contact">contact</a>
+    <a href="/projects">projects</a>
+    <a href="/music">music</a>
+</center>
+<br><br>
+<h3>Looking into site traffic (and next steps)</h3>
+<h4>18 | 17th Nov 2025</h4>
+Hello once again all, and welcome to another blog post. Yeesh, that introduction sounds like a YouTube let's play lol. If you feel like you're
+missing out on my updates, please feel free to check out the microblog at <a href="/microblog">fridg3.org/microblog</a> where I and my girlfriend "freezer" post small updates more frequently!
+<br><br>
+So, site traffic. I haven't looked at fridg3.org's metrics since June, when I happened across them while configuring my DNS settings. Today, I had the idea of taking 
+a glance when I was talking to someone about my website and they asked how many people are visiting the site. Turns out, my metrics have 
+increased quite a bit since then! So let's have a look at them, and see where the traffic is coming from.
+<br><br>
+<h3>Overview</h3>
+<h4>A general jist of what's been happening</h4>
+<img src="1.png">
+<br>
+As you can see from the graph above (which has been provided by Cloudflare), we see 3.41k unique visitors over the past month, with an average of 100 unique visitors every day. That's quite a lot more than I thought!
+<br><br>
+When it comes to where this traffic is coming from, we see these locations:
+<br><br>
+<img src="2.png">
+<br>
+I'll be fully honest (and you're allowed to call me stupid for this) but I didn't even know
+Moldova was a country. Looking at the rest of the list, it's quite interesting to see a lot of traffic coming from the US, Japan, and various other 
+countries that aren't the UK (where I'm from). 
+<br><br>
+So with that context, here's my main suspicion as to where this traffic is coming from.
+<br><br>
+<h3>People, or robots?</h3>
+<h4>What's REALLY going on?</h4>
+As much as I wish for it to be true, I highly doubt that 3.41k unique people are visiting my site every month. Given the niche nature of my content, and the fact that I don't really promote my site anywhere, I 
+have good reason to suspect that a large portion of this traffic is in fact bots, or automated scripts visiting my site for various reasons.
+<br><br>
+<a href="https://www.imperva.com/resources/resource-library/reports/2024-bad-bot-report/" target="_blank">According to Imperva</a>, bots make up over half of all internet traffic nowadays. That means that statistically speaking, it's very likely that a large portion of my site's traffic is in fact bots, and not real humans. 
+After all, Cloudflare does specify that these statistics include bots as well as humans, so from these graphs alone it's impossible to tell how many real people are visiting my site.
+<br><br>
+If we have a further look into Cloudflare's security tools, we can see that it has logged quite a lot of users that have been "challenged" with a CAPTCHA or blocked entirely. Here's a look at just a few in the past 24 hours:
+<br><br>
+<img src="3.png">
+<br>
+As you can see from the far-right column, all of these requests are either from Amazon's AWS servers, from "AS" servers (which are owned by OVHCloud), or sometimes Facebook doing whatever it's doing. These servers are a tell-tale sign of bots, as real humans don't usually visit websites from cloud hosting providers.
+<br><br>
+And on top of that, the vast majority of these servers are using IPs that come from the USA, which would account for the high amount of traffic from there.
+<br><br>
+<h3>Party's over, folks</h3>
+<h4>It was all just a good dream.</h4>
+So there you have it. While it's nice to think that thousands of people are visiting my site every month, the reality is that a large portion of this traffic is most likely bots. And it seems that's just the way the internet is now!
+<br><br>
+That being said, I'm still very grateful for the real humans that do visit my site, and I hope to continue providing content that you all enjoy. If you have any suggestions for future blog posts or projects, please feel free to reach out to me via the contact page!
+<br><br>
+But I don't consider myself a quitter (as long as quitting isn't a valid option), so I want to look into better ways of measuring site traffic, to try and weed out those fake visitors.
+<br><br>
+<h3>Next Steps</h3>
+<h4>What I'm going to do about it</h4>
+So, my next steps are as follows:
+<br><br>
+<ol>
+<li>Implement a Cloudflare rule that'll challenge the vast majority of bots, or refuse them access to the website</li>
+<li>Configuring nginx (what the website runs on) to separate bot and human traffic, based on what's used to visit the site</li>
+<li>Block known AI scrapers and non-search engine bots from accessing the site</li>
+</ol>
+And I have an idea for the real humans visiting my website, so in this deep and unending void of bot activity, they can make themselves heard. Maybe a guestbook or chat system? Stay tuned for that, it'll be a neat feature for the homepage!
+<br><br>
+Thanks for reading, and sorry for the disappointment if you were hoping for a big spike in human visitors. Maybe when I pay someone a handsome amount, or do a music collab with someone famous. Until next time!
+</div>
+</body>
+</html>
