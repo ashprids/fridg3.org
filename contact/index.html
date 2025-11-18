@@ -25,13 +25,19 @@
 <h3>Send an email!</h3>
 <br>
 <center>
-    <form class="contact-form" action="https://formsubmit.co/me@fridg3.org" method="POST" />
+    <form class="contact-form" action="https://formsubmit.co/me@fridg3.org" method="POST">
+        <input type="hidden" name="_subject" value="from /contact/">
+        <input type="hidden" name="_captcha" value="false">
+        <input type="hidden" name="_next" value="https://fridg3.org/contact/thanks.html">
+        <input type="hidden" name="_template" value="table">
 
         <label for="name">Your Name</label>
         <input type="text" id="name" name="name" required>
 
         <label for="email">Your Email Address</label>
         <input type="email" id="email" name="email" required>
+
+        <input type="text" name="_honey" style="display:none">
 
         <label for="message">Message</label>
         <textarea id="message" name="message" rows="5" required></textarea>
@@ -70,13 +76,12 @@
             }
             // incorrect — prevent submit and redirect
             e.preventDefault();
-            window.location.href = '/failed.html';
+            window.location.href = '/contact/failed.html';
             });
         })();
         </script>
 
         <button type="submit">Send</button>
-
     </form>
 </center>
 <br>
