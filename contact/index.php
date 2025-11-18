@@ -2,8 +2,8 @@
 // contact/index.php
 
 // optional: show errors while debugging (turn this off in production)
-// ini_set('display_errors', 1);
-// error_reporting(E_ALL);
+ini_set('display_errors', 1);
+error_reporting(E_ALL);
 
 $turnstileError = '';
 $formError      = '';
