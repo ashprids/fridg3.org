@@ -25,8 +25,56 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (empty($turnstileToken)) {
         $turnstileError = 'turnstile verification failed. please try again.';
     } else {
-        // your secret key (set via env var ideally)
-        $turnstileSecret = getenv('TURNSTILE_SECRET') ?: 'YOUR_TURNSTILE_SECRET_HERE';
+        // your secret key (prefer environment variable, otherwise try .env file)
+        // helper: load simple .env file if present (search up folders)
+        function load_dotenv_file($path) {
+            $out = [];
+            if (!is_readable($path)) return $out;
+            $lines = file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+            foreach ($lines as $line) {
+                $line = trim($line);
+                if ($line === '' || $line[0] === '#') continue;
+                if (strpos($line, '=') === false) continue;
+                list($k, $v) = explode('=', $line, 2);
+                $k = trim($k);
+                $v = trim($v);
+                if ($v === '') { $out[$k] = ''; continue; }
+                // remove surrounding quotes
+                if ((($v[0] === '"') && (substr($v, -1) === '"')) || (($v[0] === "'") && (substr($v, -1) === "'"))) {
+                    $v = substr($v, 1, -1);
+                }
+                $out[$k] = $v;
+            }
+            return $out;
+        }
+
+        // search for .env in current and parent directories (up to 3 levels)
+        $envFromFile = [];
+        $searchDirs = [__DIR__, dirname(__DIR__), dirname(dirname(__DIR__))];
+        foreach ($searchDirs as $d) {
+            $p = $d . DIRECTORY_SEPARATOR . '.env';
+            if (is_readable($p)) {
+                $envFromFile = array_merge($envFromFile, load_dotenv_file($p));
+                break;
+            }
+        }
+
+        $turnstileSecret = getenv('TURNSTILE_SECRET');
+        if ($turnstileSecret === false || $turnstileSecret === null || $turnstileSecret === '') {
+            $turnstileSecret = $envFromFile['TURNSTILE_SECRET'] ?? 'YOUR_TURNSTILE_SECRET_HERE';
+        }
+
+        // allow a bypass for local testing (set TURNSTILE_BYPASS=1 in env or .env)
+        $bypass = getenv('TURNSTILE_BYPASS');
+        if ($bypass === false || $bypass === null || $bypass === '') {
+            $bypass = $envFromFile['TURNSTILE_BYPASS'] ?? null;
+        }
+        if ($bypass && (string)$bypass === '1') {
+            // treat as successful for local/dev testing
+            $data = ['success' => true, 'challenge_ts' => date('c'), 'hostname' => $_SERVER['HTTP_HOST'] ?? ''];
+        } else {
+            $data = null;
+        }
 
         // optional: real user ip
         $remoteIp = $_SERVER['REMOTE_ADDR'] ?? null;
@@ -46,16 +94,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $response = curl_exec($ch);
 
-        if ($response === false) {
-            error_log('turnstile curl error: ' . curl_error($ch));
-            $turnstileError = 'turnstile verification error. please try again later.';
-        } else {
-            $data = json_decode($response, true);
-            if (empty($data['success'])) {
-                if (!empty($data['error-codes'])) {
-                    error_log('turnstile failed: ' . implode(', ', $data['error-codes']));
+        if ($data === null) {
+            if ($response === false) {
+                error_log('turnstile curl error: ' . curl_error($ch));
+                $turnstileError = 'turnstile verification error. please try again later.';
+            } else {
+                $data = json_decode($response, true);
+                // log full response for debugging (server error log only)
+                error_log('turnstile response: ' . substr($response, 0, 1000));
+                if (empty($data['success'])) {
+                    if (!empty($data['error-codes'])) {
+                        error_log('turnstile failed: ' . implode(', ', $data['error-codes']));
+                    }
+                    // if secret looks like placeholder, provide clearer guidance
+                    if ($turnstileSecret === 'YOUR_TURNSTILE_SECRET_HERE' || $turnstileSecret === '') {
+                        $turnstileError = 'turnstile not configured on the server (TURNSTILE_SECRET missing)';
+                    } else {
+                        $turnstileError = 'turnstile verification failed. please try again.';
+                    }
                 }
-                $turnstileError = 'turnstile verification failed. please try again.';
             }
         }
 
