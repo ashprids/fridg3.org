@@ -30,7 +30,7 @@ sudo chmod -R 755 /var/www/fridg3.org/microblog/images
 ## Media (images, music, videos)
 Any media to be added to the website should be moved directly onto the webserver itself, and not pushed to this repository. This rule is in place to ensure that the repository aligns with GitHub's file size restrictions, and for confidentiality should any content have a later planned release date.
 
-Any content within the /resources/ directory is not affected by this rule (with the exception of the homepage's cover image).
+Any content within the /resources/ directory is not affected by this rule.
 
 ## Ignoring files
 ### .gitignore
