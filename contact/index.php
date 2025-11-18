@@ -139,13 +139,129 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $headers = 'From: fridg3.org <no-reply@fridg3.org>' . "\r\n"
                      . 'Reply-To: ' . $email . "\r\n";
 
-            // send email
-            if (@mail($to, $subject, $body, $headers)) {
-                // bounce to thanks page like before
-                header('Location: /contact/thanks.html');
-                exit;
+            // Prefer SMTP send when configured (read from environment or .env)
+            // helper: load .env if present (search up folders)
+            $envFromFile2 = [];
+            $searchDirs2 = [__DIR__, dirname(__DIR__), dirname(dirname(__DIR__))];
+            foreach ($searchDirs2 as $d) {
+                $p = $d . DIRECTORY_SEPARATOR . '.env';
+                if (is_readable($p)) { $envFromFile2 = array_merge($envFromFile2, load_dotenv_file($p)); break; }
+            }
+
+            $smtpHost = getenv('SMTP_HOST') ?: ($envFromFile2['SMTP_HOST'] ?? '');
+
+            // minimal SMTP sender using sockets, supports ssl and starttls with AUTH LOGIN
+            function smtp_get_resp($sock) {
+                $data = '';
+                while ($line = fgets($sock, 515)) {
+                    $data .= $line;
+                    // lines that start with 3-digit + space end the response
+                    if (isset($line[3]) && $line[3] === ' ') break;
+                }
+                return $data;
+            }
+
+            function smtp_cmd($sock, $cmd) {
+                fwrite($sock, $cmd . "\r\n");
+            }
+
+            function send_via_smtp($host, $port, $user, $pass, $secure, $from, $to, $subject, $body, $replyTo = null) {
+                $timeout = 10;
+                $transport = strtolower(trim((string)$secure));
+                $remote = ($transport === 'ssl') ? "ssl://{$host}:{$port}" : "{$host}:{$port}";
+
+                $errno = 0; $errstr = '';
+                $sock = stream_socket_client($remote, $errno, $errstr, $timeout, STREAM_CLIENT_CONNECT);
+                if (!$sock) return "connect_failed: {$errstr} ({$errno})";
+                stream_set_timeout($sock, $timeout);
+
+                $greet = smtp_get_resp($sock);
+                if (strpos($greet, '220') !== 0) { fclose($sock); return "greet_failed: {$greet}"; }
+
+                $domain = $_SERVER['SERVER_NAME'] ?? 'localhost';
+                smtp_cmd($sock, "EHLO {$domain}");
+                $ehlo = smtp_get_resp($sock);
+
+                // if not already using SSL and server supports STARTTLS and we requested tls, upgrade
+                if ($transport !== 'ssl' && stripos($ehlo, 'STARTTLS') !== false && $transport === 'tls') {
+                    smtp_cmd($sock, 'STARTTLS');
+                    $res = smtp_get_resp($sock);
+                    if (strpos($res, '220') !== 0) { fclose($sock); return "starttls_failed: {$res}"; }
+                    // enable crypto (TLS)
+                    if (!stream_socket_enable_crypto($sock, true, STREAM_CRYPTO_METHOD_TLS_CLIENT)) { fclose($sock); return 'enable_crypto_failed'; }
+                    // re-ehlo
+                    smtp_cmd($sock, "EHLO {$domain}");
+                    $ehlo = smtp_get_resp($sock);
+                }
+
+                // authenticate if credentials provided
+                if ($user !== '') {
+                    smtp_cmd($sock, 'AUTH LOGIN');
+                    $res = smtp_get_resp($sock);
+                    if (strpos($res, '334') !== 0) { fclose($sock); return "auth_start_failed: {$res}"; }
+                    smtp_cmd($sock, base64_encode($user));
+                    $res = smtp_get_resp($sock);
+                    smtp_cmd($sock, base64_encode($pass));
+                    $res = smtp_get_resp($sock);
+                    if (strpos($res, '235') !== 0) { fclose($sock); return "auth_failed: {$res}"; }
+                }
+
+                smtp_cmd($sock, "MAIL FROM:<{$from}>");
+                $res = smtp_get_resp($sock);
+                if (strpos($res, '250') !== 0) { fclose($sock); return "mailfrom_failed: {$res}"; }
+
+                smtp_cmd($sock, "RCPT TO:<{$to}>");
+                $res = smtp_get_resp($sock);
+                if (!(strpos($res, '250') === 0 || strpos($res, '251') === 0)) { fclose($sock); return "rcptto_failed: {$res}"; }
+
+                smtp_cmd($sock, 'DATA');
+                $res = smtp_get_resp($sock);
+                if (strpos($res, '354') !== 0) { fclose($sock); return "data_start_failed: {$res}"; }
+
+                $headers = "From: {$from}\r\n";
+                if (!empty($replyTo)) $headers .= "Reply-To: {$replyTo}\r\n";
+                $headers .= "Subject: {$subject}\r\n";
+                $headers .= "MIME-Version: 1.0\r\n";
+                $headers .= "Content-Type: text/plain; charset=UTF-8\r\n";
+                $msg = $headers . "\r\n" . $body;
+
+                // dot-stuffing: make sure any line starting with '.' is prefixed with an extra '.'
+                $msg = preg_replace('/(^|\r\n)\./', '\\1..', $msg);
+
+                // ensure end marker
+                $msg .= "\r\n.\r\n";
+                fwrite($sock, $msg);
+                $res = smtp_get_resp($sock);
+                if (strpos($res, '250') !== 0) { fclose($sock); return "data_send_failed: {$res}"; }
+
+                smtp_cmd($sock, 'QUIT');
+                fclose($sock);
+                return true;
+            }
+
+            if (!empty($smtpHost)) {
+                $smtpPort = getenv('SMTP_PORT') ?: ($envFromFile2['SMTP_PORT'] ?? '587');
+                $smtpUser = getenv('SMTP_USER') ?: ($envFromFile2['SMTP_USER'] ?? '');
+                $smtpPass = getenv('SMTP_PASS') ?: ($envFromFile2['SMTP_PASS'] ?? '');
+                $smtpSecure = getenv('SMTP_SECURE') ?: ($envFromFile2['SMTP_SECURE'] ?? 'tls');
+                $smtpFrom = getenv('SMTP_FROM') ?: ($envFromFile2['SMTP_FROM'] ?? 'no-reply@fridg3.org');
+
+                $ok = send_via_smtp($smtpHost, (int)$smtpPort, $smtpUser, $smtpPass, $smtpSecure, $smtpFrom, $to, $subject, $body, $email);
+                if ($ok === true) {
+                    header('Location: /contact/thanks.html');
+                    exit;
+                } else {
+                    error_log('SMTP send failed: ' . (is_string($ok) ? $ok : 'unknown'));
+                    $formError = 'there was an error sending your message. please try again later.';
+                }
             } else {
-                $formError = 'there was an error sending your message. please try again later.';
+                // fallback to mail()
+                if (@mail($to, $subject, $body, $headers)) {
+                    header('Location: /contact/thanks.html');
+                    exit;
+                } else {
+                    $formError = 'there was an error sending your message. please try again later.';
+                }
             }
         }
     }
@@ -181,11 +297,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <br>
 <center>
     <?php if (!empty($turnstileError) || !empty($formError)): ?>
-        <p style="color: #ff5555; margin-bottom: 1rem;">
+        <h4 style="color: #b14a4a;">
             <?php
                 echo htmlspecialchars($turnstileError ?: $formError, ENT_QUOTES, 'UTF-8');
             ?>
-        </p>
+        </h4>
     <?php endif; ?>
 
     <form action="/contact/index.php" method="POST" class="contact-form">
