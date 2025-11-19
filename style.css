@@ -180,7 +180,50 @@ code { font-family: "MonospaceFont"; border-radius: 3px; background-color: #1111
 #avatar { width: 300px; height: 300px; border: 3px solid #515151; background-image: url('/resources/cover.png'); background-size: cover; background-position: center; background-repeat: no-repeat; pointer-events: none; -webkit-user-drag: none; user-select: none; transition: color 0.35s; }
 
 /* ==========================================================================
-  12) Tabs
+  12) Guestbook
+  ========================================================================= */
+
+.guestbook { position: relative; width: 300px; height: 300px; border: 2px solid #515151; transition: color 0.35s; display: flex; flex-direction: column; overflow: hidden; box-sizing: border-box; }
+.guestbook-messages { display: flex; flex-direction: column-reverse; width: 100%; overflow-y: auto; background-color: #101010; color: #cfcfcf; padding: 6px; box-sizing: border-box; font-size: 12px; text-align: left; flex: 1 1 auto; min-height: 0; }
+.guestbook-message { margin-bottom: 3px; font-family: "MainRegular", monospace;}
+.guestbook-controls { display: flex; border-top: 2px solid #515151; box-sizing: border-box; background-color: #181818; }
+
+/* Scrollbar */
+.guestbook-messages { scrollbar-width: thin; scrollbar-color: #5c5c5c #101010; }
+.guestbook-messages::-webkit-scrollbar { width: 4px; height: 4px; }
+.guestbook-messages::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0); border-radius: 4px; }
+.guestbook-messages::-webkit-scrollbar-thumb { background: #5c5c5c; border-radius: 4px; }
+.guestbook-messages::-webkit-scrollbar-thumb:hover { background: #303030; }
+.guestbook-messages::-webkit-scrollbar-corner { background: transparent; }
+
+.start-message { color: #4e4e4e; text-align: center; padding-bottom: 24px;}
+.system-message { font-family: "MainItalic", monospace; color: #4e4e4e; }
+#guestbook-type { flex: 1; border: none; padding: 4px; font-family: "MainRegular", monospace; font-size: 12px; background-color: inherit; color: inherit; }
+#guestbook-type:focus { outline: none; }
+#guestbook-send { border: none; background-color: #5580ab; color: #ffffff; padding: 1px 6px; font-family: "MainBold", monospace; cursor: pointer; transition: background-color 0.35s; }
+.guestbook-controls { position: relative; }
+#guestbook-help { position: absolute; top: 6px; right: 6px; z-index: 10; cursor: pointer; border: none; background-color: transparent; color: #cfcfcf80; font-size: 14px; transition: color 0.35s; text-align: center; text-decoration: none; }
+#gb-time { color: #797878; }
+
+.gb-admin-name { color: #a8a8a8; animation: gb-admin 1.6s infinite;}
+.gb-name-1 { color: #ab5555; }
+.gb-name-2 { color: #ab7c55; }
+.gb-name-3 { color: #abaa55; }
+.gb-name-4 { color: #63ab55; }
+.gb-name-5 { color: #55aba7; }
+.gb-name-6 { color: #5570ab; }
+.gb-name-7 { color: #7655ab; }
+.gb-name-8 { color: #ab5598; }
+
+/* action (/me) messages */
+.guestbook-me { font-style: italic; color: #d0d0d0; }
+
+#subtext { font-size: small; color: #565656; margin-top: 4px; }
+
+@keyframes gb-admin{0%{text-shadow:0.4389924193300864px 0 1px rgba(0,30,255,0.5),-0.4389924193300864px 0 1px rgba(255,0,80,0.3),0 0 3px;}5%{text-shadow:2.7928974010788217px 0 1px rgba(0,30,255,0.5),-2.7928974010788217px 0 1px rgba(255,0,80,0.3),0 0 3px;}10%{text-shadow:0.02956275843481219px 0 1px rgba(0,30,255,0.5),-0.02956275843481219px 0 1px rgba(255,0,80,0.3),0 0 3px;}15%{text-shadow:0.40218538552878136px 0 1px rgba(0,30,255,0.5),-0.40218538552878136px 0 1px rgba(255,0,80,0.3),0 0 3px;}20%{text-shadow:3.4794037899852017px 0 1px rgba(0,30,255,0.5),-3.4794037899852017px 0 1px rgba(255,0,80,0.3),0 0 3px;}25%{text-shadow:1.6125630401149584px 0 1px rgba(0,30,255,0.5),-1.6125630401149584px 0 1px rgba(255,0,80,0.3),0 0 3px;}30%{text-shadow:0.7015590085143956px 0 1px rgba(0,30,255,0.5),-0.7015590085143956px 0 1px rgba(255,0,80,0.3),0 0 3px;}35%{text-shadow:3.896914047650351px 0 1px rgba(0,30,255,0.5),-3.896914047650351px 0 1px rgba(255,0,80,0.3),0 0 3px;}40%{text-shadow:3.870905614848819px 0 1px rgba(0,30,255,0.5),-3.870905614848819px 0 1px rgba(255,0,80,0.3),0 0 3px;}45%{text-shadow:2.231056963361899px 0 1px rgba(0,30,255,0.5),-2.231056963361899px 0 1px rgba(255,0,80,0.3),0 0 3px;}50%{text-shadow:0.08084290417898504px 0 1px rgba(0,30,255,0.5),-0.08084290417898504px 0 1px rgba(255,0,80,0.3),0 0 3px;}55%{text-shadow:2.3758461067427543px 0 1px rgba(0,30,255,0.5),-2.3758461067427543px 0 1px rgba(255,0,80,0.3),0 0 3px;}60%{text-shadow:2.202193051050636px 0 1px rgba(0,30,255,0.5),-2.202193051050636px 0 1px rgba(255,0,80,0.3),0 0 3px;}65%{text-shadow:2.8638780614874975px 0 1px rgba(0,30,255,0.5),-2.8638780614874975px 0 1px rgba(255,0,80,0.3),0 0 3px;}70%{text-shadow:0.48874025155497314px 0 1px rgba(0,30,255,0.5),-0.48874025155497314px 0 1px rgba(255,0,80,0.3),0 0 3px;}75%{text-shadow:1.8948491305757957px 0 1px rgba(0,30,255,0.5),-1.8948491305757957px 0 1px rgba(255,0,80,0.3),0 0 3px;}80%{text-shadow:0.0833037308038857px 0 1px rgba(0,30,255,0.5),-0.0833037308038857px 0 1px rgba(255,0,80,0.3),0 0 3px;}85%{text-shadow:0.09769827255241735px 0 1px rgba(0,30,255,0.5),-0.09769827255241735px 0 1px rgba(255,0,80,0.3),0 0 3px;}90%{text-shadow:3.443339761481782px 0 1px rgba(0,30,255,0.5),-3.443339761481782px 0 1px rgba(255,0,80,0.3),0 0 3px;}95%{text-shadow:2.1841838852799786px 0 1px rgba(0,30,255,0.5),-2.1841838852799786px 0 1px rgba(255,0,80,0.3),0 0 3px;}100%{text-shadow:2.6208764473832513px 0 1px rgba(0,30,255,0.5),-2.6208764473832513px 0 1px rgba(255,0,80,0.3),0 0 3px;}}@keyframes flicker{0%{opacity:0.27861;}5%{opacity:0.34769;}10%{opacity:0.23604;}15%{opacity:0.90626;}20%{opacity:0.18128;}25%{opacity:0.83891;}30%{opacity:0.65583;}35%{opacity:0.67807;}40%{opacity:0.26559;}45%{opacity:0.84693;}50%{opacity:0.96019;}55%{opacity:0.08594;}60%{opacity:0.20313;}65%{opacity:0.71988;}70%{opacity:0.53455;}75%{opacity:0.37288;}80%{opacity:0.71428;}85%{opacity:0.70419;}90%{opacity:0.7003;}95%{opacity:0.36108;}100%{opacity:0.24387;}}
+
+/* ==========================================================================
+  13) Tabs
   ========================================================================= */
 
 .tab { display: flex; justify-content: center; overflow: hidden; background-color: #101010; border-bottom: 2px solid #5a5a5a; border-top-left-radius: 5px; border-top-right-radius: 5px; font-family: "MainRegular", monospace; }
@@ -190,7 +233,7 @@ code { font-family: "MonospaceFont"; border-radius: 3px; background-color: #1111
 .tabcontent { display: none; padding: 6px 12px; border-top: none; color: #c2c2c2; background-color: #131313; border-bottom-left-radius: 5px; border-bottom-right-radius: 5px; transition: background-color 0.35s ease; }
 
 /* ==========================================================================
-  13) Grid gallery
+  14) Grid gallery
   ========================================================================= */
 
 .grid-container { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; padding: 20px; background-color: #131313; border-radius: 0; transition: background-color 0.35s ease; }
@@ -201,7 +244,7 @@ code { font-family: "MonospaceFont"; border-radius: 3px; background-color: #1111
 #subp { font-size: x-small; color: #565656; margin: 0; }
 
 /* ==========================================================================
-  14) Audio player
+  15) Audio player
   ========================================================================= */
 
 .audio-player { display: flex; align-items: center; gap: 10px; margin: 20px auto 0; width: 300px; font-size: small; }
@@ -212,7 +255,7 @@ code { font-family: "MonospaceFont"; border-radius: 3px; background-color: #1111
 .audio-player span { font-size: small; }
 
 /* ==========================================================================
-  15) Icon row + labels
+  16) Icon row + labels
   ========================================================================= */
 
 #iconlist { display: flex; justify-content: center; gap: 10px; margin-top: 20px; }
@@ -220,7 +263,7 @@ code { font-family: "MonospaceFont"; border-radius: 3px; background-color: #1111
 #downloadtext, #songname { display: flex; font-size: small; align-items: center; justify-content: center; }
 
 /* ==========================================================================
-  16) Contact form
+  17) Contact form
   ========================================================================= */
 
 .contact-form {
@@ -278,13 +321,13 @@ code { font-family: "MonospaceFont"; border-radius: 3px; background-color: #1111
 
 
 /* ==========================================================================
-  17) Confetti (falling glyphs effect)
+  18) Confetti (falling glyphs effect)
   ========================================================================= */
 
 .confetti { position: fixed; top: 0; font-size: 8px; color: rgb(231, 231, 231); user-select: none; pointer-events: none; animation-name: fall; animation-timing-function: linear; animation-duration: 5s; animation-iteration-count: 1; }
 
 /* ==========================================================================
-  18) Microblog post card + pagination
+  19) Microblog post card + pagination
   ========================================================================= */
 
 .microblog-post { background-color: #262626; color: #ddd; padding: 12px; margin-bottom: 12px; }
@@ -292,7 +335,7 @@ code { font-family: "MonospaceFont"; border-radius: 3px; background-color: #1111
 .pagination { display: flex; justify-content: center; margin-top: 20px; }
 
 /* ==========================================================================
-  19) Keyframes
+  20) Keyframes
   ========================================================================= */
 
 @keyframes fall { from { transform: translateY(0) rotate(0deg); } to { transform: translateY(100vh) rotate(360deg); } }
