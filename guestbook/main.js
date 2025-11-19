@@ -283,9 +283,14 @@ function formatMessageHTML(m) {
     const raw = m.message || '';
     const msgEsc = escapeHtml(raw);
     const idx = (m && m.color) ? (parseInt(m.color, 10) || getColorForName(m.name || 'anon')) : getColorForName(m.name || 'anon');
-    if (typeof raw === 'string' && raw.match(/^\/me\s+/i)) {
-        const rest = escapeHtml(raw.replace(/^\/me\s+/i, ''));
-        return `<div class="guestbook-message guestbook-me"><span id="gb-time">${time}</span> &nbsp;* ${name} ${rest}</div>\n`;
+        // Action messages: either server may have normalized them to include
+        // an `is_action` flag (message without the leading '/me '), or legacy
+        // clients may still send raw '/me ' text. Handle both:
+        if ((m && m.is_action) || (typeof raw === 'string' && raw.match(/^\/me\s+/i))) {
+            const rest = (m && m.is_action) ? escapeHtml(raw) : escapeHtml(raw.replace(/^\/me\s+/i, ''));
+            // Action messages intentionally omit the timestamp and render as
+            // a plain action line: "* username does something"
+            return `<div class="guestbook-message guestbook-me">* ${name} ${rest}</div>\n`;
     }
     return `<div class="guestbook-message"> <span id="gb-time">${time}</span> <span class="gb-name gb-name-${idx}">${name}</span> &gt; ${msgEsc}</div>\n`;
 }
@@ -309,17 +314,25 @@ function renderMessages(messages) {
 
     // helper to format a single message as HTML (handles /me actions)
     function formatMessageHTML(m) {
-        const time = '[' + new Date(m.time).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'}) + ']';
         const name = escapeHtml(m.name || 'anon');
         const raw = m.message || '';
         const msgEsc = escapeHtml(raw);
         const idx = (m && m.color) ? (parseInt(m.color, 10) || getColorForName(m.name || 'anon')) : getColorForName(m.name || 'anon');
-        // Action messages: when message starts with '/me ' (case-insensitive)
-        if (typeof raw === 'string' && raw.match(/^\/me\s+/i)) {
-            const rest = escapeHtml(raw.replace(/^\/me\s+/i, ''));
-            return `<div class="guestbook-message guestbook-me"><span id="gb-time">${time}</span> &nbsp;* ${name} ${rest}</div>\n`;
+        // Action messages: either server provided an is_action flag (message
+        // already stored without the leading '/me '), or the message contains
+        // a legacy '/me ' prefix. In either case omit the timestamp.
+        if ((m && m.is_action) || (typeof raw === 'string' && raw.match(/^\/me\s+/i))) {
+            const rest = (m && m.is_action) ? escapeHtml(raw) : escapeHtml(raw.replace(/^\/me\s+/i, ''));
+            return `<div class="guestbook-message guestbook-me">* ${name} ${rest}</div>\n`;
         }
-        return `<div class="guestbook-message"> <span id="gb-time">${time}</span> <span class="gb-name gb-name-${idx}">${name}</span> &gt; ${msgEsc}</div>\n`;
+        // Non-action messages: render a time only when it's a valid timestamp
+        let time = '';
+        if (m && typeof m.time !== 'undefined') {
+            const d = new Date(m.time);
+            if (!isNaN(d.getTime())) time = '[' + d.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'}) + ']';
+        }
+        const timeHtml = time ? `<span id="gb-time">${time}</span> ` : '';
+        return `<div class="guestbook-message"> ${timeHtml}<span class="gb-name gb-name-${idx}">${name}</span> &gt; ${msgEsc}</div>\n`;
     }
 
     let html = system + '\n';
@@ -365,7 +378,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!myName) {
             const desired = text;
             // basic sanity
-            if (desired.length < 1 || desired.length > 15) { alert('Username must be 1-15 characters'); input.value = ''; return; }
+            if (desired.length < 3 || desired.length > 15) { displaySystemMessage('Username must be 3-15 characters'); input.value = ''; return; }
             // request server to reserve the name for 30 days
             fetch('/guestbook/api.php', { cache: 'no-store', credentials: 'include',
                 method: 'POST',
@@ -380,14 +393,14 @@ document.addEventListener('DOMContentLoaded', function() {
                         _gb_system_original_inner = '<div class="system-message"><span id="guestbook-current-name"></span></div>';
                     } catch (e) {}
                     // make success message persist so the user notices the reservation
-                    displaySystemMessage('Username "' + (data.name||desired) + '" reserved until ' + new Date((data.expires||0)*1000).toLocaleString(), 0);
+                    displaySystemMessage('You have reserved the username "' + (data.name||desired) + '" until ' + new Date((data.expires||0)*1000).toLocaleString(), 0);
                     // now ready to post messages
                     input.placeholder = 'Type a message...';
                 } else if (data && data.error === 'name_taken') {
                     // make "taken" error persistent so the user can act on it
                     displaySystemMessage('That username is already reserved until ' + (data.expires ? new Date(data.expires*1000).toLocaleString() : 'later'), 0 );
                 } else {
-                    displaySystemMessage('Failed to reserve username');
+                    displaySystemMessage('Failed to reserve username. Does it contain inappropriate language?');
                 }
             }).catch(err => {
                 console.warn('set_name failed', err);
@@ -419,7 +432,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     body: JSON.stringify({ action: 'set_color', name: myName, color: arg || n })
                 }).then(r => r.json()).then(resp => {
                     if (resp && resp.ok) {
-                        alert('Global color set to ' + n + ' (server)');
+                        displaySystemMessage('Your chat color has been set.');
                     } else {
                         console.warn('Failed to set global color', resp);
                         alert('Local color set, but failed to set global color');
@@ -428,10 +441,61 @@ document.addEventListener('DOMContentLoaded', function() {
                     console.warn('Failed to set global color', err);
                     alert('Local color set, but failed to set global color');
                 });
-            } else {
-                alert('Usage: /color <name> (red, orange, yellow, green, teal, blue, purple, pink) or /color N (1-8)');
-            }
+            } 
             input.value = '';
+            return;
+        }
+
+        // handle /unreserve: clear our username reservation so the user must pick a new one
+        if (text.toLowerCase().trim() === '/unreserve') {
+            const myName = getGuestbookName();
+            if (!myName) { displaySystemMessage('You have no username reserved', 3000); input.value = ''; return; }
+            fetch('/guestbook/api.php', { cache: 'no-store', credentials: 'include',
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'unreserve' })
+            }).then(r => r.json()).then(resp => {
+                if (resp && resp.ok) {
+                    displaySystemMessage('Your username reservation has been cleared. Choose a new username.', 5000);
+                    setGuestbookName('');
+                    input.placeholder = 'Type a username to reserve for 30 days';
+                } else if (resp && resp.error === 'no_reservation') {
+                    displaySystemMessage('You have no active reservation to clear', 3000);
+                } else {
+                    displaySystemMessage('Failed to clear reservation', 3000);
+                }
+            }).catch(err => {
+                console.warn('unreserve failed', err);
+                displaySystemMessage('Failed to clear reservation (network error)', 3000);
+            }).finally(() => { input.value = ''; });
+            return;
+        }
+
+        // handle /report <user> <reason>
+        if (text.toLowerCase().startsWith('/report')) {
+            const parts = text.split(/\s+/);
+            if (parts.length < 3) { displaySystemMessage('Usage: /report <username> <reason>'); input.value = ''; return; }
+            const target = parts[1];
+            const idx = text.indexOf(target);
+            const reason = text.substring(idx + target.length).trim();
+            if (!reason) { displaySystemMessage('Please provide a reason for the report'); input.value = ''; return; }
+            if (reason.length > 1000) { alert('Reason must be 1000 characters or less'); input.value = ''; return; }
+            const myName = getGuestbookName();
+            if (!myName) { displaySystemMessage('You must reserve a username before filing reports', 4000); input.value = ''; return; }
+            if (myName.toLowerCase() === target.toLowerCase()) { displaySystemMessage('You cannot report yourself', 4000); input.value = ''; return; }
+            // send report
+            fetch('/guestbook/api.php', { cache: 'no-store', credentials: 'include', method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'report', target: target, reason: reason }) })
+            .then(r => r.json()).then(resp => {
+                if (resp && resp.ok) {
+                    displaySystemMessage('Report submitted - thank you', 5000);
+                } else if (resp && resp.error) {
+                    displaySystemMessage('Failed to submit report: ' + resp.error, 5000);
+                } else {
+                    displaySystemMessage('Failed to submit report', 5000);
+                }
+            }).catch(err => {
+                console.warn('report failed', err);
+                displaySystemMessage('Failed to submit report (network error)', 5000);
+            }).finally(() => { input.value = ''; });
             return;
         }
 
@@ -446,7 +510,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
     // enforce message length on client-side as well
-    if (text.length > 100) { alert('Message must be 100 characters or less'); input.value = ''; btn.disabled = false; return; }
+    if (text.length > 100) { displaySystemMessage('Message must be 100 characters or less'); input.value = ''; btn.disabled = false; return; }
     const postBody = { name: getGuestbookName(), message: text };
         doPost(postBody).then(data => {
                 if (data.ok && data.message) {
@@ -525,7 +589,12 @@ document.addEventListener('DOMContentLoaded', function() {
                         input.placeholder = 'Type a username to reserve for 30 days';
                     });
                 } else {
-                    alert('Failed to post: ' + (data.error || 'unknown'));
+                    if (data.error === 'message_forbidden') {
+                        displaySystemMessage('Your message contains inappropriate language.', 0);
+                    }
+                    else {
+                    displaySystemMessage('Failed to post: ' + (data.error || 'unknown'));
+                    }
                 }
             }
         }).catch(err => {

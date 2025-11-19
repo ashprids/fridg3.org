@@ -9,6 +9,7 @@
 *.osk
 *.zip
 *.env
+*.json
 
 ## -- Specific directories -- ##
 !/resources/**/*

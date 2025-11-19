@@ -48,6 +48,11 @@ if ($method === 'GET') {
             $col = find_color_for_iphash($colors, $m['ip_hash']);
             if ($col !== '') $m['color'] = $col;
         }
+        // If the message was stored as an action, omit the timestamp in the
+        // API response so clients that rely on server-rendering won't show it.
+        if (!empty($m['is_action'])) {
+            if (isset($m['time'])) unset($m['time']);
+        }
     }
     unset($m);
     // report whether the caller already has a reserved name (so the client
@@ -189,6 +194,104 @@ if ($method === 'POST') {
         }
 
         echo json_encode(['ok' => true, 'name' => $newName, 'expires' => $expires], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    // quick action: unreserve (clear caller's reservation)
+    if (!empty($input['action']) && $input['action'] === 'unreserve') {
+        $ip = $_SERVER['REMOTE_ADDR'] ?? '';
+        $token = $_COOKIE['gb_token'] ?? '';
+        $map = read_name_reservations();
+        $foundKey = null;
+        // Prefer token-based lookup
+        if ($token) {
+            foreach ($map as $k => $v) {
+                if (!is_array($v)) continue;
+                if (isset($v['token']) && $v['token'] === $token) { $foundKey = $k; break; }
+            }
+        }
+        // Fallback to IP match
+        if ($foundKey === null && $ip !== '') {
+            foreach ($map as $k => $v) {
+                if (!is_array($v)) continue;
+                if (isset($v['ip_hash']) && ip_matches($v['ip_hash'], $ip)) { $foundKey = $k; break; }
+            }
+        }
+        if ($foundKey === null) {
+            http_response_code(400);
+            echo json_encode(['ok' => false, 'error' => 'no_reservation']);
+            exit;
+        }
+        unset($map[$foundKey]);
+        if (!write_name_reservations($map)) {
+            http_response_code(500);
+            echo json_encode(['ok' => false, 'error' => 'write_failed']);
+            exit;
+        }
+        // clear token cookie if present
+        if ($token) {
+            if (PHP_VERSION_ID >= 70300) {
+                setcookie('gb_token', '', ['expires' => time() - 3600, 'path' => '/', 'httponly' => true, 'samesite' => 'Lax']);
+            } else {
+                setcookie('gb_token', '', time() - 3600, '/', '', 0, true);
+            }
+        }
+        echo json_encode(['ok' => true], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    // quick action: report (submit a user report)
+    if (!empty($input['action']) && $input['action'] === 'report') {
+        $ip = $_SERVER['REMOTE_ADDR'] ?? '';
+        $token = $_COOKIE['gb_token'] ?? '';
+        // reporter must have a reserved name (token preferred, then IP)
+        $reporter = '';
+        if ($token) $reporter = get_reserved_name_for_token($token);
+        if ($reporter === '' && $ip !== '') $reporter = get_reserved_name_for_ip($ip);
+        if ($reporter === '') {
+            http_response_code(403);
+            echo json_encode(['ok' => false, 'error' => 'not_reserved', 'message' => 'You must reserve a username before filing reports']);
+            exit;
+        }
+
+        $target = trim($input['target'] ?? '');
+        $reason = trim($input['reason'] ?? '');
+        if ($target === '' || $reason === '') {
+            http_response_code(400);
+            echo json_encode(['ok' => false, 'error' => 'invalid_request']);
+            exit;
+        }
+
+        // basic sanitization and length limits
+        $target = strip_tags($target);
+        if (mb_strlen($target) > 64) $target = mb_substr($target, 0, 64);
+        $reason = strip_tags($reason);
+        $reason = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F]/u', '', $reason);
+        if (mb_strlen($reason) > 1000) $reason = mb_substr($reason, 0, 1000);
+
+        // optional: prevent reporting oneself
+        if (mb_strtolower($target) === mb_strtolower($reporter)) {
+            http_response_code(400);
+            echo json_encode(['ok' => false, 'error' => 'cannot_report_self']);
+            exit;
+        }
+
+        $entry = [
+            'id' => (int) round(microtime(true) * 1000),
+            'time' => gmdate('c'),
+            'reporter' => $reporter,
+            'reported' => $target,
+            'reason' => $reason,
+            'ip_hash' => $ip ? (string)$ip : '',
+        ];
+
+        if (!append_report($entry)) {
+            http_response_code(500);
+            echo json_encode(['ok' => false, 'error' => 'write_failed']);
+            exit;
+        }
+
+        echo json_encode(['ok' => true], JSON_UNESCAPED_UNICODE);
         exit;
     }
 

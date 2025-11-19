@@ -15,6 +15,7 @@
 - *.osk
 - *.zip
 - *.env
+- *.json
 
 ## -- Specific directories to exclude --
 - /microblog/posts/**
