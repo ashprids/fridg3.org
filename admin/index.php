@@ -63,6 +63,12 @@ $displayUser = htmlspecialchars($user, ENT_QUOTES, 'UTF-8');
         <center><p>Create a microblog post and automatically publish it to fridg3.org/microblog.</p></center>
     <br></div></a>
     <?php endif; ?>
+    <?php if ($user === 'freezer' or $user === 'fridge'): ?>
+    <a href="guestbook/" id="postlink"><div class="post"><br>
+        <h3>Guestbook Admin</h3>
+        <center><p>Manage guestbook entries and usernames, and post with an admin flare in fridg3.org/guestbook.</p></center>
+    <br></div></a>
+    <?php endif; ?>
     <?php if ($user === 'fridge'): ?>
     <a href="microblog-index/" id="postlink"><div class="post"><br>
         <h3>Clear /microblog/ search index</h3>

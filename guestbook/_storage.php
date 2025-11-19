@@ -8,7 +8,8 @@ $messagesFile = $dataDir . '/guestbook.json';
 $colorsFile = $dataDir . '/colors.json';
 $nameReservationsFile = $dataDir . '/name_reservations.json';
 $badwordsFile = $dataDir . '/badwords.txt';
-$reportsFile = '/admin/guestbook/reports/reports.json';
+$reportsFile = $dataDir . '/reports.json';
+$bansFile = $dataDir . '/bans.json';
 
 // Helper: check whether a stored ip value matches the current ip. Stored
 // values may be raw IPs (new format) or legacy SHA1 hashes of the IP. We
@@ -90,13 +91,17 @@ function append_report($entry) {
     return file_exists($reportsFile);
 }
 
-function add_message($name, $message, $ip = null) {
+function add_message($name, $message, $ip = null, $opts = null) {
     global $messagesFile;
     $name = trim(mb_substr($name ?? 'anon', 0, 15));
     $message = trim(mb_substr($message ?? '', 0, 100));
     // detect action (/me) messages: if message starts with '/me ' (case-insensitive)
     $is_action = false;
-    if (is_string($message) && preg_match('/^\/me\s+/iu', $message)) {
+    $is_announce = false;
+    if (is_array($opts) && !empty($opts['announce'])) {
+        $is_announce = true;
+    }
+    if (!$is_announce && is_string($message) && preg_match('/^\/me\s+/iu', $message)) {
         $is_action = true;
         // strip the leading '/me ' so stored message contains only the action text
         $message = preg_replace('/^\/me\s+/iu', '', $message);
@@ -107,9 +112,13 @@ function add_message($name, $message, $ip = null) {
         'name' => $name,
         'message' => $message,
         'is_action' => $is_action,
-        // store raw IP going forward (field kept named ip_hash for legacy
-        // compatibility with existing files)
-        'ip_hash' => $ip ? (string)$ip : '',
+        'is_announce' => $is_announce,
+    'is_cmd' => (is_array($opts) && !empty($opts['cmd'])) ? true : false,
+    // mark admin-submitted posts when requested by caller
+    'admin_post' => (is_array($opts) && !empty($opts['admin'])) ? true : false,
+    // store raw IP going forward (field kept named ip_hash for legacy
+    // compatibility with existing files)
+    'ip_hash' => $ip ? (string)$ip : '',
     ];
 
     $dir = dirname($messagesFile);
@@ -246,6 +255,91 @@ function read_badwords() {
     flock($fp, LOCK_UN);
     fclose($fp);
     return $out;
+}
+
+function read_bans() {
+    global $bansFile;
+    if (!file_exists($bansFile)) return [];
+    $fp = @fopen($bansFile, 'r');
+    if (!$fp) return [];
+    flock($fp, LOCK_SH);
+    $contents = stream_get_contents($fp);
+    flock($fp, LOCK_UN);
+    fclose($fp);
+    $arr = json_decode($contents, true);
+    if (!is_array($arr)) return [];
+    return $arr;
+}
+
+function write_bans($arr) {
+    global $bansFile;
+    $dir = dirname($bansFile);
+    if (!is_dir($dir)) { if (!@mkdir($dir, 0755, true)) return false; }
+    $tmpFile = tempnam($dir, 'gbban');
+    if ($tmpFile === false) return false;
+    $w = @file_put_contents($tmpFile, json_encode($arr, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+    if ($w === false) { @unlink($tmpFile); return false; }
+    $renamed = @rename($tmpFile, $bansFile);
+    if (!$renamed) {
+        $copied = @copy($tmpFile, $bansFile);
+        if ($copied) @unlink($tmpFile);
+    }
+    return file_exists($bansFile);
+}
+
+/**
+ * Add a ban entry consisting of name and ip. Returns true on success.
+ * Entry shape: ['id'=>ms, 'time'=>ISO8601, 'name'=>string, 'ip'=>string]
+ */
+function add_ban($name, $ip) {
+    global $bansFile;
+    $name = trim((string)$name);
+    $ip = trim((string)$ip);
+    $entry = ['id' => (int) round(microtime(true) * 1000), 'time' => gmdate('c'), 'name' => $name, 'ip' => $ip];
+    $arr = [];
+    if (file_exists($bansFile)) {
+        $fp = @fopen($bansFile, 'c+');
+        if ($fp) {
+            if (flock($fp, LOCK_EX)) {
+                rewind($fp);
+                $contents = stream_get_contents($fp);
+                $tmp = json_decode($contents, true);
+                if (is_array($tmp)) $arr = $tmp;
+            }
+            if (isset($fp) && is_resource($fp)) { fflush($fp); flock($fp, LOCK_UN); fclose($fp); }
+        }
+    }
+    array_unshift($arr, $entry);
+    if (count($arr) > 2000) $arr = array_slice($arr, 0, 2000);
+    $tmpFile = tempnam(dirname($bansFile), 'gbban');
+    if ($tmpFile === false) return false;
+    $written = @file_put_contents($tmpFile, json_encode($arr, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+    if ($written === false) { @unlink($tmpFile); return false; }
+    $renamed = @rename($tmpFile, $bansFile);
+    if (!$renamed) {
+        $copied = @copy($tmpFile, $bansFile);
+        if ($copied) @unlink($tmpFile);
+    }
+    return file_exists($bansFile);
+}
+
+/**
+ * Check whether given name or ip is present in the bans list.
+ * Returns true if a matching ban entry exists.
+ */
+function is_banned_by_name_or_ip($name, $ip) {
+    $name = is_string($name) ? trim(mb_strtolower($name)) : '';
+    $ip = is_string($ip) ? trim($ip) : '';
+    $bans = read_bans();
+    if (!is_array($bans) || !count($bans)) return false;
+    foreach ($bans as $b) {
+        if (!is_array($b)) continue;
+        // check name match (case-insensitive)
+        if ($name !== '' && isset($b['name']) && mb_strtolower((string)$b['name']) === $name) return true;
+        // check ip match using ip_matches for legacy compatibility
+        if ($ip !== '' && isset($b['ip']) && ip_matches((string)$b['ip'], $ip)) return true;
+    }
+    return false;
 }
 
 /**

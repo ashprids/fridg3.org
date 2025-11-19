@@ -36,9 +36,36 @@ function map_color_name_to_index($val) {
     return $names[$m] ?? 0;
 }
 
+// Get the client's IP address, honoring X-Forwarded-For when present.
+function get_client_ip() {
+    // If behind a proxy, X-Forwarded-For may contain a comma-separated list
+    if (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
+        $parts = explode(',', $_SERVER['HTTP_X_FORWARDED_FOR']);
+        if (count($parts)) return trim($parts[0]);
+    }
+    if (!empty($_SERVER['HTTP_CLIENT_IP'])) return $_SERVER['HTTP_CLIENT_IP'];
+    return $_SERVER['REMOTE_ADDR'] ?? '';
+}
+
 if ($method === 'GET') {
     $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 100;
     if ($limit <= 0 || $limit > 1000) $limit = 100;
+    $ip = get_client_ip();
+    $reserved = '';
+    $token = $_COOKIE['gb_token'] ?? '';
+    if ($token) {
+        $reserved = get_reserved_name_for_token($token);
+    }
+    if ($reserved === '' && $ip !== '') {
+        $reserved = get_reserved_name_for_ip($ip);
+    }
+    // If caller is banned by name or IP, return a banned response
+    if (is_banned_by_name_or_ip($reserved, $ip)) {
+        http_response_code(403);
+        echo json_encode(['ok' => false, 'banned' => true, 'message' => "You've been banned from using the guestbook. Contact me@fridg3.org if you believe this was in error."], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
     $messages = read_messages($limit);
     // attach color per-message based on IP-hash mapping
     $colors = read_colors();
@@ -57,16 +84,7 @@ if ($method === 'GET') {
     unset($m);
     // report whether the caller already has a reserved name (so the client
     // does not need to persist the name locally)
-    $ip = $_SERVER['REMOTE_ADDR'] ?? '';
-    $reserved = '';
-    // Prefer token-based reservation lookup if client sent a gb_token cookie
-    $token = $_COOKIE['gb_token'] ?? '';
-    if ($token) {
-        $reserved = get_reserved_name_for_token($token);
-    }
-    if ($reserved === '' && $ip !== '') {
-        $reserved = get_reserved_name_for_ip($ip);
-    }
+    $out = ['ok' => true, 'messages' => $messages, 'reserved_name' => $reserved];
 
     $out = ['ok' => true, 'messages' => $messages, 'reserved_name' => $reserved];
     if (!empty($_GET['include_colors'])) {
@@ -79,7 +97,7 @@ if ($method === 'GET') {
 
 if ($method === 'POST') {
     // get client IP
-    $ip = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+    $ip = get_client_ip() ?: 'unknown';
     // token from cookie (if present)
     $token = $_COOKIE['gb_token'] ?? '';
 
@@ -108,7 +126,7 @@ if ($method === 'POST') {
             echo json_encode(['ok' => false, 'error' => 'invalid_color']);
             exit;
         }
-        $ip = $_SERVER['REMOTE_ADDR'] ?? '';
+    $ip = get_client_ip();
         if ($ip === '') {
             http_response_code(400);
             echo json_encode(['ok' => false, 'error' => 'no_ip']);
@@ -138,7 +156,7 @@ if ($method === 'POST') {
             echo json_encode(['ok' => false, 'error' => 'name_forbidden']);
             exit;
         }
-        $ip = $_SERVER['REMOTE_ADDR'] ?? '';
+    $ip = get_client_ip();
         if ($ip === '') {
             http_response_code(400);
             echo json_encode(['ok' => false, 'error' => 'no_ip']);
@@ -149,6 +167,13 @@ if ($method === 'POST') {
         // basic sanitization
         $newName = strip_tags($newName);
         $newName = preg_replace('/[\x00-\x1F\x7F]/u', '', $newName);
+        // enforce allowed characters: letters and numbers only, allow a single underscore
+        // pattern: one or more alnum, optionally a single underscore followed by one or more alnum
+        if (!preg_match('/^[A-Za-z0-9]+(?:_[A-Za-z0-9]+)?$/u', $newName)) {
+            http_response_code(400);
+            echo json_encode(['ok' => false, 'error' => 'invalid_name_chars']);
+            exit;
+        }
     if (mb_strlen($newName) > 15) $newName = mb_substr($newName, 0, 15);
 
         $key = mb_strtolower($newName);
@@ -176,7 +201,14 @@ if ($method === 'POST') {
             $newToken = bin2hex(uniqid('', true));
         }
 
-        $expires = set_name_reservation($newName, $ip, 30, $newToken);
+            // If the requested name or caller IP is banned, refuse the reservation.
+            if (is_banned_by_name_or_ip($newName, $ip)) {
+                http_response_code(403);
+                echo json_encode(['ok' => false, 'banned' => true, 'message' => "You've been banned from using the guestbook. Contact me@fridg3.org if you believe this was in error."], JSON_UNESCAPED_UNICODE);
+                exit;
+            }
+
+            $expires = set_name_reservation($newName, $ip, 30, $newToken);
         if (!$expires) {
             http_response_code(500);
             echo json_encode(['ok' => false, 'error' => 'reserve_failed']);
@@ -199,7 +231,7 @@ if ($method === 'POST') {
 
     // quick action: unreserve (clear caller's reservation)
     if (!empty($input['action']) && $input['action'] === 'unreserve') {
-        $ip = $_SERVER['REMOTE_ADDR'] ?? '';
+    $ip = get_client_ip();
         $token = $_COOKIE['gb_token'] ?? '';
         $map = read_name_reservations();
         $foundKey = null;
@@ -242,7 +274,7 @@ if ($method === 'POST') {
 
     // quick action: report (submit a user report)
     if (!empty($input['action']) && $input['action'] === 'report') {
-        $ip = $_SERVER['REMOTE_ADDR'] ?? '';
+    $ip = get_client_ip();
         $token = $_COOKIE['gb_token'] ?? '';
         // reporter must have a reserved name (token preferred, then IP)
         $reporter = '';
@@ -273,6 +305,15 @@ if ($method === 'POST') {
         if (mb_strtolower($target) === mb_strtolower($reporter)) {
             http_response_code(400);
             echo json_encode(['ok' => false, 'error' => 'cannot_report_self']);
+            exit;
+        }
+
+        // Only allow reporting usernames that are currently reserved
+        $reservations = read_name_reservations();
+        $tkey = mb_strtolower((string)$target);
+        if (!isset($reservations[$tkey])) {
+            http_response_code(400);
+            echo json_encode(['ok' => false, 'error' => 'target_not_reserved', 'message' => 'The reported username is not reserved']);
             exit;
         }
 
@@ -343,7 +384,24 @@ if ($method === 'POST') {
         exit;
     }
 
-    $entry = add_message($name, $message, $ip);
+    // ban check: ensure neither the name nor the caller IP is banned
+    if (is_banned_by_name_or_ip($name, $ip)) {
+        http_response_code(403);
+        echo json_encode(['ok' => false, 'banned' => true, 'message' => "You've been banned from using the guestbook. Contact me@fridg3.org if you believe this was in error."], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    $opts = [];
+    if (!empty($input['announce'])) $opts['announce'] = true;
+    if (!empty($input['cmd'])) $opts['cmd'] = true;
+    // If the request originated from the admin guestbook UI, mark the post
+    // so clients can render it specially. We use the Referer header here
+    // (best-effort) because there is no separate admin auth in this repo.
+    $ref = $_SERVER['HTTP_REFERER'] ?? '';
+    if (is_string($ref) && strpos($ref, '/admin/guestbook') !== false) {
+        $opts['admin'] = true;
+    }
+    $entry = add_message($name, $message, $ip, $opts);
     if (!$entry) {
         http_response_code(500);
         echo json_encode(['ok' => false, 'error' => 'write_failed']);

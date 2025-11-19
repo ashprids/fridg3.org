@@ -3,6 +3,8 @@
 + /resources/**/**
 + /themes/**
 + /themes/**/**
++ /guestbook/alert.mp3
++ /guestbook/preview.png
 
 ## -- Universal excludes --
 - *.png

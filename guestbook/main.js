@@ -1,3 +1,6 @@
+// Warning -- this code sucks but it works so who cares ;)
+// #FuckJavascript
+
 // Guestbook client: fetch and post messages to /guestbook/api.php
 let _gb_last_id = 0;
 let _gb_polling = false;
@@ -7,6 +10,8 @@ let _gb_last_event_ts = 0;
 let _gb_system_restore_timer = null;
 let _gb_system_original_inner = null;
 let _gb_bc = null;
+// when true the current client has been banned and UI should be disabled
+let _gb_banned = false;
 // reserved name (kept in-memory only; do not persist in localStorage)
 let _gb_reserved_name = '';
 // grace period timestamp (ms) to avoid race where immediate poll clears a
@@ -38,6 +43,22 @@ if (typeof window.BroadcastChannel === 'function') {
     } catch (err) {
         _gb_bc = null;
     }
+}
+
+// audio alert for new messages (lazy-initialized)
+let _gb_alert_audio = null;
+function _gb_play_alert() {
+    try {
+        if (!_gb_alert_audio) {
+            _gb_alert_audio = new Audio('/guestbook/alert.mp3');
+            // try to load early
+            _gb_alert_audio.preload = 'auto';
+        }
+        // reset and play; ignore any play() promise rejection (autoplay policies)
+        _gb_alert_audio.currentTime = 0;
+        const p = _gb_alert_audio.play();
+        if (p && typeof p.then === 'function') p.catch(() => {});
+    } catch (e) { /* ignore */ }
 }
 
 function displaySystemMessage(msg, duration = 10000) {
@@ -72,6 +93,14 @@ async function loadGuestbook(limit = 100) {
     try {
     const res = await fetch('/guestbook/api.php?limit=' + encodeURIComponent(limit), { cache: 'no-store', credentials: 'include' });
         const data = await res.json();
+        if (data && data.banned) {
+            // banned clients should not see messages
+            displaySystemMessage("You've been banned from using the guestbook. Contact me@fridg3.org if you believe this was in error.", 0);
+            _gb_banned = true;
+            try { document.getElementById('guestbook-type').disabled = true; } catch (e) {}
+            try { document.getElementById('guestbook-send').disabled = true; } catch (e) {}
+            return;
+        }
         if (!data.ok) return;
     // set reserved name (server-side) into in-memory variable (no grace)
     setGuestbookName(data.reserved_name || '', false);
@@ -89,10 +118,10 @@ async function loadGuestbook(limit = 100) {
                     _gb_system_original_inner = clone.outerHTML;
                 } else {
                     // fallback: synthesize appropriate template based on reserved state
+                    // we intentionally do NOT inject a dedicated `#guestbook-current-name` span
+                    // to avoid duplicate placement of the current-name UI.
                     if (_gb_reserved_name) {
-                        // when reserved we no longer display the "Type a message" + label;
-                        // keep only the name span so the name can be shown without the prefix
-                        _gb_system_original_inner = '<div class="system-message"><span id="guestbook-current-name"></span></div>';
+                        _gb_system_original_inner = '<div class="system-message"></div>';
                     } else {
                         _gb_system_original_inner = '<div class="system-message">Choose a username to reserve for 30 days.</div>';
                     }
@@ -130,9 +159,18 @@ async function pollGuestbook(intervalMs = 5000) {
             try {
                         const res = await fetch('/guestbook/api.php?limit=20', { cache: 'no-store', credentials: 'include' });
                         const data = await res.json();
+                        if (data && data.banned) {
+                            displaySystemMessage("You've been banned from using the guestbook. Contact me@fridg3.org if you believe this was in error.", 0);
+                            _gb_banned = true;
+                            try { document.getElementById('guestbook-type').disabled = true; } catch (e) {}
+                            try { document.getElementById('guestbook-send').disabled = true; } catch (e) {}
+                            return; // stop polling
+                        }
                         if (data && data.ok && data.messages) {
                     const top = data.messages[0];
                     const topId = top ? (top.id || 0) : 0;
+                    // determine whether these messages include new arrivals
+                    const shouldPlayAlert = (_gb_last_id && topId && topId !== _gb_last_id);
                     // compute incoming snapshot and compare with cached snapshot
                     const snap = {};
                     for (const m of data.messages) snap[m.id] = m.color || '';
@@ -140,9 +178,9 @@ async function pollGuestbook(intervalMs = 5000) {
 
                     // events removed: server no longer returns system events
 
-                    // update reserved name state if it changed on the server
+                        // update reserved name state if it changed on the server
                     const remoteReserved = data.reserved_name || '';
-                        if (remoteReserved !== _gb_reserved_name) {
+                            if (remoteReserved !== _gb_reserved_name) {
                             // If the server reports no reservation but we recently set one
                             // or posted, ignore the empty remote value for a short grace
                             // window to avoid races where the POST write hasn't been
@@ -180,8 +218,10 @@ async function pollGuestbook(intervalMs = 5000) {
                                             const tmp = clone.querySelector('.gb-temp-system'); if (tmp) tmp.remove();
                                             _gb_system_original_inner = clone.outerHTML;
                                         } else {
+                                            // do not include a #guestbook-current-name span to avoid duplicate
+                                            // placement; keep system-message empty when reserved.
                                             if (_gb_reserved_name) {
-                                                _gb_system_original_inner = '<div class="system-message"><span id="guestbook-current-name"></span></div>';
+                                                _gb_system_original_inner = '<div class="system-message"></div>';
                                             } else {
                                                 _gb_system_original_inner = '<div class="system-message">Choose a username to reserve for 30 days.</div>';
                                             }
@@ -196,10 +236,13 @@ async function pollGuestbook(intervalMs = 5000) {
                         renderMessages(data.messages);
                         _gb_colors_snapshot = newSnapJson;
                         if (topId) _gb_last_id = topId;
+                        // Play alert only if these include new messages (avoid playing on pure color updates)
+                        if (shouldPlayAlert) _gb_play_alert();
                     } else if (topId && topId !== _gb_last_id) {
                         renderMessages(data.messages);
                         _gb_last_id = topId;
                         _gb_colors_snapshot = newSnapJson;
+                        _gb_play_alert();
                     }
                 }
             } catch (err) {
@@ -262,37 +305,100 @@ function setColorForName(name, idx) {
     _saveColorMap(map);
 }
 
+// --- ignore list (client-side only, expires after 15 days) ---
+// Stored shape in localStorage: JSON object mapping lowercased name -> expiry_ms
+function _loadIgnoreMap() {
+    try {
+        const raw = localStorage.getItem('guestbook_ignored_users');
+        if (!raw) return {};
+        const obj = JSON.parse(raw);
+        if (!obj || typeof obj !== 'object') return {};
+        // prune expired entries
+        const now = Date.now();
+        let changed = false;
+        for (const k of Object.keys(obj)) {
+            const v = parseInt(obj[k], 10) || 0;
+            if (v <= now) { delete obj[k]; changed = true; }
+        }
+        if (changed) {
+            try { localStorage.setItem('guestbook_ignored_users', JSON.stringify(obj)); } catch (e) {}
+        }
+        return obj;
+    } catch (e) { return {}; }
+}
+
+function _saveIgnoreMap(map) {
+    try { localStorage.setItem('guestbook_ignored_users', JSON.stringify(map)); } catch (e) {}
+}
+
+function isIgnored(name) {
+    if (!name) return false;
+    const low = name.toString().toLowerCase();
+    const map = _loadIgnoreMap();
+    if (!map[low]) return false;
+    return (parseInt(map[low], 10) || 0) > Date.now();
+}
+
+function addIgnore(name) {
+    if (!name) return false;
+    const low = name.toString().toLowerCase();
+    const map = _loadIgnoreMap();
+    if (map[low] && (parseInt(map[low], 10) || 0) > Date.now()) return false;
+    const expires = Date.now() + 15 * 24 * 3600 * 1000; // 15 days
+    map[low] = expires;
+    _saveIgnoreMap(map);
+    return true;
+}
+
+function removeIgnore(name) {
+    if (!name) return false;
+    const low = name.toString().toLowerCase();
+    const map = _loadIgnoreMap();
+    if (!map[low]) return false;
+    delete map[low];
+    _saveIgnoreMap(map);
+    return true;
+}
+
 function updateCurrentNameDisplay() {
-    const el = document.getElementById('guestbook-current-name');
-    if (!el) return;
-    const name = _gb_reserved_name || '';
-    el.textContent = name || '';
-    // apply color class only when name exists
-    for (let i = 1; i <= 8; i++) el.classList.remove('gb-name-' + i);
-    if (name) {
-        const idx = getColorForName(name);
-        el.classList.add('gb-name-' + idx);
-    }
+    // intentionally no-op: we no longer show the current name inside the
+    // message pane. Reserved-name UI is handled elsewhere (system messages)
+    // or omitted entirely to avoid duplicate placement.
+    return;
 }
 
 // Format a message object into HTML. Kept at top-level so it can be used
 // when rendering lists and when inserting a single posted message.
 function formatMessageHTML(m) {
-    const time = '[' + new Date(m.time).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'}) + ']';
+    const time = (m && typeof m.time !== 'undefined' && !isNaN(new Date(m.time).getTime())) ? '[' + new Date(m.time).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'}) + ']' : '';
     const name = escapeHtml(m.name || 'anon');
     const raw = m.message || '';
     const msgEsc = escapeHtml(raw);
     const idx = (m && m.color) ? (parseInt(m.color, 10) || getColorForName(m.name || 'anon')) : getColorForName(m.name || 'anon');
+    const btnHtml = '';
+        // Announcements (server-side flag) -> render as: "username message"
+        if (m && m.is_announce) {
+            const rest = escapeHtml(raw);
+            const timeHtml = (m && m.is_cmd) ? '' : (time ? `<span id="gb-time">${time}</span> ` : '');
+    const nameHtml = (m && m.admin_post) ? `<span class="gb-name-admin">${name}</span>` : `<span class="gb-name gb-name-${idx}">${name}</span>`;
+        const cmdClass = (m && m.is_cmd) ? ' guestbook-cmd' : '';
+        return `<div class="guestbook-message${cmdClass}"> ${btnHtml} ${timeHtml}${nameHtml} ${rest}</div>\n`;
+        }
         // Action messages: either server may have normalized them to include
         // an `is_action` flag (message without the leading '/me '), or legacy
         // clients may still send raw '/me ' text. Handle both:
         if ((m && m.is_action) || (typeof raw === 'string' && raw.match(/^\/me\s+/i))) {
             const rest = (m && m.is_action) ? escapeHtml(raw) : escapeHtml(raw.replace(/^\/me\s+/i, ''));
+            const nameHtml = (m && m.admin_post) ? `<span class="gb-name-admin">${name}</span>` : `<span class="gb-name gb-name-${idx}">${name}</span>`;
             // Action messages intentionally omit the timestamp and render as
             // a plain action line: "* username does something"
-            return `<div class="guestbook-message guestbook-me">* ${name} ${rest}</div>\n`;
-    }
-    return `<div class="guestbook-message"> <span id="gb-time">${time}</span> <span class="gb-name gb-name-${idx}">${name}</span> &gt; ${msgEsc}</div>\n`;
+            const cmdClass = (m && m.is_cmd) ? ' guestbook-cmd' : '';
+            return `<div class="guestbook-message guestbook-me${cmdClass}"> ${btnHtml}* ${nameHtml} ${rest}</div>\n`;
+        }
+    const timeHtml = (m && m.is_cmd) ? '' : (time ? `<span id="gb-time">${time}</span> ` : '');
+    const nameHtml = (m && m.admin_post) ? `<span class="gb-name-admin">${name}</span>` : `<span class="gb-name gb-name-${idx}">${name}</span>`;
+    const cmdClass = (m && m.is_cmd) ? ' guestbook-cmd' : '';
+    return `<div class="guestbook-message${cmdClass}"> ${btnHtml} ${timeHtml}${nameHtml} &gt; ${msgEsc}</div>\n`;
 }
 
 function createMessageElement(m) {
@@ -318,25 +424,41 @@ function renderMessages(messages) {
         const raw = m.message || '';
         const msgEsc = escapeHtml(raw);
         const idx = (m && m.color) ? (parseInt(m.color, 10) || getColorForName(m.name || 'anon')) : getColorForName(m.name || 'anon');
-        // Action messages: either server provided an is_action flag (message
-        // already stored without the leading '/me '), or the message contains
-        // a legacy '/me ' prefix. In either case omit the timestamp.
-        if ((m && m.is_action) || (typeof raw === 'string' && raw.match(/^\/me\s+/i))) {
-            const rest = (m && m.is_action) ? escapeHtml(raw) : escapeHtml(raw.replace(/^\/me\s+/i, ''));
-            return `<div class="guestbook-message guestbook-me">* ${name} ${rest}</div>\n`;
-        }
-        // Non-action messages: render a time only when it's a valid timestamp
+        const btnHtml = '';
+        // compute time early so branches can reference it
         let time = '';
         if (m && typeof m.time !== 'undefined') {
             const d = new Date(m.time);
             if (!isNaN(d.getTime())) time = '[' + d.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'}) + ']';
         }
-        const timeHtml = time ? `<span id="gb-time">${time}</span> ` : '';
-        return `<div class="guestbook-message"> ${timeHtml}<span class="gb-name gb-name-${idx}">${name}</span> &gt; ${msgEsc}</div>\n`;
+        // Announcements: render as "username message" (no '*')
+        if (m && m.is_announce) {
+            const rest = escapeHtml(raw);
+            const nameHtml = (m && m.admin_post) ? `<span class="gb-name-admin">${name}</span>` : `<span class="gb-name gb-name-${idx}">${name}</span>`;
+            const timeHtml = (m && m.is_cmd) ? '' : (time ? `<span id="gb-time">${time}</span> ` : '');
+            const cmdClass = (m && m.is_cmd) ? ' guestbook-cmd' : '';
+            return `<div class="guestbook-message${cmdClass}"> ${btnHtml} ${timeHtml}${nameHtml} ${rest}</div>\n`;
+        }
+        // Action messages: either server provided an is_action flag (message
+        // already stored without the leading '/me '), or the message contains
+        // a legacy '/me ' prefix. In either case omit the timestamp.
+        if ((m && m.is_action) || (typeof raw === 'string' && raw.match(/^\/me\s+/i))) {
+            const rest = (m && m.is_action) ? escapeHtml(raw) : escapeHtml(raw.replace(/^\/me\s+/i, ''));
+            const nameHtml = (m && m.admin_post) ? `<span class="gb-name-admin">${name}</span>` : `<span class="gb-name gb-name-${idx}">${name}</span>`;
+            const cmdClass = (m && m.is_cmd) ? ' guestbook-cmd' : '';
+            return `<div class="guestbook-message guestbook-me${cmdClass}"> ${btnHtml}* ${nameHtml} ${rest}</div>\n`;
+        }
+        // Non-action messages: time has already been computed above
+        const timeHtml = (m && m.is_cmd) ? '' : (time ? `<span id="gb-time">${time}</span> ` : '');
+        const nameHtml = (m && m.admin_post) ? `<span class="gb-name-admin">${name}</span>` : `<span class="gb-name gb-name-${idx}">${name}</span>`;
+        const cmdClass = (m && m.is_cmd) ? ' guestbook-cmd' : '';
+        return `<div class="guestbook-message${cmdClass}"> ${btnHtml} ${timeHtml}${nameHtml} &gt; ${msgEsc}</div>\n`;
     }
 
     let html = system + '\n';
     for (const m of messages) {
+        // skip messages from ignored users (client-side only)
+        if (m && m.name && isIgnored(m.name)) continue;
         html += formatMessageHTML(m);
     }
     html += '<br>' + start;
@@ -356,7 +478,6 @@ function setGuestbookName(n, withGrace = true) {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-    // ensure system message shows current name
     // initialize display with stored name (or empty)
     // initial load will populate the reserved name via loadGuestbook
     // If no name stored, prompt the user to choose a username (first submit will reserve it)
@@ -371,14 +492,20 @@ document.addEventListener('DOMContentLoaded', function() {
     // placeholder and system-message will be set after loadGuestbook returns
     function send() {
         const text = input.value.trim();
-        if (!text) return;
+    if (!text) return;
 
+    if (_gb_banned) { displaySystemMessage("You've been banned from using the guestbook. Contact me@fridg3.org if you believe this was in error.", 0); input.value = ''; return; }
         const myName = getGuestbookName();
-        // If the visitor has no username yet, the first input is their desired username.
+    // If the visitor has no username yet, the first input is their desired username.
         if (!myName) {
             const desired = text;
             // basic sanity
             if (desired.length < 3 || desired.length > 15) { displaySystemMessage('Username must be 3-15 characters'); input.value = ''; return; }
+            // allowed characters: letters and numbers only, allow at most one underscore
+            // enforce same rule client-side so user gets immediate feedback
+            const nameOk = /^[A-Za-z0-9]+(?:_[A-Za-z0-9]+)?$/u.test(desired);
+            if (!nameOk) { displaySystemMessage('Username may only contain letters and numbers, with at most one underscore', 4000); input.value = ''; return; }
+            // follow normal reservation flow (server will set the reservation)
             // request server to reserve the name for 30 days
             fetch('/guestbook/api.php', { cache: 'no-store', credentials: 'include',
                 method: 'POST',
@@ -390,10 +517,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     setGuestbookName(data.name || desired);
                     // update the stable system template now that we have a reserved name
                     try {
-                        _gb_system_original_inner = '<div class="system-message"><span id="guestbook-current-name"></span></div>';
+                        _gb_system_original_inner = '<div class="system-message"></div>';
                     } catch (e) {}
                     // make success message persist so the user notices the reservation
-                    displaySystemMessage('You have reserved the username "' + (data.name||desired) + '" until ' + new Date((data.expires||0)*1000).toLocaleString(), 0);
+                    displaySystemMessage('You have reserved the username "' + (data.name||desired) + '" until ' + new Date((data.expires||0)*1000).toLocaleString() + '.\nPlease read the rules before posting.', 0);
                     // now ready to post messages
                     input.placeholder = 'Type a message...';
                 } else if (data && data.error === 'name_taken') {
@@ -412,7 +539,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // /nick command removed: nickname changes are no longer supported.
 
     // handle /color command locally: /color <name> or /color N where N is 1-8
-        if (text.toLowerCase().startsWith('/color')) {
+        if (text.toLowerCase().startsWith('/color') || text.toLowerCase().startsWith('/colour')) {
             const parts = text.split(/\s+/);
             const arg = parts[1] ? parts[1].toLowerCase() : '';
             const nameMap = { red:1, orange:2, yellow:3, green:4, teal:5, blue:6, purple:7, pink:8 };
@@ -455,7 +582,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 body: JSON.stringify({ action: 'unreserve' })
             }).then(r => r.json()).then(resp => {
                 if (resp && resp.ok) {
-                    displaySystemMessage('Your username reservation has been cleared. Choose a new username.', 5000);
+                    displaySystemMessage('Your username reservation has expired. Choose a username.', 5000);
                     setGuestbookName('');
                     input.placeholder = 'Type a username to reserve for 30 days';
                 } else if (resp && resp.error === 'no_reservation') {
@@ -470,7 +597,7 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
-        // handle /report <user> <reason>
+    // handle /report <user> <reason>
         if (text.toLowerCase().startsWith('/report')) {
             const parts = text.split(/\s+/);
             if (parts.length < 3) { displaySystemMessage('Usage: /report <username> <reason>'); input.value = ''; return; }
@@ -499,34 +626,173 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
+        // handle /help: navigate to the guestbook help page
+        if (text.toLowerCase().trim() === '/help' || text.toLowerCase().trim() === '/?') {
+            // redirect to the guestbook index/help page
+            try { window.location.href = '/guestbook/'; } catch (e) { window.location = '/guestbook/'; }
+            input.value = '';
+            return;
+        }
+
+        // handle /roll <N> - roll a random number between 1 and N and announce
+        if (text.toLowerCase().startsWith('/roll')) {
+            const parts = text.split(/\s+/);
+            const n = parts[1] ? parseInt(parts[1], 10) : NaN;
+            if (!n || n <= 0) { displaySystemMessage('Usage: /roll <positive number>'); input.value = ''; return; }
+            if (n > 1000000) { displaySystemMessage('Max roll is 1,000,000'); input.value = ''; return; }
+            const myName = getGuestbookName();
+            if (!myName) { displaySystemMessage('Reserve a username first', 3000); input.value = ''; return; }
+            const val = Math.floor(Math.random() * n) + 1;
+                doPost({ name: myName, message: 'rolled ' + val + '!', announce: true, cmd: true }).then(res => {
+                    if (res && res.banned) {
+                        displaySystemMessage("You've been banned from using the guestbook. Contact me@fridg3.org if you believe this was in error.", 0);
+                        _gb_banned = true;
+                        try { document.getElementById('guestbook-type').disabled = true; } catch (e) {}
+                        try { document.getElementById('guestbook-send').disabled = true; } catch (e) {}
+                    }
+                }).catch(() => {});
+            input.value = '';
+            return;
+        }
+
+        // handle /coin - flip a coin and announce
+        if (text.toLowerCase().trim() === '/coin') {
+            const myName = getGuestbookName();
+            if (!myName) { displaySystemMessage('Reserve a username first', 3000); input.value = ''; return; }
+            const flip = (Math.random() < 0.5) ? 'heads' : 'tails';
+                doPost({ name: myName, message: 'flipped a coin and got ' + flip + '!', announce: true, cmd: true }).then(res => {
+                    if (res && res.banned) {
+                        displaySystemMessage("You've been banned from using the guestbook. Contact me@fridg3.org if you believe this was in error.", 0);
+                        _gb_banned = true;
+                        try { document.getElementById('guestbook-type').disabled = true; } catch (e) {}
+                        try { document.getElementById('guestbook-send').disabled = true; } catch (e) {}
+                    }
+                }).catch(() => {});
+            input.value = '';
+            return;
+        }
+
+        // handle /time - show current UTC time to the user only
+        if (text.toLowerCase().trim() === '/time') {
+            const nowUtc = new Date().toUTCString();
+            displaySystemMessage('Current time: ' + nowUtc, 8000);
+            input.value = '';
+            return;
+        }
+
+        // handle /ping - ping server and show round-trip in ms
+        if (text.toLowerCase().trim() === '/ping') {
+            const start = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+            // lightweight GET; server will respond quickly. Measure with Date.now fallback.
+            fetch('/guestbook/ping.php?ts=' + Date.now(), { cache: 'no-store', credentials: 'include' })
+            .then(response => {
+                try {
+                    const end = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+                    const ms = Math.round(end - start);
+                    if (response && response.ok === false) {
+                        displaySystemMessage('Pong! ' + ms + 'ms (server error ' + (response.status || '') + ')', 4000);
+                    } else {
+                        displaySystemMessage('Pong! ' + ms + 'ms', 4000);
+                    }
+                } catch (err) {
+                    const end = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+                    const ms = Math.round(end - start);
+                    displaySystemMessage('Pong! ' + ms + 'ms (error)', 4000);
+                    console.warn('ping handler error', err);
+                }
+            }).catch(err => {
+                const end = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+                const ms = Math.round(end - start);
+                displaySystemMessage('Pong! ' + ms + 'ms (network error)', 4000);
+                console.warn('ping network error', err);
+            }).finally(() => { input.value = ''; });
+            return;
+        }
+
+        // If the message starts with '/' and wasn't handled by any known
+        // command above, show an 'Unknown command' system message. Allow
+        // the special '/me ' action to pass through as a normal message.
+        if (myName && text.startsWith('/')) {
+            const lower = text.toLowerCase();
+            const isMe = /^\/me\s+/i.test(text);
+            // list of known command prefixes or exact commands
+            const knownCmds = ['/color','/colour','/unreserve','/report','/ignore','/unignore','/me','/block','/unblock','/roll','/coin','/time','/ping','/help','/?'];
+            const isKnown = knownCmds.some(k => lower.startsWith(k));
+            if (!isMe && !isKnown) {
+                displaySystemMessage('Unknown command', 3000);
+                input.value = '';
+                return;
+            }
+        }
+
+        // handle /ignore <username> and /unignore <username>
+        if (text.toLowerCase().startsWith('/ignore') || text.toLowerCase().startsWith('/unignore') || text.toLowerCase().startsWith('/block') || text.toLowerCase().startsWith('/unblock')) {
+            const parts = text.split(/\s+/);
+            if (parts.length < 2) { displaySystemMessage('Usage: /ignore <username> or /unignore <username>'); input.value = ''; return; }
+            const cmd = parts[0].toLowerCase();
+            const target = parts.slice(1).join(' ').trim();
+            if (!target) { displaySystemMessage('Specify a username'); input.value = ''; return; }
+            if (cmd === '/ignore' || cmd === '/block') {
+                if (addIgnore(target)) {
+                    displaySystemMessage('Ignoring ' + target + ' (messages hidden locally)');
+                    // refresh feed to hide existing messages
+                    loadGuestbook(100).catch(() => {});
+                } else {
+                    displaySystemMessage('Already ignoring ' + target);
+                }
+            } else {
+                if (removeIgnore(target)) {
+                    displaySystemMessage('Stopped ignoring ' + target);
+                    loadGuestbook(100).catch(() => {});
+                } else {
+                    displaySystemMessage('You were not ignoring ' + target);
+                }
+            }
+            input.value = '';
+            return;
+        }
+
         btn.disabled = true;
         // helper to actually POST the message body
         function doPost(body) {
             return fetch('/guestbook/api.php', { cache: 'no-store', credentials: 'include',
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(body)
+                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
             }).then(r => r.json());
         }
 
     // enforce message length on client-side as well
     if (text.length > 100) { displaySystemMessage('Message must be 100 characters or less'); input.value = ''; btn.disabled = false; return; }
     const postBody = { name: getGuestbookName(), message: text };
-        doPost(postBody).then(data => {
-                if (data.ok && data.message) {
+    doPost(postBody).then(data => {
+        if (data && data.banned) {
+            displaySystemMessage("You've been banned from using the guestbook. Contact me@fridg3.org if you believe this was in error.", 0);
+            _gb_banned = true;
+            try { document.getElementById('guestbook-type').disabled = true; } catch (e) {}
+            try { document.getElementById('guestbook-send').disabled = true; } catch (e) {}
+            btn.disabled = false;
+            input.value = '';
+            return;
+        }
+        if (data.ok && data.message) {
                 // prepend message to UI
                 const container = document.querySelector('.guestbook-messages');
                 const time = '[' + new Date(data.message.time).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'}) + ']';
                 const name = escapeHtml(data.message.name || 'anon');
                 const msg = escapeHtml(data.message.message || '');
                 // create element from message object (handles /me formatting)
-                const el = createMessageElement(data.message);
-                // insert after system-message
-                const system = container.querySelector('.system-message');
-                if (system && system.nextSibling) container.insertBefore(el, system.nextSibling);
-                else container.insertBefore(el, container.firstChild);
-                // remove the system message after the user posts so it disappears for them
-                if (system) system.remove();
+                // if the posted message is from someone the user ignores, do not insert it
+                if (isIgnored(data.message.name)) {
+                    // record last id and skip DOM insertion
+                    if (data.message && data.message.id) _gb_last_id = data.message.id;
+                } else {
+                    const el = createMessageElement(data.message);
+                    // insert after system-message
+                    const system = container.querySelector('.system-message');
+                    if (system && system.nextSibling) container.insertBefore(el, system.nextSibling);
+                    else container.insertBefore(el, container.firstChild);
+                    // remove the system message after the user posts so it disappears for them
+                    if (system) system.remove();
+                }
                 // update last seen id so the poller doesn't immediately re-fetch the same message
                 if (data.message && data.message.id) _gb_last_id = data.message.id;
                 // record the successful post time so the poller won't clear
@@ -547,19 +813,31 @@ document.addEventListener('DOMContentLoaded', function() {
                         const remote = (ref && ref.reserved_name) ? ref.reserved_name : '';
                         if (remote && attemptedName && remote.toLowerCase() === attemptedName.toLowerCase()) {
                             // server now reports the reservation; retry once
-                            displaySystemMessage('Reservation confirmed on server — retrying post...', 3000);
-                            doPost(postBody).then(second => {
-                                    if (second && second.ok && second.message) {
+                displaySystemMessage('Reservation confirmed on server — retrying post...', 3000);
+                doPost(postBody).then(second => {
+                    if (second && second.banned) {
+                    displaySystemMessage("You've been banned from using the guestbook. Contact me@fridg3.org if you believe this was in error.", 0);
+                    _gb_banned = true;
+                    try { document.getElementById('guestbook-type').disabled = true; } catch (e) {}
+                    try { document.getElementById('guestbook-send').disabled = true; } catch (e) {}
+                    return;
+                    }
+                    if (second && second.ok && second.message) {
                                     // successful on retry: prepend message
                                     const container = document.querySelector('.guestbook-messages');
                                     const time = '[' + new Date(second.message.time).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'}) + ']';
                                     const name = escapeHtml(second.message.name || 'anon');
                                     const msg = escapeHtml(second.message.message || '');
-                                    const el = createMessageElement(second.message);
-                                    const system = container.querySelector('.system-message');
-                                    if (system && system.nextSibling) container.insertBefore(el, system.nextSibling);
-                                    else container.insertBefore(el, container.firstChild);
-                                    if (second.message && second.message.id) _gb_last_id = second.message.id;
+                                    // if we ignore this user, don't insert their message locally
+                                    if (isIgnored(second.message.name)) {
+                                        if (second.message && second.message.id) _gb_last_id = second.message.id;
+                                    } else {
+                                        const el = createMessageElement(second.message);
+                                        const system = container.querySelector('.system-message');
+                                        if (system && system.nextSibling) container.insertBefore(el, system.nextSibling);
+                                        else container.insertBefore(el, container.firstChild);
+                                        if (second.message && second.message.id) _gb_last_id = second.message.id;
+                                    }
                                     // also note this successful post time
                                     _gb_last_post_time = Date.now();
                                     input.value = '';
@@ -604,4 +882,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     btn.addEventListener('click', send);
     input.addEventListener('keydown', function(e) { if (e.key === 'Enter') send(); });
+
+    // Deletion is not supported in the public client.
 });
