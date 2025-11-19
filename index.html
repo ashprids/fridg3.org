@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" type="text/css" href="/style.css">
+    <link rel="stylesheet" type="text/css" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link rel="icon" type="image/x-icon" href="/resources/favicon.png"> 
     <title>fridg3.org</title>
@@ -23,9 +23,30 @@
     <a href="/music">music</a>
 </center>
 <br><br>
-<a href="/resources/cover.png"><img id="avatar"></a><br>
+
+<!-- Guestbook Info:
+ - Messages are in reverse chronological order (newest at the top)
+ - Each message has a timestamp, username, and message content
+ - Timestamp must always be in UTC timezone
+
+ <div class="guestbook-message"> <span id="gb-time">[09:00]</span> <span id="gb-name-2">bob</span> &gt; Hey, this is an example message.</div>
+-->
+<center>
+<div class="guestbook">
+    <a href="/guestbook/" class="fa-solid fa-book" id="guestbook-help"></a>
+    <div class="guestbook-messages" aria-live="polite">
+    <div class="system-message"></div>
+        <br><div class="start-message">You're at the start of the conversation!<br>Only 100 messages are displayed at a time.</div>
+    </div>
+    <div class="guestbook-controls">
+    <input type="text" id="guestbook-type" placeholder="">
+        <button id="guestbook-send"><i class="fa-solid fa-arrow-right"></i></button>
+    </div>
+</div>
+</center>
+<script src="/guestbook/main.js"></script>
+<br>
 <span id="downloadtext"><a href="https://discord.gg/dwKgXhbVY4"><i class="fab fa-discord"></i></a></span>
 </div>
 </body>
-
 </html>

@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" type="text/css" href="/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="icon" type="image/x-icon" href="/resources/favicon.png"> 
+    <title>[18] Looking into site traffic (and next steps)</title>
+    <meta name="description" content="fridg3.org has seen quite a lot of site traffic over the past few months. Where is it coming from, and what are the next steps?">
+</head>
+
+<body>
+<div class="container">
+<script src="/theme.js"></script>
+<button id="change-theme"><i class="fa-solid fa-palette"></i></button>
+    <center>
+    <h1><a href="/">fridge</a></h1>
+    <a href="/microblog">[micro]</a><a href="/blog">blog</a>
+    <a href="/about">about</a>
+    <a href="/contact">contact</a>
+    <a href="/projects">projects</a>
+    <a href="/music">music</a>
+</center>
+<br><br>
+<h3>guestbook</h3>
+<h4>the interactive fridg3.org experience</h4>
+<center>
+<div class="guestbook">
+    <div class="guestbook-messages" aria-live="polite">
+    <div class="system-message"></div>
+        <br><div class="start-message">You're at the start of the conversation!<br>Only 100 messages are displayed at a time.</div>
+    </div>
+    <div class="guestbook-controls">
+    <input type="text" id="guestbook-type" placeholder="">
+        <button id="guestbook-send"><i class="fa-solid fa-arrow-right"></i></button>
+    </div>
+</div>
+</center>
+<script src="/guestbook/main.js"></script>
+<br>
+<h3>commands</h3>
+<h4>utility and customization</h4>
+<b>/color</b> <i>&lt;red/orange/yellow/green/teal/blue/purple/pink&gt;</i>
+<span id="subtext"><br>Example: "/color orange"<br>Change your username's text colour for everyone</span>
+<br><br>
+<b>/me</b> <i>[text]</i>
+<span id="subtext"><br>Example: "/me is feeling happy!"<br>Display a status message alongside your name</span>
+
+</div>
+</body>
+</html>
