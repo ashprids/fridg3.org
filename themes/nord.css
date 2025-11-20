@@ -158,3 +158,33 @@ pre code {
 
 /* ascii fireworks (if present) */
 #fridge-ascii-fireworks { color: var(--nord13); }
+
+/* guestbook — Nord theme adaptation */
+.guestbook { color: var(--fg); border: 2px solid var(--bg-hover); }
+.guestbook-messages { background: var(--nord0); }
+.guestbook-message { background-color: transparent; color: var(--fg); }
+.guestbook-messages { scrollbar-color: var(--bg-hover) var(--bg-elev); }
+.guestbook-messages::-webkit-scrollbar-thumb { background: var(--bg-hover); }
+.guestbook-messages::-webkit-scrollbar-thumb:hover { background: var(--nord10); }
+.start-message { color: var(--fg-weak); }
+.system-message { color: var(--fg-weak); }
+#guestbook-help { color: var(--fg-weak); }
+.gb-trash { color: var(--fg-weak); }
+#gb-time { color: var(--fg-weak); }
+#guestbook-type { background: var(--nord1); color: inherit; }
+.guestbook-controls { border-top: 2px solid var(--bg-hover); }
+#guestbook-send { background: var(--nord3); color: var(--fg); }
+
+/* name colour wheel mapped to Nord accents (pastel/soft by default) */
+.gb-name-1 { color: var(--nord11); } /* red */
+.gb-name-2 { color: var(--nord12); } /* orange */
+.gb-name-3 { color: var(--nord13); } /* yellow */
+.gb-name-4 { color: var(--nord14); } /* green */
+.gb-name-5 { color: var(--nord7); }  /* aqua/cyan */
+.gb-name-6 { color: var(--nord10); } /* blue */
+.gb-name-7 { color: var(--nord15); } /* purple */
+.gb-name-8 { color: var(--nord8); }  /* cyan */
+
+.gb-name-admin { color: var(--fg-weak); }
+.guestbook-me { color: var(--fg-weak); }
+.guestbook-cmd { color: var(--fg-weak); }

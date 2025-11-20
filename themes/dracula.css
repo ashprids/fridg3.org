@@ -34,6 +34,26 @@
   --link-hover:   var(--dr-orange);
 }
 
+/* guestbook variable mapping (Dracula tones) */
+:root{
+  --gb-bg-hard: var(--dr-bg);
+  --gb-bg: var(--dr-surface);
+  --gb-bg-soft: var(--dr-surface2);
+  --gb-bg2: var(--dr-surface2);
+  --gb-bg3: var(--dr-hover);
+  --gb-fg: var(--fg);
+  --gb-fg2: var(--fg-weak);
+  --gb-muted: var(--fg-muted);
+  --gb-red: var(--dr-red);
+  --gb-green: var(--dr-green);
+  --gb-yellow: var(--dr-yellow);
+  --gb-blue: var(--dr-cyan);
+  --gb-purple: var(--dr-purple);
+  --gb-aqua: var(--dr-cyan);
+  --gb-orange: var(--dr-orange);
+  --gb-pink: var(--dr-pink);
+}
+
 /* base */
 body{
   background: var(--bg-page);
@@ -144,3 +164,31 @@ pre code{
 
 /* ascii fireworks (if present) */
 #fridge-ascii-fireworks{ color: var(--dr-yellow); }
+
+/* guestbook */
+.guestbook { color: var(--fg); border-color: var(--gb-bg3); }
+.guestbook-messages { background: var(--gb-bg-hard); }
+.guestbook-message { background-color: transparent; color: var(--fg); }
+.guestbook-messages { scrollbar-color: var(--gb-bg2) var(--gb-bg-hard) }
+.guestbook-messages::-webkit-scrollbar-thumb { background: var(--gb-bg2) }
+.guestbook-messages::-webkit-scrollbar-thumb:hover { background: var(--gb-bg3) }
+.start-message { color: var(--gb-fg2) }
+.system-message { color: var(--gb-fg2) }
+#guestbook-send { background: var(--gb-bg3); color: var(--fg); }
+#guestbook-help { color: var(--gb-bg3); }
+.gb-trash { color: var(--gb-bg3); }
+#gb-time { color: var(--gb-fg2); }
+#guestbook-type { background: var(--gb-bg-hard); color: inherit; }
+.guestbook-controls { border-top: 2px solid var(--gb-bg3); }
+
+.gb-name-1 { color: var(--gb-red); }
+.gb-name-2 { color: var(--gb-orange); }
+.gb-name-3 { color: var(--gb-yellow); }
+.gb-name-4 { color: var(--gb-green); }
+.gb-name-5 { color: var(--gb-aqua); }
+.gb-name-6 { color: var(--gb-blue); }
+.gb-name-7 { color: var(--gb-purple); }
+.gb-name-8 { color: var(--gb-pink); }
+.gb-name-admin { color: var(--gb-fg2) }
+.guestbook-me { color: var(--gb-fg2); }
+.guestbook-cmd { color: var(--gb-fg2); }

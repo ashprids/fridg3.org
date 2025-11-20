@@ -120,3 +120,62 @@ code {
   background-color: #572128;
   color: #f6e7d3;
 }
+
+/* guestbook - adapted to DiscoPanic theme */
+.guestbook {
+  color: #f6e7d3; /* main parchment FG */
+  border-color: #6a2931; /* accent */
+}
+
+.guestbook-messages {
+  background: #351519; /* container/hard bg */
+  scrollbar-color: #572128 #4a1c21; /* thumb / track */
+}
+
+.guestbook-messages::-webkit-scrollbar-thumb {
+  background: #572128;
+}
+.guestbook-messages::-webkit-scrollbar-thumb:hover {
+  background: #6a2931;
+}
+
+.guestbook-message {
+  background-color: transparent;
+  color: #f6e7d3;
+}
+
+.start-message,
+.system-message,
+#gb-time {
+  color: #d3b59a; /* muted, old-print */
+}
+
+#guestbook-send {
+  background: #6a2931;
+  color: #f6e7d3;
+}
+#guestbook-help { color: #6a2931; }
+.gb-trash { color: #6a2931; }
+
+#guestbook-type {
+  background: #2b1416;
+  color: inherit;
+}
+
+.guestbook-controls {
+  border-top: 2px solid #6a2931;
+}
+
+/* name colour wheel — toned to the theme */
+.gb-name-1 { color: #b84a4a; } /* red */
+.gb-name-2 { color: #d98b4a; } /* orange */
+.gb-name-3 { color: #f4d27a; } /* yellow / gold */
+.gb-name-4 { color: #6aa96a; } /* green */
+.gb-name-5 { color: #4ecdc4; } /* aqua */
+.gb-name-6 { color: #6aa3c1; } /* blue */
+.gb-name-7 { color: #a36aa3; } /* purple */
+.gb-name-8 { color: #d88aa6; } /* pink */
+
+.gb-name-admin { color: #d3b59a; } /* admin / muted */
+.guestbook-me { color: #f4d27a; }   /* user highlight (gold) */
+.guestbook-cmd { color: #f4d27a; }  /* commands / system highlight */

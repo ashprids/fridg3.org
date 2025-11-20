@@ -3,6 +3,8 @@
 + /resources/**/**
 + /themes/**
 + /themes/**/**
++ /guestbook/alert.mp3
++ /guestbook/preview.png
 
 ## -- Universal excludes --
 - *.png
@@ -15,6 +17,7 @@
 - *.osk
 - *.zip
 - *.env
+- *.json
 
 ## -- Specific directories to exclude --
 - /microblog/posts/**

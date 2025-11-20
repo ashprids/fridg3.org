@@ -9,9 +9,14 @@
 *.osk
 *.zip
 *.env
+*.json
 
 ## -- Specific directories -- ##
 !/resources/**/*
 !/themes/**/*
 /microblog/posts/**/*
 /projects/frdgCanvas/download/**/*
+
+## -- Specific files -- ##
+!/guestbook/preview.png
+!/guestbook/alert.mp3

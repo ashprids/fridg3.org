@@ -150,3 +150,32 @@ pre code{
 
 /* ascii fireworks (if present) */
 #fridge-ascii-fireworks{ color: var(--dr-yellow); }
+
+/* guestbook — Pretty Odd theme adaptation */
+.guestbook { color: var(--fg); border: 2px solid var(--bg-hover); }
+.guestbook-messages { background: var(--bg-page); }
+.guestbook-message { background-color: transparent; color: var(--fg); }
+.guestbook-messages { scrollbar-color: var(--bg-hover) var(--bg-page); }
+.guestbook-messages::-webkit-scrollbar-thumb { background: var(--bg-hover); }
+.guestbook-messages::-webkit-scrollbar-thumb:hover { background: var(--dr-pink); }
+.start-message { color: var(--fg-weak); }
+.system-message { color: var(--fg-weak); }
+#guestbook-help { color: var(--fg-weak); }
+.gb-trash { color: var(--fg-weak); }
+#gb-time { color: var(--fg-weak); }
+#guestbook-type { background: var(--bg-elev); color: inherit; }
+.guestbook-controls { border-top: 2px solid var(--bg-hover); }
+#guestbook-send { background: linear-gradient(90deg, var(--dr-pink), var(--dr-orange)); color: var(--bg-page); }
+
+.gb-name-1 { color: #A95C36; } /* dr-red */
+.gb-name-2 { color: #AC6D2E; } /* dr-orange */
+.gb-name-3 { color: #B58829; } /* dr-yellow */
+.gb-name-4 { color: #80a178; } /* dr-green */
+.gb-name-5 { color: #779b98; } /* dr-cyan */
+.gb-name-6 { color: #637897; } /* dr-purple */
+.gb-name-7 { color: #8458ad; } /* dr-pink */
+.gb-name-8 { color: #ad5297; } /* blended purple/pink (hex) */
+
+.gb-name-admin { color: var(--fg-weak); animation: none; text-shadow: none; }
+.guestbook-me { color: var(--fg-weak); }
+.guestbook-cmd { color: var(--fg-weak); }
