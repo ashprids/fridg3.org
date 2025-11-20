@@ -204,8 +204,8 @@ code { font-family: "MonospaceFont"; border-radius: 3px; background-color: #1111
 .guestbook-controls { position: relative; }
 #guestbook-help { position: absolute; top: 6px; right: 6px; z-index: 10; cursor: pointer; border: none; background-color: transparent; color: #cfcfcf80; font-size: 14px; transition: color 0.35s; text-align: center; text-decoration: none; }
 #gb-time { color: #797878; }
+.gb-trash { background: none; border: none; color: #cfcfcf80; cursor: pointer; font-size: 12px; transition: color 0.35s; }
 
-.gb-admin-name { color: #a8a8a8; animation: gb-admin 1.6s infinite;}
 .gb-name-1 { color: #ab5555; }
 .gb-name-2 { color: #ab7c55; }
 .gb-name-3 { color: #abaa55; }
@@ -215,8 +215,11 @@ code { font-family: "MonospaceFont"; border-radius: 3px; background-color: #1111
 .gb-name-7 { color: #7655ab; }
 .gb-name-8 { color: #ab5598; }
 
+.gb-name-admin { color: #a8a8a8; animation: gb-admin 1.6s infinite; }
+
 /* action (/me) messages */
-.guestbook-me { font-style: italic; color: #d0d0d0; }
+.guestbook-me { font-style: italic; color: #979797; }
+.guestbook-cmd { font-style: italic; color: #979797; }
 
 #subtext { font-size: small; color: #565656; margin-top: 4px; }
 
