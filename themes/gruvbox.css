@@ -183,3 +183,31 @@ code {
 #fridge-ascii-fireworks {
   color: var(--gb-yellow);
 }
+
+/* guestbook */
+.guestbook { color: var(--fg); border-color: var(--gb-bg3); }
+.guestbook-messages { background: var(--gb-bg-hard); }
+.guestbook-message { background-color: transparent; color: var(--fg); }
+.guestbook-messages { scrollbar-color: var(--gb-bg2) var(--gb-bg-hard) }
+.guestbook-messages::-webkit-scrollbar-thumb { background: var(--gb-bg2) }
+.guestbook-messages::-webkit-scrollbar-thumb:hover { background: var(--gb-bg3) }
+.start-message { color: var(--gb-fg2) }
+.system-message { color: var(--gb-fg2) }
+#guestbook-send { background: var(--gb-bg3); color: var(--fg); }
+#guestbook-help { color: var(--gb-bg3); }
+.gb-trash { color: var(--gb-bg3); }
+#gb-time { color: var(--gb-fg2); }
+#guestbook-type { background: var(--gb-bg-hard); color: inherit; }
+.guestbook-controls { border-top: 2px solid var(--gb-bg3); }
+
+.gb-name-1 { color: var(--gb-red); }
+.gb-name-2 { color: var(--gb-orange); }
+.gb-name-3 { color: var(--gb-yellow); }
+.gb-name-4 { color: var(--gb-green); }
+.gb-name-5 { color: var(--gb-aqua); }
+.gb-name-6 { color: var(--gb-blue); }
+.gb-name-7 { color: var(--gb-purple); }
+.gb-name-8 { color: var(--gb-pink); }
+.gb-name-admin { color: var(--gb-fg2) }
+.guestbook-me { color: var(--ctp-surface1); }
+.guestbook-cmd { color: var(--ctp-surface1); }

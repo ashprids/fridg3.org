@@ -19,6 +19,26 @@
   --zb-lilac: #d8bde6;     /* side accent */
 }
 
+/* guestbook variable mapping (Kumo / Zenbloom tones) */
+:root{
+  --gb-bg-hard: var(--zb-bg-hard);
+  --gb-bg: var(--zb-bg);
+  --gb-bg-soft: var(--zb-bg2);
+  --gb-bg2: var(--zb-bg2);
+  --gb-bg3: var(--zb-bg3);
+  --gb-fg: var(--zb-fg);
+  --gb-fg2: var(--zb-fg2);
+  --gb-muted: var(--zb-muted);
+  --gb-red: var(--zb-rose);
+  --gb-green: var(--zb-lilac);
+  --gb-yellow: var(--zb-gold);
+  --gb-blue: var(--zb-pink);
+  --gb-purple: var(--zb-lilac);
+  --gb-aqua: var(--zb-pink-soft);
+  --gb-orange: var(--zb-gold);
+  --gb-pink: var(--zb-pink);
+}
+
 /* base */
 body {
   background-color: var(--zb-bg-hard);
@@ -133,3 +153,31 @@ pre code {
 
 /* ascii fireworks (if present) */
 #fridge-ascii-fireworks { color: var(--zb-pink); }
+
+/* guestbook */
+.guestbook { color: var(--fg); border-color: var(--gb-bg3); }
+.guestbook-messages { background: var(--gb-bg-hard); }
+.guestbook-message { background-color: transparent; color: var(--fg); }
+.guestbook-messages { scrollbar-color: var(--gb-bg2) var(--gb-bg-hard) }
+.guestbook-messages::-webkit-scrollbar-thumb { background: var(--gb-bg2) }
+.guestbook-messages::-webkit-scrollbar-thumb:hover { background: var(--gb-bg3) }
+.start-message { color: var(--gb-fg2) }
+.system-message { color: var(--gb-fg2) }
+#guestbook-send { background: var(--gb-bg3); color: var(--fg); }
+#guestbook-help { color: var(--gb-bg3); }
+.gb-trash { color: var(--gb-bg3); }
+#gb-time { color: var(--gb-fg2); }
+#guestbook-type { background: var(--gb-bg-hard); color: inherit; }
+.guestbook-controls { border-top: 2px solid var(--gb-bg3); }
+
+.gb-name-1 { color: #ffb3b3; } /* pastel red */
+.gb-name-2 { color: #ffd1a6; } /* pastel orange */
+.gb-name-3 { color: #fff1a8; } /* pastel yellow */
+.gb-name-4 { color: #c7f0c6; } /* pastel green */
+.gb-name-5 { color: #bff0ee; } /* pastel aqua */
+.gb-name-6 { color: #c8dbff; } /* pastel blue */
+.gb-name-7 { color: #e9d5ff; } /* pastel purple */
+.gb-name-8 { color: #ffd6ec; } /* pastel pink */
+.gb-name-admin { color: var(--gb-fg2) }
+.guestbook-me { color: var(--gb-fg2); }
+.guestbook-cmd { color: var(--gb-fg2); }

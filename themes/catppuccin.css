@@ -159,3 +159,31 @@ pre code{ display:block; padding:.75rem 1rem; overflow:auto; }
 
 /* ascii fireworks (if present) */
 #fridge-ascii-fireworks{ color: var(--ctp-peach); }
+
+/* guestbook */
+.guestbook { color: var(--fg); border-color: var(--bg-hover); }
+.guestbook-messages { background: var(--ctp-crust); }
+.guestbook-message { background-color: transparent; color: var(--fg); }
+.guestbook-messages { scrollbar-color: var(--ctp-surface0) var(--ctp-crust) }
+.guestbook-messages::-webkit-scrollbar-thumb { background: var(--ctp-surface0) }
+.guestbook-messages::-webkit-scrollbar-thumb:hover { background: var(--ctp-mantle) }
+.start-message { color: var(--ctp-surface1) }
+.system-message { color: var(--ctp-surface1) }
+#guestbook-send { background: var(--ctp-surface2); color: var(--fg); }
+#guestbook-help { color: var(--ctp-surface2); }
+.gb-trash { color: var(--ctp-surface2); }
+#gb-time { color: var(--ctp-surface2); }
+#guestbook-type { background: var(--ctp-mantle); color: inherit; }
+.guestbook-controls { border-top: 2px solid var(--bg-hover); }
+
+.gb-name-1 { color: var(--ctp-red); }
+.gb-name-2 { color: var(--ctp-peach); }
+.gb-name-3 { color: var(--ctp-yellow); }
+.gb-name-4 { color: var(--ctp-green); }
+.gb-name-5 { color: var(--ctp-teal); }
+.gb-name-6 { color: var(--ctp-blue); }
+.gb-name-7 { color: var(--ctp-mauve); }
+.gb-name-8 { color: var(--ctp-pink); }
+.gb-name-admin { color: var(--ctp-text) }
+.guestbook-me { color: var(--ctp-surface1); }
+.guestbook-cmd { color: var(--ctp-surface1); }
