@@ -160,7 +160,7 @@ pre code{
 .guestbook-messages::-webkit-scrollbar-thumb:hover { background: var(--dr-pink); }
 .start-message { color: var(--fg-weak); }
 .system-message { color: var(--fg-weak); }
-#guestbook-help { color: var(--fg-weak); }
+#guestbook-help { color: var(--bg-hover); }
 .gb-trash { color: var(--fg-weak); }
 #gb-time { color: var(--fg-weak); }
 #guestbook-type { background: var(--bg-elev); color: inherit; }
@@ -179,3 +179,4 @@ pre code{
 .gb-name-admin { color: var(--fg-weak); animation: none; text-shadow: none; }
 .guestbook-me { color: var(--fg-weak); }
 .guestbook-cmd { color: var(--fg-weak); }
+.gb-sound-toggle { color: var(--bg-hover); }

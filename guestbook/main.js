@@ -49,6 +49,9 @@ if (typeof window.BroadcastChannel === 'function') {
 let _gb_alert_audio = null;
 function _gb_play_alert() {
     try {
+        // Respect user preference (muted toggle). If muted, skip playback.
+        const muted = (localStorage.getItem('guestbook_sound_muted') === '1');
+        if (muted) return;
         if (!_gb_alert_audio) {
             _gb_alert_audio = new Audio('/guestbook/alert.ogg');
             // try to load early
@@ -59,6 +62,26 @@ function _gb_play_alert() {
         const p = _gb_alert_audio.play();
         if (p && typeof p.then === 'function') p.catch(() => {});
     } catch (e) { /* ignore */ }
+}
+
+// Toggle sound preference and update UI icon (if present).
+function _gb_update_sound_button() {
+    try {
+        const btn = document.getElementById('gb-sound-toggle');
+        if (!btn) return;
+        const muted = (localStorage.getItem('guestbook_sound_muted') === '1');
+        btn.setAttribute('aria-pressed', muted ? 'true' : 'false');
+        btn.title = muted ? 'Sound muted' : 'Sound enabled';
+        btn.innerHTML = muted ? '<i class="fa-solid fa-volume-xmark"></i>' : '<i class="fa-solid fa-volume-high"></i>';
+    } catch (e) {}
+}
+
+function _gb_toggle_sound() {
+    try {
+        const currently = (localStorage.getItem('guestbook_sound_muted') === '1');
+        localStorage.setItem('guestbook_sound_muted', currently ? '0' : '1');
+        _gb_update_sound_button();
+    } catch (e) {}
 }
 
 function displaySystemMessage(msg, duration = 10000) {
@@ -151,13 +174,16 @@ async function loadGuestbook(limit = 100) {
 
 // Poll for new messages every `intervalMs` milliseconds.
 // This keeps clients in sync without requiring WebSockets.
-async function pollGuestbook(intervalMs = 5000) {
+// Poll for new messages every `intervalMs` milliseconds. The `limit` argument
+// controls how many messages to fetch each poll; default to 100 to match
+// the initial loadGuestbook(100) call so the view doesn't shrink after updates.
+async function pollGuestbook(intervalMs = 5000, limit = 100) {
     if (_gb_polling) return;
     _gb_polling = true;
     try {
         while (true) {
             try {
-                        const res = await fetch('/guestbook/api.php?limit=20', { cache: 'no-store', credentials: 'include' });
+                        const res = await fetch('/guestbook/api.php?limit=' + encodeURIComponent(limit), { cache: 'no-store', credentials: 'include' });
                         const data = await res.json();
                         if (data && data.banned) {
                             displaySystemMessage("You've been banned from using the guestbook. Contact me@fridg3.org if you believe this was in error.", 0);
@@ -374,13 +400,19 @@ function formatMessageHTML(m) {
     const name = escapeHtml(m.name || 'anon');
     const raw = m.message || '';
     const msgEsc = escapeHtml(raw);
-    const idx = (m && m.color) ? (parseInt(m.color, 10) || getColorForName(m.name || 'anon')) : getColorForName(m.name || 'anon');
+    // determine color index (1..8). Prefer server-supplied m.color but clamp it
+    // to the valid range; fall back to deterministic name hashing.
+    let idx = getColorForName(m.name || 'anon');
+    if (m && typeof m.color !== 'undefined' && m.color !== null && m.color !== '') {
+        const parsed = parseInt(m.color, 10);
+        if (!isNaN(parsed) && parsed >= 1 && parsed <= 8) idx = parsed;
+    }
     const btnHtml = '';
         // Announcements (server-side flag) -> render as: "username message"
         if (m && m.is_announce) {
             const rest = escapeHtml(raw);
             const timeHtml = (m && m.is_cmd) ? '' : (time ? `<span id="gb-time">${time}</span> ` : '');
-    const nameHtml = (m && m.admin_post) ? `<span class="gb-name-admin">${name}</span>` : `<span class="gb-name gb-name-${idx}">${name}</span>`;
+    const nameHtml = (m && m.admin_post) ? `<span class="gb-name-admin">${name}</span>` : `<span class="gb-name-${idx}">${name}</span>`;
         const cmdClass = (m && m.is_cmd) ? ' guestbook-cmd' : '';
         return `<div class="guestbook-message${cmdClass}"> ${btnHtml} ${timeHtml}${nameHtml} ${rest}</div>\n`;
         }
@@ -389,14 +421,14 @@ function formatMessageHTML(m) {
         // clients may still send raw '/me ' text. Handle both:
         if ((m && m.is_action) || (typeof raw === 'string' && raw.match(/^\/me\s+/i))) {
             const rest = (m && m.is_action) ? escapeHtml(raw) : escapeHtml(raw.replace(/^\/me\s+/i, ''));
-            const nameHtml = (m && m.admin_post) ? `<span class="gb-name-admin">${name}</span>` : `<span class="gb-name gb-name-${idx}">${name}</span>`;
+            const nameHtml = (m && m.admin_post) ? `<span class="gb-name-admin">${name}</span>` : `<span class="gb-name-${idx}">${name}</span>`;
             // Action messages intentionally omit the timestamp and render as
             // a plain action line: "* username does something"
             const cmdClass = (m && m.is_cmd) ? ' guestbook-cmd' : '';
             return `<div class="guestbook-message guestbook-me${cmdClass}"> ${btnHtml}* ${nameHtml} ${rest}</div>\n`;
         }
     const timeHtml = (m && m.is_cmd) ? '' : (time ? `<span id="gb-time">${time}</span> ` : '');
-    const nameHtml = (m && m.admin_post) ? `<span class="gb-name-admin">${name}</span>` : `<span class="gb-name gb-name-${idx}">${name}</span>`;
+    const nameHtml = (m && m.admin_post) ? `<span class="gb-name-admin">${name}</span>` : `<span class="gb-name-${idx}">${name}</span>`;
     const cmdClass = (m && m.is_cmd) ? ' guestbook-cmd' : '';
     return `<div class="guestbook-message${cmdClass}"> ${btnHtml} ${timeHtml}${nameHtml} &gt; ${msgEsc}</div>\n`;
 }
@@ -423,7 +455,13 @@ function renderMessages(messages) {
         const name = escapeHtml(m.name || 'anon');
         const raw = m.message || '';
         const msgEsc = escapeHtml(raw);
-        const idx = (m && m.color) ? (parseInt(m.color, 10) || getColorForName(m.name || 'anon')) : getColorForName(m.name || 'anon');
+        // determine color index (1..8). Prefer server-supplied m.color but clamp it
+        // to the valid range; fall back to deterministic name hashing.
+        let idx = getColorForName(m.name || 'anon');
+        if (m && typeof m.color !== 'undefined' && m.color !== null && m.color !== '') {
+            const parsed = parseInt(m.color, 10);
+            if (!isNaN(parsed) && parsed >= 1 && parsed <= 8) idx = parsed;
+        }
         const btnHtml = '';
         // compute time early so branches can reference it
         let time = '';
@@ -434,7 +472,7 @@ function renderMessages(messages) {
         // Announcements: render as "username message" (no '*')
         if (m && m.is_announce) {
             const rest = escapeHtml(raw);
-            const nameHtml = (m && m.admin_post) ? `<span class="gb-name-admin">${name}</span>` : `<span class="gb-name gb-name-${idx}">${name}</span>`;
+            const nameHtml = (m && m.admin_post) ? `<span class="gb-name-admin">${name}</span>` : `<span class="gb-name-${idx}">${name}</span>`;
             const timeHtml = (m && m.is_cmd) ? '' : (time ? `<span id="gb-time">${time}</span> ` : '');
             const cmdClass = (m && m.is_cmd) ? ' guestbook-cmd' : '';
             return `<div class="guestbook-message${cmdClass}"> ${btnHtml} ${timeHtml}${nameHtml} ${rest}</div>\n`;
@@ -444,13 +482,13 @@ function renderMessages(messages) {
         // a legacy '/me ' prefix. In either case omit the timestamp.
         if ((m && m.is_action) || (typeof raw === 'string' && raw.match(/^\/me\s+/i))) {
             const rest = (m && m.is_action) ? escapeHtml(raw) : escapeHtml(raw.replace(/^\/me\s+/i, ''));
-            const nameHtml = (m && m.admin_post) ? `<span class="gb-name-admin">${name}</span>` : `<span class="gb-name gb-name-${idx}">${name}</span>`;
+            const nameHtml = (m && m.admin_post) ? `<span class="gb-name-admin">${name}</span>` : `<span class="gb-name-${idx}">${name}</span>`;
             const cmdClass = (m && m.is_cmd) ? ' guestbook-cmd' : '';
             return `<div class="guestbook-message guestbook-me${cmdClass}"> ${btnHtml}* ${nameHtml} ${rest}</div>\n`;
         }
         // Non-action messages: time has already been computed above
         const timeHtml = (m && m.is_cmd) ? '' : (time ? `<span id="gb-time">${time}</span> ` : '');
-        const nameHtml = (m && m.admin_post) ? `<span class="gb-name-admin">${name}</span>` : `<span class="gb-name gb-name-${idx}">${name}</span>`;
+    const nameHtml = (m && m.admin_post) ? `<span class="gb-name-admin">${name}</span>` : `<span class="gb-name-${idx}">${name}</span>`;
         const cmdClass = (m && m.is_cmd) ? ' guestbook-cmd' : '';
         return `<div class="guestbook-message${cmdClass}"> ${btnHtml} ${timeHtml}${nameHtml} &gt; ${msgEsc}</div>\n`;
     }
@@ -489,6 +527,16 @@ document.addEventListener('DOMContentLoaded', function() {
 
     const input = document.getElementById('guestbook-type');
     const btn = document.getElementById('guestbook-send');
+    // initialize sound toggle button (if present on the page)
+    try {
+        const sb = document.getElementById('gb-sound-toggle');
+        if (sb) {
+            // ensure a sensible default (unmuted)
+            if (localStorage.getItem('guestbook_sound_muted') === null) localStorage.setItem('guestbook_sound_muted', '0');
+            _gb_update_sound_button();
+            sb.addEventListener('click', function (e) { e.preventDefault(); _gb_toggle_sound(); });
+        }
+    } catch (e) {}
     // placeholder and system-message will be set after loadGuestbook returns
     function send() {
         const text = input.value.trim();

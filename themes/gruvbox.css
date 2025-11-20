@@ -13,7 +13,8 @@
   --gb-green: #b8bb26;
   --gb-yellow: #fabd2f;
   --gb-blue: #83a598;
-  --gb-purple: #d3869b;
+  --gb-purple: #ae86d3;
+  --gb-pink: #d3869b;
   --gb-aqua: #8ec07c;
   --gb-orange: #fe8019;
 }
@@ -211,3 +212,4 @@ code {
 .gb-name-admin { color: var(--gb-fg2) }
 .guestbook-me { color: var(--ctp-surface1); }
 .guestbook-cmd { color: var(--ctp-surface1); }
+.gb-sound-toggle { color: var(--gb-bg3); }

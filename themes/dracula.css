@@ -192,3 +192,4 @@ pre code{
 .gb-name-admin { color: var(--gb-fg2) }
 .guestbook-me { color: var(--gb-fg2); }
 .guestbook-cmd { color: var(--gb-fg2); }
+.gb-sound-toggle { color: var(--gb-bg3); }

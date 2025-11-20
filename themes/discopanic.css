@@ -179,3 +179,4 @@ code {
 .gb-name-admin { color: #d3b59a; } /* admin / muted */
 .guestbook-me { color: #f4d27a; }   /* user highlight (gold) */
 .guestbook-cmd { color: #f4d27a; }  /* commands / system highlight */
+.gb-sound-toggle { color: #6a2931; } /* sound toggle button */

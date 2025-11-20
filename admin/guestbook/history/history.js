@@ -36,19 +36,25 @@ function formatMessageHTML(m) {
     const name = escapeHtml(m.name || 'anon');
     const raw = m.message || '';
     const msgEsc = escapeHtml(raw);
-    const idx = (m && m.color) ? (parseInt(m.color, 10) || getColorForName(m.name || 'anon')) : getColorForName(m.name || 'anon');
+    // determine color index (1..8). Prefer server-supplied m.color but clamp it
+    // to the valid range; fall back to deterministic name hashing.
+    let idx = getColorForName(m.name || 'anon');
+    if (m && typeof m.color !== 'undefined' && m.color !== null && m.color !== '') {
+        const parsed = parseInt(m.color, 10);
+        if (!isNaN(parsed) && parsed >= 1 && parsed <= 8) idx = parsed;
+    }
     // render a delete button at the start of the post (before any time or text)
     const btnHtml = `<button class="gb-trash" data-id="${m.id}" title="Delete post"><i class="fa-solid fa-trash"></i></button>`;
     if (m && m.is_announce) {
         const rest = escapeHtml(raw);
         const timeHtml = time ? `<span id="gb-time">${time}</span> ` : '';
-        return `<div class="guestbook-message"> ${btnHtml} ${timeHtml}<span class="gb-name gb-name-${idx}">${name}</span> ${rest}</div>\n`;
+    return `<div class="guestbook-message"> ${btnHtml} ${timeHtml}<span class="gb-name-${idx}">${name}</span> ${rest}</div>\n`;
     }
     if ((m && m.is_action) || (typeof raw === 'string' && raw.match(/^\/me\s+/i))) {
         const rest = (m && m.is_action) ? escapeHtml(raw) : escapeHtml(raw.replace(/^\/me\s+/i, ''));
         return `<div class="guestbook-message guestbook-me"> ${btnHtml} * ${name} ${rest}</div>\n`;
     }
-    return `<div class="guestbook-message"> ${btnHtml} <span id="gb-time">${time}</span> <span class="gb-name gb-name-${idx}">${name}</span> &gt; ${msgEsc}</div>\n`;
+    return `<div class="guestbook-message"> ${btnHtml} <span id="gb-time">${time}</span> <span class="gb-name-${idx}">${name}</span> &gt; ${msgEsc}</div>\n`;
 }
 
 function createMessageElement(m) {

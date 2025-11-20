@@ -49,7 +49,10 @@ function get_client_ip() {
 
 if ($method === 'GET') {
     $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 100;
-    if ($limit <= 0 || $limit > 1000) $limit = 100;
+    // Allow larger limits so admin/history can request the full stored set
+    // (storage keeps up to 2000 entries). Sanitize invalid values.
+    if ($limit <= 0) $limit = 100;
+    if ($limit > 2000) $limit = 2000;
     $ip = get_client_ip();
     $reserved = '';
     $token = $_COOKIE['gb_token'] ?? '';

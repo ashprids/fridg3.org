@@ -220,6 +220,7 @@ code { font-family: "MonospaceFont"; border-radius: 3px; background-color: #1111
 /* action (/me) messages */
 .guestbook-me { font-style: italic; color: #979797; }
 .guestbook-cmd { font-style: italic; color: #979797; }
+.gb-sound-toggle { position: absolute; top: 4px; right: 18px; z-index: 10; cursor: pointer; border: none; background-color: transparent; color: #cfcfcf80; font-size: 14px; transition: color 0.35s; text-align: center; text-decoration: none; }
 
 #subtext { font-size: small; color: #565656; margin-top: 4px; }
 
