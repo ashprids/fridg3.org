@@ -50,7 +50,7 @@ let _gb_alert_audio = null;
 function _gb_play_alert() {
     try {
         if (!_gb_alert_audio) {
-            _gb_alert_audio = new Audio('/guestbook/alert.mp3');
+            _gb_alert_audio = new Audio('/guestbook/alert.ogg');
             // try to load early
             _gb_alert_audio.preload = 'auto';
         }
