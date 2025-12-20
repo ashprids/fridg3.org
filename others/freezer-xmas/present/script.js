@@ -3,6 +3,7 @@ document.addEventListener('DOMContentLoaded', () => {
 	const open1 = document.getElementById('envelope-open1');
 	const open2 = document.getElementById('envelope-open2');
 	const letter = document.getElementById('letter');
+	const hint = document.getElementById('hint');
 	const openAudio = new Audio('/others/freezer-xmas/present/open.ogg');
 	const ascendAudio = new Audio('/others/freezer-xmas/present/ascend.ogg');
 	const musicAudio = new Audio('/others/freezer-xmas/present/music.ogg');
@@ -69,6 +70,17 @@ document.addEventListener('DOMContentLoaded', () => {
 			top: -10%;
 			animation: confetti-fall linear infinite;
 		}
+		@keyframes hint-fade-in {
+			0% {
+				opacity: 0;
+			}
+			100% {
+				opacity: 1;
+			}
+		}
+		#hint {
+			animation: hint-fade-in 2s ease-in-out forwards;
+		}
 	`;
 	document.head.appendChild(style);
 
@@ -123,6 +135,15 @@ document.addEventListener('DOMContentLoaded', () => {
 	// Trigger ascend animation and sound on first body click
 	let ascended = false;
 	document.body.addEventListener('click', () => {
+		// Hide hint on first click with fade out
+		if (hint) {
+			hint.style.transition = 'opacity 0.5s ease-out';
+			hint.style.opacity = '0';
+			setTimeout(() => {
+				hint.style.display = 'none';
+			}, 500);
+		}
+		
 		if (ascended) return;
 		ascended = true;
 		ascendAudio.play().catch(() => {});
