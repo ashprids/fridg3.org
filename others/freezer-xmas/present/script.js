@@ -3,6 +3,7 @@ document.addEventListener('DOMContentLoaded', () => {
 	const open1 = document.getElementById('envelope-open1');
 	const open2 = document.getElementById('envelope-open2');
 	const letter = document.getElementById('letter');
+	const hint = document.getElementById('hint');
 	const openAudio = new Audio('/others/freezer-xmas/present/open.ogg');
 	const ascendAudio = new Audio('/others/freezer-xmas/present/ascend.ogg');
 	const musicAudio = new Audio('/others/freezer-xmas/present/music.ogg');
@@ -123,6 +124,9 @@ document.addEventListener('DOMContentLoaded', () => {
 	// Trigger ascend animation and sound on first body click
 	let ascended = false;
 	document.body.addEventListener('click', () => {
+		// Hide hint on first click
+		if (hint) hint.style.display = 'none';
+		
 		if (ascended) return;
 		ascended = true;
 		ascendAudio.play().catch(() => {});
