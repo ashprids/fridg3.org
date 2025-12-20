@@ -5,6 +5,8 @@
 + /themes/**/**
 + /guestbook/alert.mp3
 + /guestbook/preview.png
++ /others/freezer-xmas/**
++ /others/freezer-xmas/**/**
 
 ## -- Universal excludes --
 - *.png
