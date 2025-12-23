@@ -36,7 +36,6 @@ document.addEventListener('DOMContentLoaded', function() {
     { id: 'gruvbox', title: 'Gruvbox', icon: 'fa-mug-saucer', file: 'gruvbox.css' },
     { id: 'catppuccin', title: 'Catppuccin', icon: 'fa-cat', file: 'catppuccin.css' },
     { id: 'dracula', title: 'Dracula', icon: 'fa-ghost', file: 'dracula.css' },
-    { id: 'partyattack', title: 'Disco Panic', icon: 'fa-star', file: 'discopanic.css' },
     { id: 'kumo', title: 'Kumo', icon: 'fa-cloud', file: 'kumo.css' },
     { id: 'prettyodd', title: 'Pretty Odd', icon: 'fa-fan', file: 'prettyodd.css' },
   ];
@@ -49,7 +48,6 @@ document.addEventListener('DOMContentLoaded', function() {
     nord: '#81a1c1ff',
     gruvbox: '#d4a373',
     catppuccin: '#b4befe',
-    partyattack: '#7a2424ff',
     kumo: '#923878ff',
     prettyodd: '#977D63ff',
   };

@@ -126,6 +126,13 @@ a:hover   { color: #a97fa9; }
 img { max-width: 100%; height: auto; display: block; margin: auto; border-radius: 0; }
 li { margin: 16px 0 16px 16px; }
 
+hr {
+  border: none;
+  height: 1px;
+  background-color: #b5b5b51f;
+  margin: 20px 0;
+}
+
 /* ==========================================================================
   6) Navigation / State labels
   ========================================================================= */
@@ -334,7 +341,10 @@ code { font-family: "MonospaceFont"; border-radius: 3px; background-color: #1111
   19) Microblog post card + pagination
   ========================================================================= */
 
-.microblog-post { background-color: #262626; color: #ddd; padding: 12px; margin-bottom: 12px; }
+.microblog-post { background-color: #262626; color: #ddd; padding: 16px 16px 6px 12px; margin-bottom: 12px; transition: filter 0.15s; }
+.microblog-post:hover { filter: brightness(0.90); }
+#microblog-user { font-family: "MainBold", monospace; }
+#microblog-username { font-family: "MainRegular", monospace; color: #878787; margin-left: 6px; }
 #microblog-date { float: right; color: #878787; }
 .pagination { display: flex; justify-content: center; margin-top: 20px; }
 

@@ -104,6 +104,8 @@ h4{ color: var(--fg-muted); }
 }
 #date{ color: var(--fg-muted); }
 
+#microblog-username{ color: var(--fg-muted); }
+
 /* code */
 code{
   background: #1f2130;

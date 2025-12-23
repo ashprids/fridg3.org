@@ -1,4 +1,13 @@
 <?php
+// Username mapping for display
+$username_map = [
+    'fridge' => '@fridgestuff',
+    'freezer' => '@yaztastrophe'
+];
+
+// Microblog count (set when index is built/loaded)
+$microblog_count = 0;
+
 // Build a JSON index of posts for fast searching. The index is lazily
 // rebuilt when missing or when any post file is newer than the index.
 function build_posts_index($postsDir, $indexPath) {
@@ -57,10 +66,14 @@ function build_posts_index($postsDir, $indexPath) {
     $tmp = $indexPath . '.tmp';
     @file_put_contents($tmp, json_encode($index, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
     @rename($tmp, $indexPath);
-    return $index;
+    return [
+        'index' => $index,
+        'count' => count($index)
+    ];
 }
 
 function loadPosts($limit = 5, $page = 1, $query = null) {
+    global $username_map, $microblog_count;
     $postsDir = __DIR__ . '/posts';
     $indexPath = $postsDir . '/index.json';
 
@@ -75,10 +88,12 @@ function loadPosts($limit = 5, $page = 1, $query = null) {
         }
     }
     if ($needBuild) {
-        // build_posts_index returns the array it built; use it directly
-        $index = build_posts_index($postsDir, $indexPath);
+        $buildResult = build_posts_index($postsDir, $indexPath);
+        $index = $buildResult['index'];
+        $microblog_count = $buildResult['count'];
     } else {
         $index = @json_decode(@file_get_contents($indexPath), true) ?: [];
+        $microblog_count = is_array($index) ? count($index) : 0;
     }
 
     // apply search filter on index (text field). limit query length to 200 chars
@@ -102,6 +117,7 @@ function loadPosts($limit = 5, $page = 1, $query = null) {
     foreach ($slice as $item) {
         $id = htmlspecialchars($item['id'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
         $user = htmlspecialchars($item['user'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $displayUsername = htmlspecialchars($username_map[$item['user']] ?? '@' . $item['user'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
         $date = htmlspecialchars($item['date'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
         $excerpt = $item['excerpt']; // already escaped when building index
 
@@ -118,9 +134,9 @@ function loadPosts($limit = 5, $page = 1, $query = null) {
         }
         $body_html .= '</p>';
 
-        $output .= "<div class='microblog-post'>\n" .
-                   "<b>$user</b> <span><a id='microblog-date' href='post.php?id=$id'>$date</a></span><br>\n" .
-                   $body_html . "\n</div><hr>";
+        $output .= "<div class='microblog-post' onclick=\"window.location='post.php?id=$id'\" style='cursor:pointer;'>\n" .
+               "<span id='microblog-user'>$user</span> <span id='microblog-username'>$displayUsername</span> <span id='microblog-date'>$date</span><br>\n" .
+               $body_html . "\n</div><hr>";
     }
 
     // Pagination
@@ -165,6 +181,7 @@ $search_html .= "</form></div>";
 
 // inject into template
 $out = str_replace("{{microblog_posts}}", $posts_html, $template);
+$out = str_replace("{{microblog_count}}", (string)$microblog_count, $out);
 $out = str_replace("{{microblog_search}}", $search_html, $out);
 echo $out;
 ?>

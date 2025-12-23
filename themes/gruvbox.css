@@ -126,6 +126,10 @@ code {
   color: var(--gb-muted);
 }
 
+#microblog-username {
+  color: var(--gb-muted);
+}
+
 .audio-player button {
   color: var(--gb-fg2);
 }

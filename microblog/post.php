@@ -1,5 +1,11 @@
 <?php
 
+// Username mapping for display
+$username_map = [
+    'fridge' => '@fridgestuff',
+    'freezer' => '@yaztastrophe'
+];
+
 $id = basename($_GET['id']);
 $file = __DIR__ . "/posts/$id.txt";
 
@@ -11,6 +17,8 @@ if (!file_exists($file)) {
 
 $lines = file($file, FILE_IGNORE_NEW_LINES);
 $user = $lines[0] ?? "fridge";
+$displayUsername = htmlspecialchars($username_map[$user] ?? '@' . $user, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+$userSafe = htmlspecialchars($user, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 $date = $lines[1] ?? "";
 $body = array_slice($lines, 2);
 
@@ -56,7 +64,7 @@ $title = "$user | microblog post from $date";
         if ($has_image) {
             $imgAbs = 'https://fridg3.org/microblog/images/' . rawurlencode($has_image);
         } else {
-            $imgAbs = 'https://fridg3.org/resources/cover.png';
+            $imgAbs = '';
         }
     ?>
     <meta property="og:image" content="<?php echo $imgAbs; ?>">
@@ -68,7 +76,6 @@ $title = "$user | microblog post from $date";
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="<?php echo $title; ?>">
     <meta name="twitter:description" content="<?php echo $preview; ?>">
-    <meta name="twitter:image" content="preview.jpg">
 
     <link rel="stylesheet" href="/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
@@ -90,7 +97,7 @@ $title = "$user | microblog post from $date";
 <h4><a href='/microblog'>back to /microblog/</a></h4>
 <br>
     <div class="microblog-post">
-        <b><?php echo $user; ?></b> <span id="microblog-date"><?php echo $date; ?></span><br>
+        <span id="microblog-user"><?php echo $userSafe; ?></span> <span id="microblog-username"><?php echo $displayUsername; ?></span> <span id="microblog-date"><?php echo $date; ?></span><br>
         <p><?php echo $text; ?></p>
     </div>
 </div>

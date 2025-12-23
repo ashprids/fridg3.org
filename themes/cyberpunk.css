@@ -73,6 +73,10 @@ a:hover {
   text-decoration-color: #e6fcff;
 }
 
+hr {
+  background-color: var(--glass-2);
+}
+
 /* selection */
 ::selection { background-color: rgba(0, 230, 255, 0.35); color: #eaffff; }
 
@@ -109,6 +113,11 @@ h1 a:hover { color: transparent; filter: hue-rotate(150deg) saturate(1.2); }
 .post:hover,
 .microblog-post:hover {
   background: linear-gradient(180deg, var(--glass-2), rgba(0, 230, 255, 0.05)) !important;
+}
+
+#microblog-username {
+  color: var(--ink-dim) !important;
+  margin-left: 8px;
 }
 
 /* date + meta text */
@@ -210,7 +219,7 @@ h1 a:hover { color: transparent; filter: hue-rotate(150deg) saturate(1.2); }
   color: #001317 !important;
   border: 1px solid var(--cyan) !important;
   box-shadow: 0 0 16px var(--wire), inset 0 0 10px rgba(255,255,255,0.15) !important;
-  border-radius: 6px !important;
+  border-radius: 0px !important;
 }
 .contact-form button:hover {
   filter: brightness(1.08);

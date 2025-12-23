@@ -86,6 +86,8 @@ h4 { color: var(--zb-muted); }
 }
 #date { color: var(--zb-muted); }
 
+#microblog-username { color: var(--zb-muted); }
+
 /* code blocks */
 code {
   background: #3a2b35;

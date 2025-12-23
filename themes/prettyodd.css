@@ -90,6 +90,8 @@ h4{ color: var(--fg-muted); }
 }
 #date{ color: var(--fg-muted); }
 
+#microblog-usernae{ color: var(--fg-muted); }
+
 /* code */
 code{
   background: #532F40;

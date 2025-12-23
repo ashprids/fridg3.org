@@ -97,6 +97,8 @@ h4 { color: var(--fg-muted); }
 }
 #date { color: var(--fg-muted); }
 
+#microblog-username { color: #788694; }
+
 /* code */
 code {
   background: var(--nord1);
