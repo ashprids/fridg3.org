@@ -5,6 +5,13 @@ $username_map = [
     'freezer' => '@yaztastrophe'
 ];
 
+// Reverse map: handle (without @) -> canonical user key
+$handle_lookup = [];
+foreach ($username_map as $user => $handle) {
+    $clean = mb_strtolower(ltrim((string)$handle, '@'));
+    if ($clean !== '') $handle_lookup[$clean] = mb_strtolower($user);
+}
+
 // Microblog count (set when index is built/loaded)
 $microblog_count = 0;
 
@@ -73,7 +80,7 @@ function build_posts_index($postsDir, $indexPath) {
 }
 
 function loadPosts($limit = 5, $page = 1, $query = null) {
-    global $username_map, $microblog_count;
+    global $username_map, $microblog_count, $handle_lookup;
     $postsDir = __DIR__ . '/posts';
     $indexPath = $postsDir . '/index.json';
 
@@ -97,21 +104,44 @@ function loadPosts($limit = 5, $page = 1, $query = null) {
     }
 
     // apply search filter on index (text field). limit query length to 200 chars
+    $isHandleSearch = false;
+
     if ($query) {
         $q = mb_substr(trim((string)$query), 0, 200);
         $qLower = mb_strtolower($q);
-        $filtered = array_filter($index, function($item) use ($qLower) {
-            return mb_stripos($item['text'] ?? '', $qLower) !== false;
-        });
-        $index = array_values($filtered);
+
+        // If the query looks like a handle (@name or name), map to a user and
+        // filter by that user. Otherwise, fall back to full-text search.
+        $handleKey = ltrim($qLower, '@');
+        $userMatch = $handle_lookup[$handleKey] ?? null;
+
+        if ($userMatch !== null) {
+            $filtered = array_filter($index, function($item) use ($userMatch) {
+                return mb_strtolower($item['user'] ?? '') === $userMatch;
+            });
+            $index = array_values($filtered);
+            $isHandleSearch = true;
+        } else {
+            $filtered = array_filter($index, function($item) use ($qLower) {
+                return mb_stripos($item['text'] ?? '', $qLower) !== false;
+            });
+            $index = array_values($filtered);
+        }
     }
 
     $total = count($index);
-    $total_pages = $total > 0 ? ceil($total / $limit) : 1;
-    $page = max(1, min($page, $total_pages));
+    // For handle searches, show all matches without pagination.
+    if ($isHandleSearch) {
+        $total_pages = 1;
+        $page = 1;
+        $slice = $index;
+    } else {
+        $total_pages = $total > 0 ? ceil($total / $limit) : 1;
+        $page = max(1, min($page, $total_pages));
 
-    $start = ($page - 1) * $limit;
-    $slice = array_slice($index, $start, $limit);
+        $start = ($page - 1) * $limit;
+        $slice = array_slice($index, $start, $limit);
+    }
 
     $output = '';
     foreach ($slice as $item) {
@@ -140,7 +170,7 @@ function loadPosts($limit = 5, $page = 1, $query = null) {
     }
 
     // Pagination
-    if ($total_pages > 1) {
+    if (!$isHandleSearch && $total_pages > 1) {
         $output .= "<div class='pagination'>";
         if ($page > 1) {
             $prev = $page - 1;

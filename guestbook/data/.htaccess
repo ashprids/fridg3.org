@@ -1,0 +1,9 @@
+# Block direct web access to guestbook storage files
+<FilesMatch "\.(json|txt)$">
+  Require all denied
+  <IfModule !mod_authz_core.c>
+    Order allow,deny
+    Deny from all
+  </IfModule>
+</FilesMatch>
+Options -Indexes
