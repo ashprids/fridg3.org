@@ -1,4 +1,5 @@
 <?php
+require_once $_SERVER['DOCUMENT_ROOT'] . '/admin/_auth.php';
 // Admin purge handler: remove all posts by a specified username from the
 // guestbook messages file (`guestbook/data/guestbook.json`).
 

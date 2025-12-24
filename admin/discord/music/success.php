@@ -1,4 +1,5 @@
 <?php
+require_once $_SERVER['DOCUMENT_ROOT'] . '/admin/_auth.php';
 // success.php - shown after a successful action in /discord/music
 ?>
 <!DOCTYPE html>

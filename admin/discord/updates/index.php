@@ -1,4 +1,5 @@
 <?php
+require_once $_SERVER['DOCUMENT_ROOT'] . '/admin/_auth.php';
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $notes = trim($_POST["notes"] ?? "");
     if (!$notes) die("Update notes required.");

@@ -1,4 +1,5 @@
 <?php
+require_once $_SERVER['DOCUMENT_ROOT'] . '/admin/_auth.php';
 // Admin unreserve handler: remove a username reservation from
 // guestbook/data/name_reservations.json
 

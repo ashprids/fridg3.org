@@ -1,4 +1,5 @@
 <?php
+require_once $_SERVER['DOCUMENT_ROOT'] . '/admin/_auth.php';
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
     // Delete the microblog search index file
     $index_path = __DIR__ . '/../../microblog/posts/index.json';

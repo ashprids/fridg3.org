@@ -1,4 +1,5 @@
 <?php
+require_once $_SERVER['DOCUMENT_ROOT'] . '/admin/_auth.php';
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $id = trim($_POST["id"] ?? "");
     if (!$id) die("ID required.");

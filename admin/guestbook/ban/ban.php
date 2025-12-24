@@ -1,4 +1,5 @@
 <?php
+require_once $_SERVER['DOCUMENT_ROOT'] . '/admin/_auth.php';
 // Simple admin ban/unban handler.
 // This file expects a POST with 'name' (username or IP). It will add or remove
 // an entry in guestbook/data/bans.json. After completion it shows a JS alert

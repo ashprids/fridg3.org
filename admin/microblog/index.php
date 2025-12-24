@@ -1,4 +1,5 @@
 <?php
+require_once $_SERVER['DOCUMENT_ROOT'] . '/admin/_auth.php';
 
 // get the authenticated username (try common server variables)
 $user = $_SERVER['REMOTE_USER'] ?? $_SERVER['PHP_AUTH_USER'] ?? '';
@@ -67,7 +68,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     }
     $webhook_url = getenv('MICROBLOG_WEBHOOK');
     $post_link = "https://fridg3.org/microblog/post.php?id=$timestamp";
-    $message = "<@&1408064770891972660>**\n**New microblog post by $author!\n$post_link";
+    $message = "new /microblog/ post by $author!\n$post_link\n<@&1408064770891972660>";
 
     $payload = json_encode(["content" => $message]);
     $ch = curl_init($webhook_url);

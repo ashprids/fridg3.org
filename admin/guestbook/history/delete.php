@@ -1,4 +1,5 @@
 <?php
+require_once $_SERVER['DOCUMENT_ROOT'] . '/admin/_auth.php';
 // Delete a single guestbook message by id. Expects JSON POST { id: <number|string> }
 // Returns JSON { ok: true, removed: 1 } or { ok: false, error: '...' }
 
