@@ -56,7 +56,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 	</center>
 <br><br>
 <h3>Account Access</h3>
-<br><br>
 <center>
 	<?php if ($error): ?>
 		<h4 style="color:#f88">
