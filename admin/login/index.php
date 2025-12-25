@@ -22,6 +22,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 		if ($expected !== '' && hash_equals($expected, $password)) {
 			$_SESSION['admin_logged_in'] = true;
 			$_SESSION['admin_user'] = $username;
+			$_SESSION['admin_login_time'] = time();
 			header('Location: ' . $redirect);
 			exit;
 		} else {
@@ -37,11 +38,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 	<link rel="stylesheet" type="text/css" href="/style.css">
 	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 	<link rel="icon" type="image/x-icon" href="/resources/favicon.png">
-	<title>fridge | admin login</title>
+	<title>fridge | login</title>
 	<meta name="description" content="Authorized Access Only">
-	<style>
-		.contact-form input { max-width: 320px; }
-	</style>
 </head>
 
 <body>
@@ -61,10 +59,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <br><br>
 <center>
 	<?php if ($error): ?>
-		<div style="color:#f88; margin-bottom: 10px;">
+		<h4 style="color:#f88">
 			<?php echo htmlspecialchars($error, ENT_QUOTES, 'UTF-8'); ?>
-		</div>
-	<?php endif; ?>
+    </h4>
+    <?php else: ?>
+        <br><br>
+	<?php endif ?>
+
 	<form class="contact-form" method="POST" action="?redirect=<?php echo urlencode($redirect); ?>">
 		<label for="name">Username</label>
 		<input type="text" id="name" name="name" required>
@@ -74,8 +75,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 		<br>
 		<button type="submit">Login</button>
 	</form>
-	<p style="margin-top:10px"><small><a href="/">Back to site</a></small></p>
-	<p style="margin-top:4px"><small><a href="/logout.php">Logout</a></small></p>
 	</center>
 <br>
 </div>

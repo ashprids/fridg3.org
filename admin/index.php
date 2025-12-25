@@ -38,16 +38,16 @@ $displayUser = htmlspecialchars($user, ENT_QUOTES, 'UTF-8');
 <?php endif; ?>
 
 <div id="posts">
-    <?php if ($user === 'fridge'): ?>
-    <a href="discord/" id="postlink"><div class="post"><br>
-        <h3>Publish a Discord notification</h3>
-        <center><p>Select a channel to publish a notification to, and format it automatically depending on the channel.</p></center>
-    <br></div></a>
-    <?php endif; ?>
     <?php if ($user === 'freezer' or $user === 'fridge'): ?>
     <a href="microblog/" id="postlink"><div class="post"><br>
         <h3>Make a /microblog/ post</h3>
         <center><p>Create a microblog post and automatically publish it to fridg3.org/microblog.</p></center>
+    <br></div></a>
+    <?php endif; ?>
+    <?php if ($user === 'fridge'): ?>
+    <a href="discord/" id="postlink"><div class="post"><br>
+        <h3>Publish a Discord notification</h3>
+        <center><p>Select a channel to publish a notification to, and format it automatically depending on the channel.</p></center>
     <br></div></a>
     <?php endif; ?>
     <?php if ($user === 'freezer' or $user === 'fridge'): ?>
