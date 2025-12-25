@@ -6,12 +6,13 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link rel="icon" type="image/x-icon" href="/resources/favicon.png"> 
     <title>fridge | music</title>
-    <meta name="description" content="Music created by or featuring me!">
+    <meta name="description" content="Songs made or published by me!">
 </head>
 
 <body>
 <div class="container">
 <script src="/theme.js"></script>
+<script src="tabs.js"></script>
 <button id="change-theme"><i class="fa-solid fa-palette"></i></button>
 <center>
     <h1><a href="/">fridge</a></h1>
@@ -23,8 +24,15 @@
 </center>
 <br><br>
 
-<h3>frdg3</h3>
-<br>
+<h3>Music</h3>
+<h4>Songs made or published by me</h4>
+
+<div class="tab">
+  <button class="tablinks" onclick="openTab(event, 'frdg3')">frdg3</button>
+  <button class="tablinks" onclick="openTab(event, 'cactile')">Cactile</button>
+</div>
+
+<div id="frdg3" class="tabcontent">
 <div class="grid-container">
     <div class="grid-item">
         <a href="frdg3/morefortheinbetween/"><img src="frdg3/morefortheinbetween/cover.png" alt="Cover art"></a>
@@ -57,10 +65,10 @@
         <p id="subp">Michael e</p>
     </div>
 </div>
-<br><a href="frdg3/" id="downloadtext">View all</a>
-<br><br>
-<h3>Cactile</h3>
-<br>
+<br><a href="frdg3/" id="downloadtext">View all</a><br>
+</div>
+
+<div id="cactile" class="tabcontent">
 <div class="grid-container">
     <div class="grid-item">
         <a href="cactile/engineer/"><img src="cactile/engineer/coverart.jpg" alt="Cover art"></a>
@@ -108,7 +116,8 @@
         <p id="subp">Cactile</p>
     </div>
 </div>
-<br><a href="cactile/" id="downloadtext">View all</a>
+<br><a href="cactile/" id="downloadtext">View all</a><br>
+</div>
 </div>
 </body>
 </html>

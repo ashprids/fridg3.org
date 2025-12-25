@@ -13,6 +13,21 @@ When a change is made to the repository, GitHub Actions will automatically begin
 
 When making an update yet to be released, you can create a new branch and then pull it to main whenever it's ready.
 
+## Admin Login Configuration
+
+Admin passwords are loaded from `/admin/.env`. Create this file under the `/admin` folder with the following keys:
+
+```
+# /admin/.env
+ADMIN_PASSWORD_FRIDGE="your-fridge-password"
+ADMIN_PASSWORD_FREEZER="your-freezer-password"
+```
+
+- The login page is at `/admin/login`.
+- Unauthenticated `/admin/*` requests redirect to `/admin/login/?redirect=<requested path>`.
+
+Note: The `/admin/.env` file is parsed at runtime by [admin/_config.php](admin/_config.php) and should not be committed publicly.
+
 ### Permissions
 Every file and directory in the website's root must belong to the "deploy" user, otherwise GitHub Actions won't be able to update it. The following commands can be issued on the webserver to ensure this requirement is met:
 ```bash
