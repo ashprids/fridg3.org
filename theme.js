@@ -38,6 +38,7 @@ document.addEventListener('DOMContentLoaded', function() {
     { id: 'dracula', title: 'Dracula', icon: 'fa-ghost', file: 'dracula.css' },
     { id: 'kumo', title: 'Kumo', icon: 'fa-cloud', file: 'kumo.css' },
     { id: 'prettyodd', title: 'Pretty Odd', icon: 'fa-fan', file: 'prettyodd.css' },
+    { id: 'minecraft', title: 'Minecraft', icon: 'fa-cube', file: 'minecraft.css' },
   ];
 
   // glow colors per theme for hover effect
@@ -50,6 +51,7 @@ document.addEventListener('DOMContentLoaded', function() {
     catppuccin: '#b4befe',
     kumo: '#923878ff',
     prettyodd: '#977D63ff',
+    minecraft: '#6ab04cff',
   };
 
   // create / locate appended style element
