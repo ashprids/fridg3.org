@@ -13,3 +13,35 @@ body {
     border: 2px solid #000000;
     border-radius: 4px;
 }
+
+@keyframes splashPulse {
+    0%, 100% {
+        transform: rotate(-20deg) scale(1);
+    }
+    50% {
+        transform: rotate(-20deg) scale(1.1);
+    }
+}
+
+.splash {
+    font-family: "MainRegular", sans-serif;
+    color: #f8fe18;
+    text-shadow: 2px 2px 0 #61571c;
+    display: inline-block;
+    position: relative;
+    margin-top: -7.9em;
+    margin-left: 134px;
+    margin-bottom: 0;
+    font-size: 0.9em;
+    white-space: nowrap;
+    opacity: 0.95;
+    z-index: 1;
+    transform: rotate(-15deg) scale(1);
+    transform-origin: center;
+    vertical-align: middle;
+    animation: splashPulse 1.5s ease-in-out infinite;
+}
+#splashbr {
+    display: block;
+    margin: 1.1em 5;
+}

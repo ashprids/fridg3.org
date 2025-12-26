@@ -5,6 +5,107 @@ document.addEventListener('DOMContentLoaded', function() {
   const themeButton = document.getElementById('change-theme');
   if (!themeButton) return;
 
+  // Track the active theme and manage Minecraft click sound behavior
+  let currentThemeId = null;
+  let minecraftClickHandler = null;
+  let minecraftAudio = null;
+  let minecraftSplashTexts = null;
+
+  async function loadMinecraftSplash() {
+    if (minecraftSplashTexts) return minecraftSplashTexts;
+    try {
+      const response = await fetch('/projects/fridgePack/splash.txt');
+      if (response.ok) {
+        const text = await response.text();
+        minecraftSplashTexts = text.split('\n').filter(line => line.trim().length > 0);
+        return minecraftSplashTexts;
+      }
+    } catch (err) {
+      console.warn('Could not load Minecraft splash texts:', err);
+    }
+    return ['Awesome!'];
+  }
+
+  function getRandomSplashText() {
+    if (!minecraftSplashTexts || minecraftSplashTexts.length === 0) return 'Awesome!';
+    return minecraftSplashTexts[Math.floor(Math.random() * minecraftSplashTexts.length)];
+  }
+
+  function attachMinecraftSplashElement() {
+    // Remove existing splash element if present
+    const existing = document.getElementById('minecraft-splash-container');
+    if (existing) existing.remove();
+
+    // Find the container div
+    const mainContainer = document.querySelector('div.container');
+    if (!mainContainer) return; // Container not found, skip
+
+    // Find the first <center> block within the container
+    const firstCenter = mainContainer.querySelector('center');
+    
+    const splashContainer = document.createElement('center');
+    splashContainer.id = 'minecraft-splash-container';
+    const splash = document.createElement('span');
+    splash.className = 'splash';
+    splash.textContent = getRandomSplashText();
+    splashContainer.appendChild(splash);
+
+    // Insert after the first <center> if it exists, otherwise at the beginning
+    if (firstCenter) {
+      firstCenter.parentNode.insertBefore(splashContainer, firstCenter.nextSibling);
+    } else {
+      mainContainer.insertBefore(splashContainer, mainContainer.firstChild);
+    }
+  }
+
+  function removeMinecraftSplashElement() {
+    const existing = document.getElementById('minecraft-splash-container');
+    if (existing) existing.remove();
+  }
+
+  function attachMinecraftClickSound() {
+    if (!minecraftClickHandler) {
+      if (!minecraftAudio) {
+        try {
+          minecraftAudio = new Audio('/projects/fridgePack/click.ogg');
+          minecraftAudio.preload = 'auto';
+          // modest default volume; sites can be loud
+          minecraftAudio.volume = 1.0;
+        } catch (e) { /* ignore audio init failures */ }
+      }
+      minecraftClickHandler = function (e) {
+        try {
+          const clickable = e.target && e.target.closest && e.target.closest(
+            'a, button, [role="button"], input[type="button"], input[type="submit"]'
+          );
+          if (clickable && minecraftAudio) {
+            // restart from beginning so rapid clicks still play
+            try { minecraftAudio.currentTime = 0; } catch (err) {}
+            minecraftAudio.play().catch(() => {});
+            
+            // if it's a link, add delay before navigation so sound can play
+            const link = clickable.closest('a');
+            if (link && link.href) {
+              e.preventDefault();
+              setTimeout(() => {
+                window.location.href = link.href;
+              }, 200); // 200ms delay for sound to play
+            }
+          }
+        } catch (err) { /* swallow to avoid breaking clicks */ }
+      };
+      // use capture to catch early and be theme-wide
+      window.addEventListener('click', minecraftClickHandler, true);
+    }
+  }
+
+  function detachMinecraftClickSound() {
+    if (minecraftClickHandler) {
+      try { window.removeEventListener('click', minecraftClickHandler, true); } catch (e) {}
+      minecraftClickHandler = null;
+    }
+  }
+
   // helper cookie functions
   function setCookie(name, value, days) {
     let expires = "";
@@ -57,6 +158,11 @@ document.addEventListener('DOMContentLoaded', function() {
   // create / locate appended style element
   async function applyThemeById(id) {
     const theme = THEMES.find(t => t.id === id) || THEMES[0];
+    // if leaving minecraft, remove click sound handler and splash element first
+    if (currentThemeId === 'minecraft') {
+      detachMinecraftClickSound();
+      removeMinecraftSplashElement();
+    }
     
     // remove any previous injected style or link
     const existingStyle = document.getElementById('appended-theme-css');
@@ -108,6 +214,15 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // persist choice as cookie (365 days)
     try { setCookie('themeChoice', theme.id, 365); } catch (e) { /* ignore */ }
+
+    // update active theme id and attach minecraft-specific behavior
+    currentThemeId = theme.id;
+    if (currentThemeId === 'minecraft') {
+      attachMinecraftClickSound();
+      // load splash texts and attach the element
+      await loadMinecraftSplash();
+      attachMinecraftSplashElement();
+    }
   }
 
   // build the options overlay (hidden by default)
