@@ -11,6 +11,71 @@ document.addEventListener('DOMContentLoaded', function() {
   let minecraftAudio = null;
   let minecraftSplashTexts = null;
 
+  // full-screen fade layer used during theme switches
+  let fadeLayer = null;
+  let themeTransitionInFlight = false;
+
+  function ensureFadeLayer() {
+    if (fadeLayer) return fadeLayer;
+    fadeLayer = document.createElement('div');
+    fadeLayer.id = 'theme-fade-layer';
+    Object.assign(fadeLayer.style, {
+      position: 'fixed',
+      inset: '0',
+      background: '#000',
+      opacity: '0',
+      transition: 'opacity 1000ms ease',
+      pointerEvents: 'none',
+      zIndex: 2147483647,
+      willChange: 'opacity'
+    });
+    document.body.appendChild(fadeLayer);
+    return fadeLayer;
+  }
+
+  function fadeToBlack() {
+    return new Promise(resolve => {
+      const layer = ensureFadeLayer();
+      const finish = () => {
+        layer.removeEventListener('transitionend', finish);
+        resolve();
+      };
+      layer.addEventListener('transitionend', finish);
+      layer.style.pointerEvents = 'auto';
+      layer.style.opacity = '1';
+      // safety timeout in case transitionend doesn't fire
+      setTimeout(finish, 1200);
+    });
+  }
+
+  function fadeFromBlack() {
+    return new Promise(resolve => {
+      const layer = ensureFadeLayer();
+      const finish = () => {
+        layer.removeEventListener('transitionend', finish);
+        layer.style.pointerEvents = 'none';
+        resolve();
+      };
+      layer.addEventListener('transitionend', finish);
+      layer.style.opacity = '0';
+      setTimeout(finish, 1200);
+    });
+  }
+
+  async function changeThemeWithFade(themeId) {
+    if (themeTransitionInFlight) return;
+    themeTransitionInFlight = true;
+    try {
+      await fadeToBlack();
+      await applyThemeById(themeId);
+    } catch (err) {
+      console.warn('Theme change failed', err);
+    } finally {
+      await fadeFromBlack();
+      themeTransitionInFlight = false;
+    }
+  }
+
   async function loadMinecraftSplash() {
     if (minecraftSplashTexts) return minecraftSplashTexts;
     try {
@@ -299,7 +364,8 @@ document.addEventListener('DOMContentLoaded', function() {
             // activation via click or keyboard (Enter/Space)
             function activate(e) {
               if (e) e.stopPropagation();
-              applyThemeById(t.id);
+              hideOverlay(true);
+              changeThemeWithFade(t.id);
             }
             btn.addEventListener('click', activate);
             btn.addEventListener('keydown', (ev) => {
