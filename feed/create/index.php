@@ -187,7 +187,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         if ($discordWebhookUrl && strpos($discordWebhookUrl, 'https://discord.com/api/webhooks/') === 0) {
             $postLink = 'https://fridg3.org/feed/posts/' . $timestampFilename;
-            $discordMessage = "new /feed/ post by " . $username . "!\n" . $postLink . "\n<@&1408064770891972660>";
+            $discordMessage = "<@&1408064770891972660> new post by **@" . $username . "**\n" . $postLink;
             
             $payload = json_encode([
                 'content' => $discordMessage
