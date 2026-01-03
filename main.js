@@ -1,5 +1,5 @@
 // Global work-in-progress kill-switch; set to true to redirect site to /error/wip
-const workInProgress = true;
+const workInProgress = false;
 
 function hasAdminCookie() {
     try {
