@@ -21,9 +21,36 @@ _|"""""|_|"""""|_|"""""|_|"""""|_|"""""|_|"""""|_|"""""|_|"""""|
 </div>
 <br><br>
 </span>
-<h3>account</h3>
+<span id="user-settings">
+<h3>account</h3>    
 <button id="form-button" type="button" data-tooltip="will prompt you to log in if you aren't already" onclick="window.location='/account/change-password'">change password</button>
 <br><br>
+</span>
+<h3>color scheme</h3>
+<div id="color-scheme-group">
+    <label class="color-row">
+        <span>background</span>
+        <input type="color" class="color-input" data-color-key="bg" value="#000000">
+    </label>
+    <label class="color-row">
+        <span>text</span>
+        <input type="color" class="color-input" data-color-key="fg" value="#ffffff">
+    </label>
+    <label class="color-row">
+        <span>lines</span>
+        <input type="color" class="color-input" data-color-key="border" value="#ffffff">
+    </label>
+    <label class="color-row">
+        <span>subtle</span>
+        <input type="color" class="color-input" data-color-key="subtle" value="#808080">
+    </label>
+    <label class="color-row">
+        <span>links</span>
+        <input type="color" class="color-input" data-color-key="links" value="#305aad">
+    </label>
+</div>
+<button id="color-reset" data-tooltip="reset color scheme to defaults">reset to default</button>
+<br>
 <h3>text glow intensity</h3>
 <div class="radio-group" id="glow-intensity-group">
     <label class="radio-label">
@@ -43,7 +70,6 @@ _|"""""|_|"""""|_|"""""|_|"""""|_|"""""|_|"""""|_|"""""|_|"""""|
         <span>high</span>
     </label>
 </div>
-
-
+<br><br>
 <br><br><br><br>
 <button id="settings-save" data-tooltip="save your configuration.\nwill save to your account if you're logged in">apply settings</button>

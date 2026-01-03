@@ -51,7 +51,12 @@ if (!$content_path) {
 
 $content = file_get_contents($content_path);
 
+$isLoggedIn = isset($_SESSION['user']) && isset($_SESSION['user']['username']);
 $isAdmin = isset($_SESSION['user']['isAdmin']) && $_SESSION['user']['isAdmin'] === true;
+if (!$isLoggedIn) {
+    // Hide user-only controls when not logged in
+    $content = str_replace('<span id="user-settings">', '<span id="user-settings" style="display:none">', $content);
+}
 if (!$isAdmin) {
     // Keep markup to avoid layout shifts; hide by default
     $content = str_replace('<span id="admin-settings">', '<span id="admin-settings" style="display:none">', $content);

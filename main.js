@@ -703,6 +703,55 @@ const GLOW_INTENSITY_KEY = 'glowIntensity';
 const GLOW_RADIUS_DEFAULT = '8px';
 const GLOW_CLASS = 'glow-enabled';
 const GLOW_STYLE_ID = 'glow-style-tag';
+const COLOR_PREFS_KEY = 'colorPrefs';
+const COLOR_FIELDS = ['bg', 'fg', 'border', 'subtle', 'links'];
+const COLOR_DEFAULTS = {
+    bg: '#000000',
+    fg: '#ffffff',
+    border: '#ffffff',
+    subtle: '#808080',
+    links: '#305aad',
+};
+
+function applyColorVars(colors) {
+    if (!colors) return;
+    const root = document.documentElement;
+    COLOR_FIELDS.forEach(key => {
+        if (colors[key]) {
+            root.style.setProperty(`--${key}`, colors[key]);
+        }
+    });
+}
+
+function normalizeColor(hex) {
+    if (typeof hex !== 'string') return null;
+    const v = hex.trim();
+    if (/^#[0-9a-fA-F]{6}$/.test(v)) return v.toUpperCase();
+    return null;
+}
+
+function loadLocalColorPrefs() {
+    try {
+        const raw = localStorage.getItem(COLOR_PREFS_KEY);
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        if (!parsed || typeof parsed !== 'object') return null;
+        const out = {};
+        COLOR_FIELDS.forEach(k => {
+            const n = normalizeColor(parsed[k]);
+            if (n) out[k] = n;
+        });
+        return Object.keys(out).length ? out : null;
+    } catch (_) {
+        return null;
+    }
+}
+
+function saveLocalColorPrefs(colors) {
+    try {
+        localStorage.setItem(COLOR_PREFS_KEY, JSON.stringify(colors));
+    } catch (_) { /* ignore */ }
+}
 
 function ensureGlowStyle() {
     if (document.getElementById(GLOW_STYLE_ID)) return;
@@ -873,6 +922,8 @@ function initSettingsPage() {
         const glowGroup = document.getElementById('glow-intensity-group');
         const maintenanceGroup = document.getElementById('maintenance-mode-group');
         const adminSection = document.getElementById('admin-settings');
+        const colorGroup = document.getElementById('color-scheme-group');
+        const colorResetBtn = document.getElementById('color-reset');
         const saveBtn = document.getElementById('settings-save');
         if (!glowGroup || !saveBtn) return;
         if (glowGroup.dataset.bound === '1') return;
@@ -880,9 +931,11 @@ function initSettingsPage() {
 
         const glowRadios = glowGroup.querySelectorAll('input[type="radio"][name="glow-intensity"]');
         const maintenanceRadios = maintenanceGroup ? maintenanceGroup.querySelectorAll('input[type="radio"][name="maintenance-mode"]') : [];
+        const colorInputs = colorGroup ? colorGroup.querySelectorAll('input.color-input[data-color-key]') : [];
         if (!glowRadios.length) return;
 
         let isAdmin = false;
+        const isLoggedIn = !!document.getElementById('user-greeting');
 
         const selectMaintenance = (state) => {
             if (!maintenanceRadios.length) return;
@@ -911,6 +964,48 @@ function initSettingsPage() {
             return val;
         };
 
+        const getColorValuesFromInputs = () => {
+            const result = {};
+            colorInputs.forEach(inp => {
+                const key = inp.dataset.colorKey;
+                const n = normalizeColor(inp.value);
+                if (key && n) result[key] = n;
+            });
+            return result;
+        };
+
+        const setColorInputs = (colors) => {
+            if (!colors) return;
+            colorInputs.forEach(inp => {
+                const key = inp.dataset.colorKey;
+                if (colors[key]) {
+                    inp.value = colors[key];
+                }
+            });
+        };
+
+        const resetColorsToDefault = () => {
+            setColorInputs(COLOR_DEFAULTS);
+            applyColorVars(COLOR_DEFAULTS);
+            saveLocalColorPrefs(COLOR_DEFAULTS);
+            if (isLoggedIn && window.fetch) {
+                const params = new URLSearchParams();
+                Object.entries(COLOR_DEFAULTS).forEach(([k, v]) => {
+                    params.append('color' + k.charAt(0).toUpperCase() + k.slice(1), v);
+                });
+                fetch('/api/settings', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                    body: params.toString(),
+                }).catch(() => {}).finally(() => {
+                    window.location.reload();
+                });
+            }
+        };
+
         // Pre-select glow from localStorage if available
         let stored = null;
         try {
@@ -928,6 +1023,31 @@ function initSettingsPage() {
             glowRadios[0].checked = true;
         }
 
+        // Load color prefs: local first, then server if logged in
+        const initialColors = Object.assign({}, COLOR_DEFAULTS, loadLocalColorPrefs() || {});
+        setColorInputs(initialColors);
+        applyColorVars(initialColors);
+
+        if (isLoggedIn && window.fetch) {
+            fetch('/api/settings', {
+                method: 'GET',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            }).then(r => r.ok ? r.json() : null).then(data => {
+                if (!data || !data.ok || !data.settings || !data.settings.colors) return;
+                const serverColors = {};
+                COLOR_FIELDS.forEach(k => {
+                    const n = normalizeColor(data.settings.colors[k] ?? '');
+                    if (n) serverColors[k] = n;
+                });
+                if (Object.keys(serverColors).length) {
+                    const merged = Object.assign({}, COLOR_DEFAULTS, serverColors);
+                    setColorInputs(merged);
+                    applyColorVars(merged);
+                    saveLocalColorPrefs(merged);
+                }
+            }).catch(() => {});
+        }
+
         saveBtn.addEventListener('click', function() {
             let selected = null;
             glowRadios.forEach(r => {
@@ -943,10 +1063,22 @@ function initSettingsPage() {
             // Apply immediately
             applyGlowIntensity(selected);
 
-            const isLoggedIn = !!document.getElementById('user-greeting');
+            // Colors: collect, persist locally, apply immediately
+            const chosenColors = getColorValuesFromInputs();
+            const mergedColors = Object.assign({}, COLOR_DEFAULTS, chosenColors);
+            saveLocalColorPrefs(mergedColors);
+            applyColorVars(mergedColors);
+
             if (isLoggedIn && window.fetch) {
                 const params = new URLSearchParams();
                 params.append('glowIntensity', selected);
+
+                if (Object.keys(chosenColors).length) {
+                    // flatten colors into separate fields
+                    Object.entries(chosenColors).forEach(([k, v]) => {
+                        params.append('color' + k.charAt(0).toUpperCase() + k.slice(1), v);
+                    });
+                }
 
                 if (isAdmin) {
                     const maintenanceSelection = getMaintenanceSelection();
@@ -969,6 +1101,13 @@ function initSettingsPage() {
                 window.location.reload();
             }
         });
+
+        if (colorResetBtn) {
+            colorResetBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                resetColorsToDefault();
+            });
+        }
 
         // Determine admin status to show/hide admin controls and load state
         fetchAdminStatus().then(flag => {
@@ -1917,11 +2056,15 @@ imageModal.className = 'image-modal';
 document.body.appendChild(imageModal);
 
 document.addEventListener('click', function(e) {
-    // Support both inline post images (id="post-image") and gallery grid images (.grid-image)
+    // Support inline post images everywhere; grid lightbox only on /gallery
+    const rawPath = (window.location && window.location.pathname) ? window.location.pathname : '/';
+    const path = rawPath.replace(/\/+$/, '') || '/';
+    const allowGridLightbox = path === '/gallery' || path.startsWith('/gallery/');
+
     let targetImg = null;
     if (e.target && e.target.id === 'post-image') {
         targetImg = e.target;
-    } else if (e.target) {
+    } else if (allowGridLightbox && e.target) {
         const fromGrid = e.target.closest && e.target.closest('.grid-item');
         if (fromGrid) {
             targetImg = fromGrid.querySelector('.grid-image');

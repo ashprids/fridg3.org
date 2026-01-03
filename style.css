@@ -1,4 +1,10 @@
-
+:root {
+    --bg: #000000;
+    --fg: #ffffff;
+    --border: #ffffff;
+    --subtle: #808080;
+    --links: #305aad;
+}
 
 .ascii-scale-container {
         width: 100%;
@@ -93,20 +99,20 @@
 }
 
 .spoiler {
-    background-color: white;
+    background-color: var(--fg);
     color: transparent;
     cursor: help;
     transition: color 0.2s;
 }
 
 .spoiler:hover {
-    color: white;
+    color: var(--fg);
     background-color: transparent;
 }
 
 body {
-    background-color: black;
-    color: white;
+    background-color: var(--bg);
+    color: var(--fg);
     font-family: 'MainRegular', monospace;
     font-size: 15px;
     margin: 0;
@@ -127,7 +133,7 @@ body {
     min-width: 150px;
     max-width: 200px;
     height: 100%;
-    border-right: 1px solid white;
+    border-right: 1px solid var(--border);
     box-sizing: border-box;
     flex-shrink: 0;
     display: flex;
@@ -162,7 +168,7 @@ body {
 }
 
 #header {
-    border-bottom: 1px solid white;
+    border-bottom: 1px solid var(--border);
     padding-top: 16px;
     padding-left: 16px;
     padding-bottom: 24px;
@@ -181,14 +187,14 @@ body {
 #subtitle {
     font-family: "MainItalic", monospace;
     font-size: 11px;
-    color: rgba(128, 128, 128, 0.434);
+    color: var(--subtle);
     margin-top: 4px;
     cursor: default
 }
 
 #hide-sidebar {
     cursor: pointer;
-    color: rgba(128, 128, 128, 0.434);
+    color: var(--subtle);
     font-size: 12px;
 }
 
@@ -201,7 +207,7 @@ body {
     top: 8px;
     left: 8px;
     cursor: pointer;
-    color: rgba(128, 128, 128, 0.434);
+    color: var(--subtle);
     font-size: 12px;
     z-index: 100;
 }
@@ -220,7 +226,7 @@ body {
 .tooltip {
     position: fixed;
     background-color: rgba(0, 0, 0, 0.9);
-    color: white;
+    color: var(--fg);
     padding: 4px 8px;
     border: 1px solid rgb(48, 90, 173);
     border-radius: 4px;
@@ -255,26 +261,26 @@ button[data-tooltip] {
 #tab {
     font-family: "MainRegular", monospace;
     padding: 8px;
-    border-bottom: 1px solid white;
-    color: white;
+    border-bottom: 1px solid var(--border);
+    color: var(--fg);
     flex-shrink: 0;
 }
 
 #tab.active {
     background-color: rgb(255, 255, 255);
-    color: black;
+    color: var(--bg);
 }
 
 #tab.active:hover {
     background-color: rgb(255, 255, 255);
-    color: black;
+    color: var(--bg);
     cursor: default;
 }
 
 #user-greeting {
     font-family: "MainItalic", monospace;
     font-size: 12px;
-    color: rgba(128, 128, 128, 0.8);
+    color: var(--subtle);
     padding: 8px;
     flex-shrink: 0;
 }
@@ -292,7 +298,7 @@ button[data-tooltip] {
     width: 100%;
     padding: 18px 8px 12px 8px;
     box-sizing: border-box;
-    border-top: 1px solid white;
+    border-top: 1px solid var(--border);
     flex-shrink: 0;
 }
 
@@ -300,7 +306,7 @@ button[data-tooltip] {
     width: 100%;
     padding: 10px 8px 8px 8px;
     box-sizing: border-box;
-    border-top: 1px solid white;
+    border-top: 1px solid var(--border);
     display: none; /* shown only when populated via JS */
     flex-direction: column;
     gap: 4px;
@@ -320,11 +326,11 @@ button[data-tooltip] {
 }
 
 .mini-track:hover {
-    color: #ffffff;
+    color: var(--fg);
 }
 
 .mini-track.active {
-    color: #ffffff;
+    color: var(--fg);
     font-family: "MainBold", monospace;
 }
 
@@ -332,7 +338,7 @@ button[data-tooltip] {
     width: 100%;
     padding: 10px 8px 6px 8px;
     box-sizing: border-box;
-    border-top: 1px solid white;
+    border-top: 1px solid var(--border);
     display: flex;
     flex-direction: column;
     gap: 6px;
@@ -407,7 +413,7 @@ button[data-tooltip] {
     display: inline-block;
     font-size: 11px;
     font-family: "MainItalic", monospace;
-    color: gray;
+    color: var(--subtle);
     white-space: nowrap;
     text-overflow: ellipsis;
     --scroll-distance: 0px;
@@ -500,7 +506,7 @@ button[data-tooltip] {
     width: 10px;
     height: 10px;
     border-radius: 2px;
-    background: #fff;
+    background: var(--fg);
     border: 1px solid #888;
 }
 
@@ -517,7 +523,7 @@ button[data-tooltip] {
     width: 10px;
     height: 10px;
     border-radius: 2px;
-    background: #fff;
+    background: var(--fg);
     border: 1px solid #888;
 }
 
@@ -545,7 +551,7 @@ button[data-tooltip] {
 #footer-text {
     font-size: 12px;
     font-family: "MainItalic", monospace;
-    color: gray;
+    color: var(--subtle);
     display: block;
     text-align: center;
     margin-bottom: 12px;
@@ -592,9 +598,9 @@ button[data-tooltip] {
 #footer-button {
     font-family: "MainRegular", monospace;
     font-size: 12px;
-    color: white;
-    background-color: black;
-    border: 1px solid white;
+    color: var(--fg);
+    background-color: var(--bg);
+    border: 1px solid var(--border);
     padding: 4px 8px;
     text-decoration: none;
     width: 100%;
@@ -610,7 +616,7 @@ button[data-tooltip] {
 
 #footer-button.active {
     background-color: rgb(255, 255, 255);
-    color: black;
+    color: var(--bg);
     cursor: default;
 }
 
@@ -633,23 +639,23 @@ button[data-tooltip] {
     height: 14px;
     cursor: pointer;
     flex-shrink: 0;
-    background-color: black;
-    border: 1px solid white;
+    background-color: var(--bg);
+    border: 1px solid var(--border);
     appearance: none;
     -webkit-appearance: none;
     -moz-appearance: none;
-    accent-color: white;
+    accent-color: var(--fg);
     border-radius: 2px;
 }
 
 .checkbox:checked {
-    background-color: white;
+    background-color: var(--fg);
 }
 
 .checkbox-label span {
     font-family: 'MainRegular', monospace;
     font-size: 15px;
-    color: white;
+    color: var(--fg);
 }
 
 .checkbox-label:hover span {
@@ -675,8 +681,8 @@ button[data-tooltip] {
     height: 14px;
     cursor: pointer;
     flex-shrink: 0;
-    background-color: black;
-    border: 2px solid white;
+    background-color: var(--bg);
+    border: 2px solid var(--border);
     appearance: none;
     -webkit-appearance: none;
     -moz-appearance: none;
@@ -684,25 +690,83 @@ button[data-tooltip] {
 }
 
 .radio:checked {
-    background: radial-gradient(circle, white 30%, black 30%);
+    background: radial-gradient(circle, var(--fg) 30%, var(--bg) 30%);
 }
 
 .radio-label span {
     font-family: 'MainRegular', monospace;
     font-size: 15px;
-    color: white;
+    color: var(--fg);
 }
 
 .radio-label:hover span {
     color: rgb(200, 200, 200);
 }
 
+#color-scheme-group {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-width: 360px;
+    padding: 12px;
+    background-color: rgba(255, 255, 255, 0);
+}
+
+.color-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    font-family: 'MainRegular', monospace;
+    font-size: 14px;
+    color: var(--fg);
+}
+
+.color-row span {
+    min-width: 90px;
+    color: var(--subtle);
+    letter-spacing: 0.4px;
+}
+
+.color-input {
+    width: 72px;
+    height: 34px;
+    padding: 0;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    border-radius: 4px;
+    cursor: pointer;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.02);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.1s ease;
+}
+
+.color-input::-webkit-color-swatch,
+.color-input::-webkit-color-swatch-wrapper {
+    border: none;
+    padding: 0;
+    border-radius: 3px;
+}
+
+.color-input::-moz-color-swatch {
+    border: none;
+    border-radius: 3px;
+}
+
+.color-input:hover {
+    border-color: var(--links);
+    box-shadow: 0 0 0 1px rgba(48, 90, 173, 0.45);
+}
+
+.color-input:active {
+    transform: translateY(1px);
+}
+
 .dropdown {
     font-family: 'MainRegular', monospace;
     font-size: 14px;
-    color: white;
-    background-color: black;
-    border: 1px solid white;
+    color: var(--fg);
+    background-color: var(--bg);
+    border: 1px solid var(--border);
     padding: 8px;
     cursor: pointer;
     box-sizing: border-box;
@@ -727,8 +791,8 @@ button[data-tooltip] {
 }
 
 .dropdown option {
-    background-color: black;
-    color: white;
+    background-color: var(--bg);
+    color: var(--fg);
     font-family: 'MainRegular', monospace;
     font-size: 14px;
 }
@@ -750,7 +814,7 @@ button[data-tooltip] {
     display: flex;
     flex-direction: column;
     gap: 8px;
-    border: 1px solid white;
+    border: 1px solid var(--border);
     padding: 8px;
     box-sizing: border-box;
     cursor: pointer !important;
@@ -769,7 +833,7 @@ button[data-tooltip] {
 .grid-caption {
     font-family: 'MainBold', monospace;
     font-size: 14px;
-    color: white;
+    color: var(--fg);
     margin: 0;
     word-wrap: break-word;
     text-decoration: none !important;
@@ -801,7 +865,7 @@ h2 {
     font-size: 14px;
     margin-top: 0;
     margin-bottom: 16px;
-    color: gray
+    color: var(--subtle)
 }
 
 h3 {
@@ -823,14 +887,16 @@ h5 {
     font-size: 13px;
     margin-top: 6px;
     margin-bottom: 4px;
-    color: rgb(180, 180, 180);
+    color: var(--subtle);
 }
 
 a {
-    color: rgb(48, 90, 173);
+    color: var(--links);
+    text-decoration-color: var(--links);
 }
 a:hover {
-    color:rgb(173, 48, 173)
+    color: var(--links);
+    text-decoration-color: var(--links);
 }
 
 /* Remove underline on hyperlinked grid captions/subcaptions only */
@@ -842,7 +908,7 @@ a.grid-subcaption {
 }
 
 hr {
-    border: 1px solid white
+    border: 1px solid var(--border)
 }
 
 #posts {
@@ -864,7 +930,7 @@ hr {
     flex-direction: column;
     gap: 4px;
     padding: 12px;
-    border: 1px solid white;
+    border: 1px solid var(--border);
     border-radius: 2px;
     transition: background-color 0.2s;
     position: relative;
@@ -884,14 +950,14 @@ hr {
 #post-date {
     font-family: "MainItalic", monospace;
     font-size: 12px;
-    color: rgb(150, 150, 150);
+    color: var(--subtle);
 }
 
 #post-bookmark {
     position: absolute;
     top: 12px;
     right: 12px;
-    color: rgb(150, 150, 150);
+    color: var(--subtle);
     font-size: 12px;
     cursor: pointer !important;
 }
@@ -899,13 +965,13 @@ hr {
 #post-title {
     font-family: "MainBold", monospace;
     font-size: 16px;
-    color: white;
+    color: var(--fg);
 }
 
 #post-description {
     font-family: "MainRegular", monospace;
     font-size: 13px;
-    color: rgb(180, 180, 180);
+    color: var(--subtle);
 }
 
 #post-username {
@@ -917,7 +983,7 @@ hr {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    border-bottom: 1px solid white;
+    border-bottom: 1px solid var(--border);
     padding-bottom: 8px;
     margin-bottom: 8px;
 }
@@ -925,11 +991,11 @@ hr {
 #post-date-feed {
     font-family: "MainItalic", monospace;
     font-size: 12px;
-    color: rgb(150, 150, 150);
+    color: var(--subtle);
 }
 
 #post-edit-feed {
-    color: rgb(150, 150, 150);
+    color: var(--subtle);
     cursor: pointer;
 }
 
@@ -938,7 +1004,7 @@ hr {
 }
 
 #post-bookmark-feed {
-    color: rgb(150, 150, 150);
+    color: var(--subtle);
     cursor: pointer !important;
 }
 
@@ -950,7 +1016,7 @@ hr {
 #post-content {
     font-family: "MainRegular", monospace;
     font-size: 14px;
-    color: white;
+    color: var(--fg);
     line-height: 1.4;
 }
 
@@ -1020,7 +1086,7 @@ hr {
 
 .image-modal-expand:hover {
     background-color: rgb(48, 90, 173);
-    color: black;
+    color: var(--bg);
 }
 
 .bbcode-editor {
@@ -1034,9 +1100,9 @@ hr {
     display: flex;
     flex-wrap: wrap;
     gap: 4px;
-    background-color: black;
+    background-color: var(--bg);
     padding: 8px;
-    border: 1px solid white;
+    border: 1px solid var(--border);
     border-bottom: none;
     border-top-left-radius: 3px;
     border-top-right-radius: 3px;
@@ -1049,8 +1115,8 @@ hr {
 
 .bbcode-btn {
     background-color: transparent;
-    color: white;
-    border: 1px solid white;
+    color: var(--fg);
+    border: 1px solid var(--border);
     padding: 6px 10px;
     cursor: pointer;
     font-size: 14px;
@@ -1076,9 +1142,9 @@ hr {
 
 .bbcode-dropdown {
     padding: 8px 12px;
-    border: 1px solid white;
-    background-color: black;
-    color: white;
+    border: 1px solid var(--border);
+    background-color: var(--bg);
+    color: var(--fg);
     font-family: "MainRegular", monospace;
     font-size: 14px;
     cursor: pointer;
@@ -1090,8 +1156,8 @@ hr {
 }
 
 .bbcode-dropdown option {
-    background-color: black;
-    color: white;
+    background-color: var(--bg);
+    color: var(--fg);
 }
 
 .bbcode-dropdown option[value="h3"] {
@@ -1108,9 +1174,9 @@ hr {
     width: 100%;
     min-height: 200px;
     padding: 12px;
-    border: 1px solid white;
-    background-color: black;
-    color: white;
+    border: 1px solid var(--border);
+    background-color: var(--bg);
+    color: var(--fg);
     font-family: "MainRegular", monospace;
     font-size: 14px;
     resize: vertical;
@@ -1127,9 +1193,9 @@ hr {
     width: 100%;
     min-height: 200px;
     padding: 12px;
-    border: 1px solid white;
-    background-color: black;
-    color: white;
+    border: 1px solid var(--border);
+    background-color: var(--bg);
+    color: var(--fg);
     font-family: "MainRegular", monospace;
     font-size: 14px;
     box-sizing: border-box;
@@ -1148,9 +1214,9 @@ hr {
     font-size: 14px;
     padding: 8px;
     box-sizing: border-box;
-    border: 1px solid white;
-    background-color: black;
-    color: white;
+    border: 1px solid var(--border);
+    background-color: var(--bg);
+    color: var(--fg);
     resize: vertical;
     border-radius: 3px;
 }
@@ -1178,9 +1244,9 @@ hr {
 }
 
 pre code.hljs {
-    background-color: black;
-    color: white;
-    border: 1px solid white;
+    background-color: var(--bg);
+    color: var(--fg);
+    border: 1px solid var(--border);
     padding: 12px;
     font-family: "MainRegular", monospace;
     font-size: 14px;
@@ -1196,12 +1262,13 @@ pre code.hljs {
 }
 
 #form-button,
-#lastfm-link-button {
+#lastfm-link-button,
+#color-reset {
     display: inline-block;
     padding: 8px 16px;
-    border: 1px solid white;
-    background-color: black;
-    color: white;
+    border: 1px solid var(--border);
+    background-color: var(--bg);
+    color: var(--fg);
     font-family: "MainRegular", monospace;
     font-size: 14px;
     cursor: pointer;
@@ -1212,12 +1279,16 @@ pre code.hljs {
     margin-bottom: 16px;
 }
 
+#color-reset {
+    margin-top: 10px;
+}
+
 #settings-save {
     display: inline-block;
     padding: 8px 16px;
-    border: 1px solid white;
-    background-color: black;
-    color: white;
+    border: 1px solid var(--border);
+    background-color: var(--bg);
+    color: var(--fg);
     font-family: "MainRegular", monospace;
     font-size: 14px;
     cursor: pointer;
@@ -1231,9 +1302,9 @@ pre code.hljs {
 #two-buttons {
     display: inline-block;
     padding: 8px 16px;
-    border: 1px solid white;
-    background-color: black;
-    color: white;
+    border: 1px solid var(--border);
+    background-color: var(--bg);
+    color: var(--fg);
     font-family: "MainRegular", monospace;
     font-size: 14px;
     cursor: pointer;
@@ -1245,14 +1316,16 @@ pre code.hljs {
 }
 
 #form-button:hover,
-#lastfm-link-button:hover {
+#lastfm-link-button:hover,
+#color-reset:hover {
     background-color: rgba(255, 255, 255, 0.1);
     cursor: pointer;
 }
 
 #form-button:active,
-#lastfm-link-button:active {
-    background-color: black
+#lastfm-link-button:active,
+#color-reset:active {
+    background-color: var(--bg)
 }
 
 #two-buttons:not(:only-of-type) {
@@ -1274,7 +1347,7 @@ pre code.hljs {
 }
 
 #two-buttons:active {
-    background-color: black
+    background-color: var(--bg)
 }
 
 #error {
@@ -1297,9 +1370,9 @@ pre code.hljs {
     font-size: 14px;
     padding: 8px;
     box-sizing: border-box;
-    border: 1px solid white;
-    background-color: black;
-    color: white;
+    border: 1px solid var(--border);
+    background-color: var(--bg);
+    color: var(--fg);
     border-radius: 3px;
 }
 
@@ -1314,9 +1387,9 @@ pre code.hljs {
 
 #search-button {
     padding: 6px 16px;
-    border: 1px solid white;
-    background-color: black;
-    color: white;
+    border: 1px solid var(--border);
+    background-color: var(--bg);
+    color: var(--fg);
     font-family: "MainRegular", monospace;
     font-size: 14px;
     cursor: pointer;
@@ -1330,5 +1403,5 @@ pre code.hljs {
 }
 
 #search-button:active {
-    background-color: black;
+    background-color: var(--bg);
 }
