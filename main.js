@@ -713,6 +713,13 @@ const COLOR_DEFAULTS = {
     links: '#305aad',
 };
 
+// Apply saved color prefs early on page load so refreshes keep the scheme
+(() => {
+    const localColors = loadLocalColorPrefs();
+    const merged = Object.assign({}, COLOR_DEFAULTS, localColors || {});
+    applyColorVars(merged);
+})();
+
 function applyColorVars(colors) {
     if (!colors) return;
     const root = document.documentElement;
@@ -984,26 +991,35 @@ function initSettingsPage() {
             });
         };
 
+        const postColorsToServer = (colors) => {
+            if (!isLoggedIn || !window.fetch) return Promise.resolve();
+            const params = new URLSearchParams();
+            Object.entries(colors).forEach(([k, v]) => {
+                params.append('color' + k.charAt(0).toUpperCase() + k.slice(1), v);
+            });
+            return fetch('/api/settings', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                body: params.toString(),
+            }).catch(() => {});
+        };
+
+        const persistColors = (colors, opts = {}) => {
+            const merged = Object.assign({}, COLOR_DEFAULTS, colors || {});
+            saveLocalColorPrefs(merged);
+            applyColorVars(merged);
+            if (!opts.skipServer) {
+                return postColorsToServer(merged);
+            }
+            return Promise.resolve();
+        };
+
         const resetColorsToDefault = () => {
             setColorInputs(COLOR_DEFAULTS);
-            applyColorVars(COLOR_DEFAULTS);
-            saveLocalColorPrefs(COLOR_DEFAULTS);
-            if (isLoggedIn && window.fetch) {
-                const params = new URLSearchParams();
-                Object.entries(COLOR_DEFAULTS).forEach(([k, v]) => {
-                    params.append('color' + k.charAt(0).toUpperCase() + k.slice(1), v);
-                });
-                fetch('/api/settings', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
-                        'X-Requested-With': 'XMLHttpRequest',
-                    },
-                    body: params.toString(),
-                }).catch(() => {}).finally(() => {
-                    window.location.reload();
-                });
-            }
+            persistColors(COLOR_DEFAULTS);
         };
 
         // Pre-select glow from localStorage if available
@@ -1048,6 +1064,14 @@ function initSettingsPage() {
             }).catch(() => {});
         }
 
+        // Persist colors immediately when changed
+        colorInputs.forEach(inp => {
+            inp.addEventListener('input', () => {
+                const chosen = getColorValuesFromInputs();
+                persistColors(chosen);
+            });
+        });
+
         saveBtn.addEventListener('click', function() {
             let selected = null;
             glowRadios.forEach(r => {
@@ -1066,16 +1090,15 @@ function initSettingsPage() {
             // Colors: collect, persist locally, apply immediately
             const chosenColors = getColorValuesFromInputs();
             const mergedColors = Object.assign({}, COLOR_DEFAULTS, chosenColors);
-            saveLocalColorPrefs(mergedColors);
-            applyColorVars(mergedColors);
+            persistColors(mergedColors, { skipServer: isLoggedIn });
 
             if (isLoggedIn && window.fetch) {
                 const params = new URLSearchParams();
                 params.append('glowIntensity', selected);
 
-                if (Object.keys(chosenColors).length) {
-                    // flatten colors into separate fields
-                    Object.entries(chosenColors).forEach(([k, v]) => {
+                if (Object.keys(mergedColors).length) {
+                    // flatten colors into separate fields (merged so defaults persist server-side)
+                    Object.entries(mergedColors).forEach(([k, v]) => {
                         params.append('color' + k.charAt(0).toUpperCase() + k.slice(1), v);
                     });
                 }
