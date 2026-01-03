@@ -21,7 +21,11 @@ async function fetchAdminStatus() {
 }
 
 function enableWipEnforcement() {
-    const isAllowedPath = (pathname) => pathname === '/error/wip' || pathname === '/account/login';
+    const isAllowedPath = (pathname) => {
+        // Remove trailing slash for consistent comparison
+        const normalizedPath = pathname.replace(/\/$/, '') || '/';
+        return normalizedPath === '/error/wip' || normalizedPath === '/account/login';
+    };
     let intervalId = null;
 
     const cleanupIfAdmin = () => {
@@ -34,7 +38,9 @@ function enableWipEnforcement() {
 
     const enforceWip = () => {
         if (cleanupIfAdmin()) return;
-        if (!isAllowedPath(window.location.pathname)) {
+        const currentPath = window.location.pathname;
+        // Only redirect if not on an allowed path
+        if (!isAllowedPath(currentPath)) {
             window.location.replace('/error/wip');
         }
     };
@@ -54,6 +60,11 @@ function enableWipEnforcement() {
     };
 
     enforceWip();
+
+    // If already on an allowed path, don't set up enforcement
+    if (isAllowedPath(window.location.pathname)) {
+        return;
+    }
 
     // Prevent navigation away while WIP is active
     document.addEventListener('click', handleClick, true);
