@@ -179,6 +179,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $postFile = $postsDir . DIRECTORY_SEPARATOR . $timestampFilename . '.txt';
     file_put_contents($postFile, $text);
 
+    // Send Discord webhook notification
+    $webhooksFile = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'data' . DIRECTORY_SEPARATOR . 'etc' . DIRECTORY_SEPARATOR . 'webhooks.json';
+    if (file_exists($webhooksFile)) {
+        $webhooksData = json_decode(file_get_contents($webhooksFile), true);
+        $discordWebhookUrl = $webhooksData['discord_feed'] ?? null;
+        
+        if ($discordWebhookUrl && strpos($discordWebhookUrl, 'https://discord.com/api/webhooks/') === 0) {
+            $postLink = 'https://fridg3.org/feed/posts/' . $timestampFilename;
+            $discordMessage = "new /feed/ post by " . $username . "!\n" . $postLink . "\n<@&1408064770891972660>";
+            
+            $payload = json_encode([
+                'content' => $discordMessage
+            ]);
+            
+            $ch = curl_init($discordWebhookUrl);
+            curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'POST');
+            curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
+            curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                'Content-Type: application/json',
+                'Content-Length: ' . strlen($payload)
+            ]);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 5);
+            @curl_exec($ch);
+            curl_close($ch);
+        }
+    }
+
     // Redirect to feed after posting
     header('Location: /feed');
     exit;

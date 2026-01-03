@@ -2,8 +2,8 @@
 
 session_start();
 
-$title = 'example title';
-$description = 'example description.';
+$title = '404';
+$description = 'the requested page could not be found.';
 
 
 function find_template_file($filename) {
