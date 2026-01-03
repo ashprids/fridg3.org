@@ -1,0 +1,231 @@
+<h1>formatting</h1>
+<h2>all-in-one page for theme customization</h2>
+This page contains all of the different elements that can be found throughout the website, along with examples of how they look and function. Use this page as a reference for formatting when creating new content or customizing the website's appearance.
+<br><br>
+The changes you make to your custom theme will be reflected on this page whenever you refresh it, allowing you to see how your modifications affect the various elements in real-time.
+<br><br><br><hr><br><br>
+
+<h1>title (h1)</h1>
+<h2>sub-title (h2)</h2>
+<h3>heading (h3)</h3>
+        <span id="post-save" data-tooltip="save post"><i class="fa-regular fa-bookmark"></i></span>
+<span data-tooltip="tooltips are made with the data-tooltip attribute.\na tooltip can be added to any HTML element.">text with tooltip (hover to view)</span>
+<br><span id="error">this is an error message</span>
+<img id="post-image" src="/data/images/formatting-example.png">
+
+<br><br>
+        <span id="post-save" data-tooltip="add to saves"><i class="fa-regular fa-bookmark"></i></span>
+<a href="https://fridg3.org" data-tooltip="https://fridg3.org">hyperlinked text</a>
+
+<br><br>
+
+<pre><code class="language-javascript">// this is an example code block
+function helloWorld() {
+    console.log("hello, world!");
+}</code></pre>
+
+<div id="posts">
+    <div id="post">
+        <span id="post-date">25/01/2025</span>
+        <span id="post-save" data-tooltip="save post"><i class="fa-regular fa-bookmark"></i></span>
+        <span id="post-title">example journal post</span>
+        <span id="post-description">this is an example post description, acting as an overview of the post's content.</span>
+    </div>
+    <div id="post">
+        <span id="post-date">14/02/2025</span>
+        <span id="post-bookmark" data-tooltip="add to bookmarks"><i class="fa-regular fa-bookmark"></i></span>
+        <span id="post-title">yet another example journal post</span>
+        <span id="post-description">this is here to show what posts look like when there's multiple of them. looks pretty good imo.</span>
+    </div>
+</div>
+
+<br><br>
+
+<div id="posts">
+    <div id="post">
+        <div id="post-header">
+            <span id="post-username">@fridge</span>
+            <span id="post-date-feed">2h ago • <span id="post-save-feed" data-tooltip="save post"><i class="fa-regular fa-bookmark"></i></span></span> 
+        </div>
+        <span id="post-content">this is an example feed post. feed posts are short-form posts that are designed to be quick and easy to read.
+            <br><br>feed posts are like twitter posts, but without the social media aspect. they're just for sharing quick thoughts or updates.
+        </span>
+            <span id="post-date-feed">2h ago • <span id="post-save-feed" data-tooltip="add to saves"><i class="fa-regular fa-bookmark"></i></span></span> 
+    <div id="post">
+        <div id="post-header">
+            <span id="post-username">@fridge</span>
+            <span id="post-date-feed">4d ago • <span id="post-save-feed" data-tooltip="save post"><i class="fa-regular fa-bookmark"></i></span></span> 
+        </div>
+        <span id="post-content">this is yet another example feed post. just to show what multiple posts look like in a row.
+            <br><br>this post also has an image attachment. you can click on images to expand their size.
+            <img id="post-image" src="/data/images/formatting-example.png">
+            <span id="post-date-feed">4d ago • <span id="post-save-feed" data-tooltip="add to saves"><i class="fa-regular fa-bookmark"></i></span></span> 
+    </div>
+</div>
+
+<br><br>
+
+<div id="posts">
+    <div id="post">
+        <div id="post-header">
+            <span id="post-username">Anonymous</span>
+            <span id="post-date-feed">3w ago</span> 
+        </div>
+        <span id="post-content">this is an example of what comments will look like.<br><br>
+        comments can be left by anyone, and are intended to be used for leaving feedback or sharing thoughts on the website.</span>
+    </div>
+    <div id="post">
+        <div id="post-header">
+            <span id="post-username">Michael E</span>
+            <span id="post-date-feed">3w ago</span> 
+        </div>
+        <span id="post-content">this is another example comment to showcase that users can input their own name/alias.</span>
+    </div>
+</div>
+
+<br><br>
+
+<input id="textbox" type="text" placeholder="small textbox">
+
+<br><br>
+
+<textarea id="textbox" class="large" type="text" placeholder="this is a large textbox. it can be resized by dragging the bottom right corner."></textarea>
+
+<br>
+
+<div class="bbcode-editor">
+    <div class="bbcode-toolbar">
+        <button class="bbcode-btn" data-tag="b" data-tooltip="bold"><i class="fa-solid fa-bold"></i></button>
+        <button class="bbcode-btn" data-tag="i" data-tooltip="italic"><i class="fa-solid fa-italic"></i></button>
+        <button class="bbcode-btn" data-tag="u" data-tooltip="underline"><i class="fa-solid fa-underline"></i></button>
+        <button class="bbcode-btn" data-tag="s" data-tooltip="strikethrough"><i class="fa-solid fa-strikethrough"></i></button>
+        <button id="bbcode-spoiler-btn" class="bbcode-btn" data-tooltip="spoiler"><i class="fa-solid fa-eye-slash"></i></button>
+        <button id="bbcode-color-btn" class="bbcode-btn" data-tooltip="color"><i class="fa-solid fa-palette"></i></button>
+        <input id="bbcode-color-input" type="color" style="display: none;">
+        <button id="bbcode-image-btn" class="bbcode-btn" data-tooltip="attach image"><i class="fa-solid fa-image"></i></button>
+        <input id="bbcode-image-input" type="file" accept="image/*" style="display: none;">
+        <button class="bbcode-btn" data-tag="code=python" data-tooltip="code block"><i class="fa-solid fa-code"></i></button>
+        <button id="bbcode-tooltip-btn" class="bbcode-btn" data-tooltip="tooltip"><i class="fa-solid fa-comment-dots"></i></button>
+        <button id="bbcode-link-btn" class="bbcode-btn" data-tooltip="link"><i class="fa-solid fa-link"></i></button>
+        <select id="bbcode-header-dropdown" class="bbcode-dropdown" data-tooltip="heading">
+            <option value="">headings</option>
+            <option value="h3">heading</option>
+            <option value="h4">sub-heading</option>
+        </select>
+        <button id="bbcode-preview-toggle" class="bbcode-btn" data-tooltip="toggle preview"><i class="fa-solid fa-eye"></i></button>
+    </div>
+    <textarea id="bbcode-textbox">
+[h3]heading[/h3]
+[h4]subheading[/h4]
+[b]bold[/b]
+[i]italic[/i]
+[u]underline[/u]
+[s]strikethrough[/s]
+[spoiler]spoiler[/spoiler]
+[color:#1CD977]colour[/color]
+[img=https://www.robloxforum.com/media/twink-differet-png.458/full?auto=webp&fit=bounds&format=pjgp&height=1920&optimize=high&width=1920][name:you can name this whatever you'd like]
+[code=python]for i in range(1,10):
+print("current number: " + i)[/code]
+[tooltip="this is the tooltip, pretty cool right?"]this text has a tooltip attached to it[/tooltip]
+[link=https://example.com]this text is a hyperlink[/link]
+    </textarea>
+    <div id="bbcode-preview" style="display: none;"></div>
+</div>
+
+<br><br>
+
+<button id="form-button" data-tooltip="this is a button">button</button>
+<button id="two-buttons" data-tooltip="this is a button">button 1</button><button id="two-buttons" data-tooltip="this is another button">button 2</button>
+
+<br><br>
+
+<div id="grid">
+    <div class="grid-item">
+        <img class="grid-image" src="" alt="Example 1">
+        <div class="grid-caption">grid item 1</div>
+        <div class="grid-subcaption">item description or metadata</div>
+    </div>
+    <div class="grid-item">
+        <img class="grid-image" src="" alt="Example 2">
+        <div class="grid-caption">grid item 2</div>
+        <div class="grid-subcaption">item description or metadata</div>
+    </div>
+    <div class="grid-item">
+        <img class="grid-image" src="" alt="Example 3">
+        <div class="grid-caption">grid item 3</div>
+        <div class="grid-subcaption">item description or metadata</div>
+    </div>
+    <div class="grid-item">
+        <img class="grid-image" src="" alt="Example 4">
+        <div class="grid-caption">grid item 4</div>
+        <div class="grid-subcaption">item description or metadata</div>
+    </div>
+    <div class="grid-item">
+        <img class="grid-image" src="" alt="Example 5">
+        <div class="grid-caption">grid item 5</div>
+        <div class="grid-subcaption">item description or metadata</div>
+    </div>
+    <div class="grid-item">
+        <img class="grid-image" src="" alt="Example 6">
+        <div class="grid-caption">grid item 6</div>
+        <div class="grid-subcaption">item description or metadata</div>
+    </div>
+</div>
+
+<br><br>
+
+<div class="checkbox-group">
+    <label class="checkbox-label">
+        <input type="checkbox" class="checkbox" checked>
+        <span>checkbox option 1</span>
+    </label>
+    <label class="checkbox-label">
+        <input type="checkbox" class="checkbox">
+        <span>checkbox option 2</span>
+    </label>
+    <label class="checkbox-label">
+        <input type="checkbox" class="checkbox" checked>
+        <span>checkbox option 3</span>
+    </label>
+    <label class="checkbox-label">
+        <input type="checkbox" class="checkbox">
+        <span>checkbox option 4</span>
+    </label>
+</div>
+
+<br><br>
+<div class="radio-group">
+    <label class="radio-label">
+        <input type="radio" class="radio" name="example-radio" checked>
+        <span>radio option 1</span>
+    </label>
+    <label class="radio-label">
+        <input type="radio" class="radio" name="example-radio">
+        <span>radio option 2</span>
+    </label>
+    <label class="radio-label">
+        <input type="radio" class="radio" name="example-radio">
+        <span>radio option 3</span>
+    </label>
+    <label class="radio-label">
+        <input type="radio" class="radio" name="example-radio">
+        <span>radio option 4</span>
+    </label>
+</div>
+
+<br><br>
+
+<select class="dropdown">
+    <option value="">select an option</option>
+    <option value="1">dropdown option 1</option>
+    <option value="2">dropdown option 2</option>
+    <option value="3">dropdown option 3</option>
+    <option value="4">dropdown option 4</option>
+</select>
+
+<br><br>
+
+<div id="search">
+    <input id="search-box" type="text" placeholder="search...">
+    <button id="search-button"><i class="fa-solid fa-magnifying-glass"></i></button>
+</div>

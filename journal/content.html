@@ -1,0 +1,47 @@
+<pre id="ascii" style="color:#bba16c;font-size:12px;line-height:0.8">
+     @@@   @@@@@@   @@@  @@@  @@@@@@@   @@@  @@@   @@@@@@   @@@      
+     @@@  @@@@@@@@  @@@  @@@  @@@@@@@@  @@@@ @@@  @@@@@@@@  @@@      
+     @@!  @@!  @@@  @@!  @@@  @@!  @@@  @@!@!@@@  @@!  @@@  @@!      
+     !@!  !@!  @!@  !@!  @!@  !@!  @!@  !@!!@!@!  !@!  @!@  !@!      
+     !!@  @!@  !@!  @!@  !@!  @!@!!@!   @!@ !!@!  @!@!@!@!  @!!      
+     !!!  !@!  !!!  !@!  !!!  !!@!@!    !@!  !!!  !!!@!!!!  !!!      
+     !!:  !!:  !!!  !!:  !!!  !!: :!!   !!:  !!!  !!:  !!!  !!:      
+!!:  :!:  :!:  !:!  :!:  !:!  :!:  !:!  :!:  !:!  :!:  !:!   :!:     
+::: : ::  ::::: ::  ::::: ::  ::   :::   ::   ::  ::   :::   :: :::: 
+ : :::     : :  :    : :  :    :   : :  ::    :    :   : :  : :: : : 
+</pre>
+<br>
+<style>
+    #post a, a#post, #post a:visited, a#post:visited {
+        text-decoration: none;
+    }
+</style>
+<form id="search" action="/feed" method="GET">
+    <input id="search-box" name="q" type="text" placeholder="search...">
+    <button id="search-button" type="submit"><i class="fa-solid fa-magnifying-glass"></i></button>
+</form>
+<a style="text-decoration: none;" href="/journal/create"><button id="form-button" type="button">create post</button></a>
+<div id="posts">
+<script>
+// Highlight saved bookmarks for anonymous users in /journal
+if (!window.isLoggedIn || !window.isLoggedIn()) {
+    document.addEventListener('DOMContentLoaded', function() {
+        try {
+            var bookmarks = [];
+            try {
+                var raw = localStorage.getItem('bookmarkedPosts');
+                if (raw) bookmarks = JSON.parse(raw);
+            } catch (_) {}
+            document.querySelectorAll('#post-bookmark').forEach(function(bm) {
+                var id = bm.dataset.postId;
+                var icon = bm.querySelector('i');
+                if (id && icon && bookmarks.includes(id)) {
+                    icon.classList.add('fa-solid');
+                    icon.classList.remove('fa-regular');
+                }
+            });
+        } catch (_) {}
+    });
+}
+</script>
+</div>

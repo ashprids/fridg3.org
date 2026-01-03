@@ -1,0 +1,26 @@
+<h1>{title}</h1>
+<h2>{subtitle}<br><br>{date}</h2>
+<style>
+	#content a {
+		text-decoration: none;
+	}
+</style>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+	var links = document.querySelectorAll('#content a');
+	links.forEach(function(link) {
+		var href = link.getAttribute('href');
+		if (href) {
+			link.setAttribute('data-tooltip', href);
+		}
+	});
+	
+	// Apply syntax highlighting to code blocks
+	if (typeof hljs !== 'undefined') {
+		document.querySelectorAll('pre code').forEach(function(block) {
+			hljs.highlightElement(block);
+		});
+	}
+});
+</script>
+{content}
