@@ -1,0 +1,68 @@
+fridg3.org — developer notes
+==============================
+
+Purpose
+- Personal site with multiple sections (feed, journal, music, merch, guestbook, etc.) served from PHP + static assets.
+- Repo is deployment source; data in /data is runtime content and not tracked by git.
+
+Deployment
+- GitHub Actions workflow deploys main branch to /var/www/fridg3.org via rsync over SSH.
+- Files must be owned by user deploy:http for updates; /data must be owned by http:http and chmod 755 for web write access.
+- See README.md for exact chown/chmod commands.
+
+Routing / nginx
+- Custom nginx rules avoid 301/302 on API and content POST endpoints (feed/journal create/edit) and map clean URLs.
+- /error/wip is the maintenance page; /data is protected from public reads (JSON blocked).
+
+Data layout (server-side)
+- /data/accounts/accounts.json: source of truth for users; stores at least username, isAdmin, glowIntensity, colors (map of bg/fg/border/subtle/links). Written by /api/settings.
+- /data/etc/wip: plain text flag controlling maintenance ("true"/"false" etc.). Written by /api/settings when admin toggles maintenance. Read by main.js to enforce WIP redirect.
+- /data/feed/*.txt, /data/journal/*.txt, /data/audio, /data/downloads, /data/images, etc.: content payloads (not git-tracked).
+- /data/etc/webhooks.json: webhook configs.
+
+Frontend theming and settings (main.js + settings page)
+- CSS vars define palette: --bg, --fg, --border, --subtle, --links.
+- COLOR_DEFAULTS: bg #000000, fg #ffffff, border #ffffff, subtle #808080, links #305aad.
+- On any page load, main.js loads local color prefs (localStorage key colorPrefs), merges with defaults, and immediately applies vars so refreshes keep the scheme.
+- Settings page (/settings): color inputs post updates as you change them.
+  - If logged in: every color change POSTs to /api/settings; server writes merged colors to accounts.json for that user, and localStorage is also updated.
+  - If logged out: changes stay only in localStorage; vars apply immediately.
+  - Reset button restores COLOR_DEFAULTS, updates localStorage, and (when logged in) syncs to server.
+- Glow intensity: stored in localStorage key glowIntensity; applyGlowIntensity reads it on load. If logged in and you click save, glowIntensity is also POSTed to /api/settings to persist in accounts.json.
+- Maintenance toggle (admin only on settings page): writes /data/etc/wip through /api/settings. WIP flag is polled on load; non-admins are forced to /error/wip except /account/login.
+
+Front-end behavior (main.js highlights)
+- SPA-like navigation: internal links (except logout, /api/, /bookmarks) load into #content via fetch/XHR to keep sidebar/audio persistent.
+- ASCII/gradient headers auto-scale for narrow screens; tooltips handled via data-tooltip.
+- Sidebar show/hide state stored in localStorage key sidebarVisible.
+- BBCode parsing for post content; highlight.js used when present.
+
+API endpoints (implemented in repo)
+- /api/settings (GET/POST): get/set per-user glowIntensity and colors; POST also handles admin maintenance toggle. Requires session user for writes.
+- /api/account/is-admin: returns JSON isAdmin for current session; used by main.js WIP guard and settings admin controls.
+- Other endpoints exist under /api (bookmark, feed-post, settings/, account/, etc.) — review respective index.php files when modifying functionality.
+
+Authentication / sessions
+- PHP sessions track logged-in user; presence of #user-greeting in DOM is used client-side to decide if logged in.
+- Admin detection: cookie is_admin=1 plus /api/account/is-admin check to confirm.
+
+Error/maintenance handling
+- work-in-progress flag from /data/etc/wip sets global workInProgress. Non-admins are redirected to /error/wip and navigation is intercepted to stay there.
+
+Style system
+- style.css uses CSS vars for colors; buttons/inputs styled for consistent monochrome look. Color pickers styled via #color-scheme-group and .color-row/.color-input.
+
+Content structure (high level)
+- Section folders (feed/, journal/, bookmarks/, gallery/, guestbook/, music/, merch/, settings/, account/, etc.) each have index.php and content.html (template fragments).
+- template.html and index.php at root orchestrate layout; main.js drives interactivity.
+
+How to make changes safely
+- Persist new per-user settings through /api/settings and mirror to localStorage for immediate UX.
+- Keep /data writes server-side (PHP); never expose JSON directly to the client.
+- When adding new routes, ensure nginx rewrites avoid redirecting POSTs and protect /data.
+- Respect maintenance guard: allow /account/login and /error/wip, block others when WIP is on.
+
+Quick start mental model
+- State sources: accounts.json (authoritative per-user prefs), localStorage (fast UX + anonymous users), wip file (site-wide maintenance), PHP session (auth/admin).
+- Rendering: PHP serves pages; main.js enhances with SPA navigation, theming, glow, BBCode.
+- Saving prefs: logged-in users sync to accounts.json via /api/settings; guests stay local.
