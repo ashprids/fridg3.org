@@ -1,5 +1,5 @@
-// Global work-in-progress kill-switch; set to true to redirect site to /error/wip
-const workInProgress = false;
+// Global work-in-progress kill-switch; derived from /data/etc/wip
+let workInProgress = false;
 
 function hasAdminCookie() {
     try {
@@ -92,7 +92,23 @@ function initWorkInProgressGuard() {
     });
 }
 
-initWorkInProgressGuard();
+async function loadWorkInProgressFlag() {
+    try {
+        const res = await fetch('/data/etc/wip', { cache: 'no-store' });
+        if (!res.ok) return;
+        const raw = await res.text();
+        const text = (raw || '').trim().toLowerCase();
+        const truthy = new Set(['1', 'true', 'yes', 'y', 'on', 'wip']);
+        workInProgress = truthy.has(text);
+    } catch (_) {
+        workInProgress = false;
+    } finally {
+        initWorkInProgressGuard();
+        toggleMaintenanceBanner();
+    }
+}
+
+loadWorkInProgressFlag();
 
 function toggleMaintenanceBanner() {
     try {
@@ -854,35 +870,67 @@ function initSettingsPage() {
         const path = rawPath.replace(/\/+$/, '') || '/';
         if (!path.startsWith('/settings')) return;
 
-        const group = document.getElementById('glow-intensity-group');
+        const glowGroup = document.getElementById('glow-intensity-group');
+        const maintenanceGroup = document.getElementById('maintenance-mode-group');
+        const adminSection = document.getElementById('admin-settings');
         const saveBtn = document.getElementById('settings-save');
-        if (!group || !saveBtn) return;
-        if (group.dataset.bound === '1') return;
-        group.dataset.bound = '1';
+        if (!glowGroup || !saveBtn) return;
+        if (glowGroup.dataset.bound === '1') return;
+        glowGroup.dataset.bound = '1';
 
-        const radios = group.querySelectorAll('input[type="radio"][name="glow-intensity"]');
-        if (!radios.length) return;
+        const glowRadios = glowGroup.querySelectorAll('input[type="radio"][name="glow-intensity"]');
+        const maintenanceRadios = maintenanceGroup ? maintenanceGroup.querySelectorAll('input[type="radio"][name="maintenance-mode"]') : [];
+        if (!glowRadios.length) return;
 
-        // Pre-select from localStorage if available
+        let isAdmin = false;
+
+        const selectMaintenance = (state) => {
+            if (!maintenanceRadios.length) return;
+            maintenanceRadios.forEach(r => {
+                r.checked = (r.value === state);
+            });
+        };
+
+        const loadMaintenanceState = async () => {
+            if (!maintenanceRadios.length) return;
+            try {
+                const res = await fetch('/data/etc/wip', { cache: 'no-store' });
+                if (!res.ok) return;
+                const txt = (await res.text()).trim().toLowerCase();
+                const truthy = new Set(['1', 'true', 'yes', 'y', 'on', 'enabled', 'wip']);
+                selectMaintenance(truthy.has(txt) ? 'on' : 'off');
+            } catch (_) {
+                /* ignore */
+            }
+        };
+
+        const getMaintenanceSelection = () => {
+            if (!maintenanceRadios.length) return null;
+            let val = null;
+            maintenanceRadios.forEach(r => { if (r.checked) val = r.value; });
+            return val;
+        };
+
+        // Pre-select glow from localStorage if available
         let stored = null;
         try {
             stored = localStorage.getItem(GLOW_INTENSITY_KEY);
         } catch (_) { stored = null; }
         const initial = stored || GLOW_DEFAULT_INTENSITY;
         let anyChecked = false;
-        radios.forEach(r => {
+        glowRadios.forEach(r => {
             if (r.value === initial) {
                 r.checked = true;
                 anyChecked = true;
             }
         });
         if (!anyChecked) {
-            radios[0].checked = true;
+            glowRadios[0].checked = true;
         }
 
         saveBtn.addEventListener('click', function() {
             let selected = null;
-            radios.forEach(r => {
+            glowRadios.forEach(r => {
                 if (r.checked) selected = r.value;
             });
             if (!selected) return;
@@ -895,19 +943,44 @@ function initSettingsPage() {
             // Apply immediately
             applyGlowIntensity(selected);
 
-            // If logged in, also persist to server-side accounts.json
             const isLoggedIn = !!document.getElementById('user-greeting');
             if (isLoggedIn && window.fetch) {
-                const body = 'glowIntensity=' + encodeURIComponent(selected);
+                const params = new URLSearchParams();
+                params.append('glowIntensity', selected);
+
+                if (isAdmin) {
+                    const maintenanceSelection = getMaintenanceSelection();
+                    if (maintenanceSelection !== null) {
+                        params.append('maintenanceMode', maintenanceSelection);
+                    }
+                }
+
                 fetch('/api/settings', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
                         'X-Requested-With': 'XMLHttpRequest',
                     },
-                    body,
-                }).catch(() => {});
+                    body: params.toString(),
+                }).catch(() => {}).finally(() => {
+                    window.location.reload();
+                });
+            } else {
+                window.location.reload();
             }
+        });
+
+        // Determine admin status to show/hide admin controls and load state
+        fetchAdminStatus().then(flag => {
+            isAdmin = flag === true;
+            if (adminSection) {
+                adminSection.style.display = isAdmin ? 'block' : 'none';
+            }
+            if (isAdmin) {
+                loadMaintenanceState();
+            }
+        }).catch(() => {
+            if (adminSection) adminSection.style.display = 'none';
         });
     } catch (_) { /* no-op */ }
 }

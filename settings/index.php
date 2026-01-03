@@ -50,6 +50,12 @@ if (!$content_path) {
 }
 
 $content = file_get_contents($content_path);
+
+$isAdmin = isset($_SESSION['user']['isAdmin']) && $_SESSION['user']['isAdmin'] === true;
+if (!$isAdmin) {
+    // Keep markup to avoid layout shifts; hide by default
+    $content = str_replace('<span id="admin-settings">', '<span id="admin-settings" style="display:none">', $content);
+}
 $html = str_replace('{content}', $content, $template);
 $html = str_replace('{title}', $title, $html);
 $html = str_replace('{description}', $description, $html);
