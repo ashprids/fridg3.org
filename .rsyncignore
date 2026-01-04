@@ -1,2 +1,7 @@
 - /data/**
 - sitemap.xml
+- README.md
+- PROJECT_NOTES.txt
+- .rsyncignore
+- .gitignore
+- .github

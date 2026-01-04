@@ -1,9 +1,9 @@
 :root {
     --bg: #000000;
-    --fg: #ffffff;
-    --border: #ffffff;
-    --subtle: #808080;
-    --links: #305aad;
+    --fg: rgb(238, 238, 238);
+    --border: rgb(60, 120, 149);
+    --subtle: rgb(145, 125, 170);
+    --links: rgb(65, 95, 173);
 }
 
 .ascii-scale-container {

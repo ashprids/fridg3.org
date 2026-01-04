@@ -707,10 +707,10 @@ const COLOR_PREFS_KEY = 'colorPrefs';
 const COLOR_FIELDS = ['bg', 'fg', 'border', 'subtle', 'links'];
 const COLOR_DEFAULTS = {
     bg: '#000000',
-    fg: '#ffffff',
-    border: '#ffffff',
-    subtle: '#808080',
-    links: '#305aad',
+    fg: '#EEEEEE',
+    border: '#3C7895',
+    subtle: '#917DAA',
+    links: '#415FAD',
 };
 
 // Apply saved color prefs early on page load so refreshes keep the scheme
