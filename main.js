@@ -1373,6 +1373,44 @@ function initMiniPlayer() {
             requestAnimationFrame(updateTitleScroll);
         };
 
+        const normalizeArtUrl = (art) => {
+            if (!art) return null;
+            try {
+                return new URL(art, window.location.href).toString();
+            } catch (_) {
+                return null;
+            }
+        };
+
+        const setMediaSessionMetadata = (meta) => {
+            if (!('mediaSession' in navigator) || !meta) return;
+            const artworkUrl = normalizeArtUrl(meta.albumArt || meta.art || '');
+            const artwork = artworkUrl ? [
+                { src: artworkUrl, sizes: '512x512', type: 'image/png' }
+            ] : [];
+            try {
+                navigator.mediaSession.metadata = new MediaMetadata({
+                    title: meta.name || meta.title || 'Unknown',
+                    artist: meta.albumArtist || meta.artist || '',
+                    album: meta.albumName || meta.album || '',
+                    artwork
+                });
+            } catch (_) { /* no-op */ }
+        };
+
+        const bindMediaSessionActions = () => {
+            if (!('mediaSession' in navigator)) return;
+            try {
+                navigator.mediaSession.setActionHandler('play', () => audio.play().catch(() => {}));
+                navigator.mediaSession.setActionHandler('pause', () => audio.pause());
+                navigator.mediaSession.setActionHandler('previoustrack', () => {/* not implemented */});
+                navigator.mediaSession.setActionHandler('nexttrack', () => {
+                    // trigger autoplay chain if available
+                    handleAutoplayOnEnded();
+                });
+            } catch (_) { /* no-op */ }
+        };
+
         let isSeeking = false;
         let lastVolume = 1;
         let lastTrackLabel = '';
@@ -1441,6 +1479,12 @@ function initMiniPlayer() {
                 artEl.src = track.albumArt;
             }
             setNowPlayingTitle(labelName + labelArtist);
+            setMediaSessionMetadata({
+                name: track.name,
+                albumArtist: track.albumArtist,
+                albumName: track.albumName,
+                albumArt: track.albumArt
+            });
             if (seekEl) {
                 seekEl.value = '0';
             }
@@ -1686,6 +1730,12 @@ function initMiniPlayer() {
                         }
                         const artistLabelSingle = albumArtist ? ' - ' + albumArtist : '';
                         setNowPlayingTitle(name + artistLabelSingle);
+                        setMediaSessionMetadata({
+                            name,
+                            albumArtist,
+                            albumName,
+                            albumArt
+                        });
                         if (seekEl) {
                             seekEl.value = '0';
                         }
@@ -1733,6 +1783,12 @@ function initMiniPlayer() {
                             }
                             const artistLabel = albumArtist ? ' - ' + albumArtist : '';
                             setNowPlayingTitle(name + artistLabel);
+                            setMediaSessionMetadata({
+                                name,
+                                albumArtist,
+                                albumName,
+                                albumArt
+                            });
                             if (seekEl) {
                                 seekEl.value = '0';
                             }
@@ -1758,6 +1814,9 @@ function initMiniPlayer() {
         // hook so SPA navigation can re-bind after content changes.
         bindAlbumLinks();
         window.bindMiniPlayerAlbumLinks = bindAlbumLinks;
+
+        // Enable media session actions for hardware/notification controls
+        bindMediaSessionActions();
 
         // Mark audio element as initialized so subsequent calls to
         // initMiniPlayer from SPA navigation only re-bind album
