@@ -27,8 +27,8 @@ sudo chown -R deploy:http /var/www/fridg3.org
 find /var/www/fridg3.org -type d -exec chmod 755 {} \;
 find /var/www/fridg3.org -type f -exec chmod 644 {} \;
 ```
-/data/ will not be writeable by the web server unless it's owned by the "http" user. Run the following commands (ideally after pushing to the main branch) to fix permissions:
+/data/ and sitemap.xml will not be writeable by the web server unless they're owned by the "http" user. Run the following commands (ideally after pushing to the main branch) to fix permissions:
 ```bash
-sudo chown -R http:http /var/www/fridg3.org/data
-sudo chmod -R 755 /var/www/fridg3.org/data
+sudo chown -R http:http /var/www/fridg3.org/data && sudo chmod -R 755 /var/www/fridg3.org/data
+sudo chown -R http:http /var/www/fridg3.org/sitemap.xml && sudo chmod -R 755 /var/www/fridg3.org/sitemap.xml
 ```
