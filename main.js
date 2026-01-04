@@ -932,6 +932,7 @@ function initSettingsPage() {
         const colorGroup = document.getElementById('color-scheme-group');
         const colorResetBtn = document.getElementById('color-reset');
         const saveBtn = document.getElementById('settings-save');
+        const sitemapBtn = document.querySelector('[data-action="generate-sitemap"]');
         if (!glowGroup || !saveBtn) return;
         if (glowGroup.dataset.bound === '1') return;
         glowGroup.dataset.bound = '1';
@@ -1020,6 +1021,33 @@ function initSettingsPage() {
         const resetColorsToDefault = () => {
             setColorInputs(COLOR_DEFAULTS);
             persistColors(COLOR_DEFAULTS);
+        };
+
+        const bindSitemapButton = () => {
+            if (!sitemapBtn || sitemapBtn.dataset.bound === '1') return;
+            sitemapBtn.dataset.bound = '1';
+            sitemapBtn.addEventListener('click', async () => {
+                if (!isAdmin) return;
+                const originalText = sitemapBtn.textContent;
+                sitemapBtn.disabled = true;
+                sitemapBtn.textContent = 'generating...';
+                try {
+                    const res = await fetch('/api/sitemap', {
+                        method: 'POST',
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                    });
+                    if (!res.ok) throw new Error('http');
+                    const data = await res.json().catch(() => ({}));
+                    sitemapBtn.textContent = data && data.ok ? 'sitemap generated' : 'failed';
+                } catch (_) {
+                    sitemapBtn.textContent = 'error';
+                } finally {
+                    setTimeout(() => {
+                        sitemapBtn.textContent = originalText;
+                        sitemapBtn.disabled = false;
+                    }, 1200);
+                }
+            });
         };
 
         // Pre-select glow from localStorage if available
@@ -1140,6 +1168,7 @@ function initSettingsPage() {
             }
             if (isAdmin) {
                 loadMaintenanceState();
+                bindSitemapButton();
             }
         }).catch(() => {
             if (adminSection) adminSection.style.display = 'none';

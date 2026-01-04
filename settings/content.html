@@ -8,7 +8,8 @@ _|"""""|_|"""""|_|"""""|_|"""""|_|"""""|_|"""""|_|"""""|_|"""""|
 </pre>
 <br><br>
 <span id="admin-settings">
-<h3>maintenance mode</h3>
+<h3>admin settings</h3><br>
+<h4 data-tooltip="redirect all non-admin users to /error/wip/">maintenance mode</h4>
 <div class="radio-group" id="maintenance-mode-group">
     <label class="radio-label">
         <input type="radio" class="radio" name="maintenance-mode" value="off">
@@ -19,12 +20,18 @@ _|"""""|_|"""""|_|"""""|_|"""""|_|"""""|_|"""""|_|"""""|_|"""""|
         <span>enabled</span>
     </label>
 </div>
-<br><br>
+<br>
+<h4>sitemap.xml</h4>
+<button id="form-button" type="button" data-tooltip="regenerate the sitemap.xml file" data-action="generate-sitemap">regenerate sitemap</button>
+<br>
+<h4>account management</h4>
+<button id="form-button" type="button" data-tooltip="(admin-only) generate a new account with a random password" onclick="window.location='/account/create'">create new account</button>
+<br><br><hr><br>
 </span>
 <span id="user-settings">
 <h3>account</h3>    
 <button id="form-button" type="button" data-tooltip="will prompt you to log in if you aren't already" onclick="window.location='/account/change-password'">change password</button>
-<br><br>
+<br><br><hr><br>
 </span>
 <h3>color scheme</h3>
 <div id="color-scheme-group">
@@ -50,7 +57,7 @@ _|"""""|_|"""""|_|"""""|_|"""""|_|"""""|_|"""""|_|"""""|_|"""""|
     </label>
 </div>
 <button id="color-reset" data-tooltip="reset color scheme to defaults">reset to default</button>
-<br>
+<br><br><hr><br>
 <h3>text glow intensity</h3>
 <div class="radio-group" id="glow-intensity-group">
     <label class="radio-label">
@@ -70,6 +77,5 @@ _|"""""|_|"""""|_|"""""|_|"""""|_|"""""|_|"""""|_|"""""|_|"""""|
         <span>high</span>
     </label>
 </div>
-<br><br>
-<br><br><br><br>
-<button id="settings-save" data-tooltip="save your configuration.\nwill save to your account if you're logged in">apply settings</button>
+<br><br><hr><br>
+<button style="background-color: #206420" id="settings-save" data-tooltip="save your configuration.\nwill save to your account if you're logged in">save changes</button>
