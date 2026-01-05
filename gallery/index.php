@@ -91,7 +91,7 @@ if (is_dir($imagesDir)) {
 
         $deleteForm = '';
         if ($isAdmin) {
-            $deleteForm = '<form class="grid-delete-form" action="/api/gallery/delete" method="POST">'
+            $deleteForm = '<form class="grid-delete-form" action="/api/gallery/delete/index.php" method="POST">'
                 . '<input type="hidden" name="filename" value="' . htmlspecialchars($filename, ENT_QUOTES, 'UTF-8') . '">'
                 . '<button type="submit" class="grid-delete-button" aria-label="delete ' . $alt . '"><i class="fa-solid fa-trash"></i> delete</button>'
                 . '</form>';

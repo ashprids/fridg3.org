@@ -2245,7 +2245,7 @@ async function submitGalleryDelete(form) {
     }
 
     try {
-        const resp = await fetch('/api/gallery/delete', {
+        const resp = await fetch('/api/gallery/delete/index.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             credentials: 'include',
