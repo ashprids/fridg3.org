@@ -4,6 +4,7 @@ session_start();
 
 $title = 'gallery';
 $description = 'a listing of all images uploaded to the site.';
+$isAdmin = isset($_SESSION['user']['isAdmin']) && $_SESSION['user']['isAdmin'] === true;
 
 
 function find_template_file($filename) {
@@ -88,10 +89,19 @@ if (is_dir($imagesDir)) {
             $resolution = '';
         }
 
+        $deleteForm = '';
+        if ($isAdmin) {
+            $deleteForm = '<form class="grid-delete-form" action="/api/gallery/delete" method="POST">'
+                . '<input type="hidden" name="filename" value="' . htmlspecialchars($filename, ENT_QUOTES, 'UTF-8') . '">'
+                . '<button type="submit" class="grid-delete-button" aria-label="delete ' . $alt . '"><i class="fa-solid fa-trash"></i> delete</button>'
+                . '</form>';
+        }
+
         $gridItems .= '<div class="grid-item">'
             . '<img class="grid-image" src="' . $url . '" alt="' . $alt . '">'
             . '<div class="grid-caption">' . htmlspecialchars($resolution, ENT_QUOTES, 'UTF-8') . '</div>'
             . '<div class="grid-subcaption">' . $alt . '</div>'
+            . $deleteForm
             . '</div>' . "\n";
     }
 

@@ -331,9 +331,7 @@ function isSpaEligibleLink(anchor) {
     // the browser URL immediately.
     if (href.startsWith('/account/logout')) return false;
     if (href.startsWith('/api/')) return false; // API endpoints are not pages
-        // Force full reload for /bookmarks so localStorage bookmarks are always up to date
-        if (href === '/bookmarks' || href === '/bookmarks/') return false;
-        return true;
+    return true;
 }
 
 function loadPageIntoContent(url, addToHistory = true) {
@@ -1924,9 +1922,11 @@ function initSidebarActiveState() {
             '/email',
             '/guestbook',
             '/music',
+            '/gallery',
             '/projects',
             '/merch',
             '/bookmarks',
+            '/saves',
         ];
 
         // Determine active href based on prefix match
@@ -2067,15 +2067,6 @@ function attachBookmarkBehavior(bookmark) {
         e.stopPropagation();
         if (typeof e.preventDefault === 'function') e.preventDefault();
 
-        const reloadWithScroll = () => {
-            try {
-                const scrollKey = 'scroll:' + window.location.pathname + window.location.search;
-                const y = window.scrollY || window.pageYOffset || 0;
-                sessionStorage.setItem(scrollKey, String(y));
-            } catch (_) { /* no-op */ }
-            window.location.reload();
-        };
-
         // Logged-in users: toggle server-side bookmark and reflect
         // the new state on this element.
         if (isLoggedIn()) {
@@ -2098,12 +2089,33 @@ function attachBookmarkBehavior(bookmark) {
                     credentials: 'same-origin',
                     body: JSON.stringify({ postId })
                 })
-                    .then(() => { reloadWithScroll(); })
-                    .catch(() => { reloadWithScroll(); });
-                return; // avoid immediate reload below; wait for fetch
+                    .then(resp => {
+                        if (!resp.ok) throw new Error('bookmark failed');
+                    })
+                    .catch(() => {
+                        // Revert on failure so UI stays truthful
+                        bookmark.dataset.bookmarked = currentlyMarked ? '1' : '0';
+                        if (currentlyMarked) {
+                            icon.classList.add('fa-solid');
+                            icon.classList.remove('fa-regular');
+                        } else {
+                            icon.classList.add('fa-regular');
+                            icon.classList.remove('fa-solid');
+                        }
+                        alert('Could not update bookmark.');
+                    });
+                return; // no page reload needed
             } catch (_) {
-                // If fetch setup fails, fall back to immediate reload
-                reloadWithScroll();
+                // If fetch setup fails, revert state
+                bookmark.dataset.bookmarked = currentlyMarked ? '1' : '0';
+                if (currentlyMarked) {
+                    icon.classList.add('fa-solid');
+                    icon.classList.remove('fa-regular');
+                } else {
+                    icon.classList.add('fa-regular');
+                    icon.classList.remove('fa-solid');
+                }
+                alert('Could not update bookmark.');
                 return;
             }
         } else {
@@ -2128,10 +2140,6 @@ function attachBookmarkBehavior(bookmark) {
                 }).catch(() => {});
             } catch (_) { /* ignore */ }
         }
-        // For anonymous users we can reload immediately because
-        // the effective state is stored locally and not dependent
-        // on the server toggle completing.
-        reloadWithScroll();
     });
 }
 
@@ -2168,6 +2176,9 @@ document.body.appendChild(imageModal);
 
 document.addEventListener('click', function(e) {
     // Support inline post images everywhere; grid lightbox only on /gallery
+    if (e.target && e.target.closest && e.target.closest('.grid-delete-form')) {
+        return; // allow delete buttons to use their own handlers
+    }
     const rawPath = (window.location && window.location.pathname) ? window.location.pathname : '/';
     const path = rawPath.replace(/\/+$/, '') || '/';
     const allowGridLightbox = path === '/gallery' || path.startsWith('/gallery/');
@@ -2217,6 +2228,64 @@ imageModal.addEventListener('click', function(e) {
     }
 });
 
+// Admin-only gallery delete handler
+async function submitGalleryDelete(form) {
+    const filenameInput = form.querySelector('input[name="filename"]');
+    const deleteButton = form.querySelector('.grid-delete-button');
+    const filename = filenameInput ? filenameInput.value.trim() : '';
+    if (!filename) return;
+
+    const confirmed = window.confirm('Delete ' + filename + '?');
+    if (!confirmed) return;
+
+    const originalLabel = deleteButton ? deleteButton.innerHTML : '';
+    if (deleteButton) {
+        deleteButton.disabled = true;
+        deleteButton.innerHTML = '<i class="fa-solid fa-hourglass" aria-hidden="true"></i> deleting...';
+    }
+
+    try {
+        const resp = await fetch('/api/gallery/delete', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ filename })
+        });
+
+        let payload = {};
+        try {
+            payload = await resp.json();
+        } catch (_) {
+            payload = {};
+        }
+
+        if (!resp.ok || payload.ok !== true) {
+            const message = payload.error || 'failed to delete image';
+            throw new Error(message);
+        }
+
+        const card = form.closest('.grid-item');
+        if (card) {
+            card.remove();
+        }
+    } catch (err) {
+        alert('Delete failed: ' + err.message);
+    } finally {
+        if (deleteButton) {
+            deleteButton.disabled = false;
+            deleteButton.innerHTML = originalLabel || 'delete';
+        }
+    }
+}
+
+document.addEventListener('submit', function(e) {
+    const form = e.target && e.target.closest ? e.target.closest('.grid-delete-form') : null;
+    if (!form) return;
+    if (!window.fetch) return; // fall back to normal submission when fetch isn't available
+    e.preventDefault();
+    submitGalleryDelete(form);
+});
+
 // Note: /bookmarks is rendered server-side from the user's bookmark JSON.
 
 // Enhance /bookmarks with localStorage bookmarks for non-logged-in users
@@ -2224,7 +2293,7 @@ function enhanceBookmarksPage() {
     try {
         const rawPath = (window.location && window.location.pathname) ? window.location.pathname : '/';
         const path = rawPath.replace(/\/+$/, '') || '/';
-        if (!path.startsWith('/bookmarks')) return;
+        if (!(path.startsWith('/bookmarks') || path.startsWith('/saves'))) return;
 
         const container = document.getElementById('bookmarks-list');
         if (!container) return;
