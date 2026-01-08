@@ -1,0 +1,165 @@
+<?php
+
+session_start();
+
+$title = 'post to guestbook';
+$description = 'send a message to the guestbook.';
+
+$status_message = '';
+$status_class = 'success';
+$hasPosted = false;
+
+$client_ip = guestbook_client_ip();
+
+$posts_dir = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'data' . DIRECTORY_SEPARATOR . 'guestbook';
+if (!is_dir($posts_dir)) {
+    @mkdir($posts_dir, 0777, true);
+}
+
+$ip_index_path = $posts_dir . DIRECTORY_SEPARATOR . 'ip_index.json';
+$ip_index = [];
+if (is_file($ip_index_path)) {
+    $decoded = json_decode(@file_get_contents($ip_index_path), true);
+    if (is_array($decoded)) {
+        $ip_index = $decoded;
+    }
+}
+
+// Mark if this IP already posted (for UI disable)
+if (isset($ip_index[$client_ip])) {
+    $hasPosted = true;
+}
+
+// Best-effort client IP detection (single IP only)
+function guestbook_client_ip(): string {
+    $candidates = [
+        $_SERVER['HTTP_CF_CONNECTING_IP'] ?? '',
+        $_SERVER['HTTP_X_FORWARDED_FOR'] ?? '',
+        $_SERVER['REMOTE_ADDR'] ?? '',
+    ];
+    foreach ($candidates as $raw) {
+        if (!$raw) {
+            continue;
+        }
+        // If multiple forwarded IPs, take the first
+        $ip = trim(explode(',', $raw)[0]);
+        if ($ip !== '') {
+            return $ip;
+        }
+    }
+    return 'unknown';
+}
+
+// Handle guestbook submission
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $name = trim($_POST['name'] ?? '');
+    $message = $_POST['message'] ?? '';
+
+    // Normalize and sanitize inputs (strip HTML/PHP tags)
+    $name = strip_tags($name);
+    $name = str_replace(["\r", "\n"], ' ', $name);
+    $message = str_replace(["\r\n", "\r"], "\n", $message);
+    $message = strip_tags($message);
+
+    // Fallback values and length limits
+    $name = $name === '' ? 'Anonymous' : $name;
+    $name = (function_exists('mb_substr') ? mb_substr($name, 0, 80) : substr($name, 0, 80));
+    $message = trim(function_exists('mb_substr') ? mb_substr($message, 0, 4000) : substr($message, 0, 4000));
+
+    if ($message === '') {
+        $status_message = 'message cannot be empty.';
+        $status_class = 'error';
+    } else {
+        if (isset($ip_index[$client_ip])) {
+            $hasPosted = true;
+            $status_message = 'you have already posted to the guestbook.';
+            $status_class = 'error';
+        } else {
+            $timestamp_line = date('Y/m/d H:i:s');
+
+            // Use timestamp plus random suffix to avoid collisions
+            try {
+                $suffix = bin2hex(random_bytes(3));
+            } catch (Exception $e) {
+                $suffix = substr(uniqid('', true), -6);
+            }
+            $filename = date('Y-m-d_H-i-s') . '_' . $suffix . '.txt';
+            $filepath = $posts_dir . DIRECTORY_SEPARATOR . $filename;
+
+            $payload = $timestamp_line . PHP_EOL . $name . PHP_EOL . $message . PHP_EOL;
+
+            $written = @file_put_contents($filepath, $payload, LOCK_EX);
+            if ($written === false) {
+                $status_message = 'could not save your message. please try again later.';
+                $status_class = 'error';
+            } else {
+                $ip_index[$client_ip] = $filename;
+                @file_put_contents($ip_index_path, json_encode($ip_index, JSON_PRETTY_PRINT), LOCK_EX);
+                header('Location: /guestbook');
+                exit;
+            }
+        }
+    }
+}
+
+
+function find_template_file($filename) {
+    $dir = __DIR__;
+    $prev_dir = '';
+    
+    while ($dir !== $prev_dir) {
+        $filepath = $dir . DIRECTORY_SEPARATOR . $filename;
+        if (file_exists($filepath)) {
+            return $filepath;
+        }
+        $prev_dir = $dir;
+        $dir = dirname($dir);
+    }
+    
+    return null;
+}
+
+$template_path = find_template_file('template.html');
+if (!$template_path) {
+    die('template.html not found. report this issue to me@fridg3.org.');
+}
+
+$template = file_get_contents($template_path);
+
+// Generate user greeting if logged in
+$user_greeting = '';
+if (isset($_SESSION['user'])) {
+    $user_name = htmlspecialchars($_SESSION['user']['name'], ENT_QUOTES, 'UTF-8');
+    $user_greeting = '<div id="user-greeting">Hello, ' . $user_name . '!</div>';
+    
+    // Swap Account button to Logout
+    $accountBtn = '<a href="/account"><div id="footer-button" data-tooltip="access your fridg3.org account"><i class="fa-solid fa-user"></i></div></a>';
+    $logoutBtn = '<a href="/account/logout"><div id="footer-button" data-tooltip="log out"><i class="fa-solid fa-arrow-right-from-bracket"></i></div></a>';
+    $template = str_replace($accountBtn, $logoutBtn, $template);
+}
+
+// Replace user greeting placeholder
+$template = str_replace('{user_greeting}', $user_greeting, $template);
+
+$content_path = find_template_file('content.html');
+if (!$content_path) {
+    die('content.html not found. report this issue to me@fridg3.org.');
+}
+
+$content = file_get_contents($content_path);
+$status_html = '';
+if ($status_message !== '') {
+    $status_classname = $status_class === 'error' ? 'form-status error' : 'form-status success';
+    $status_html = '<div class="' . $status_classname . '">' . htmlspecialchars($status_message, ENT_QUOTES, 'UTF-8') . '</div>';
+}
+
+$button_state = $hasPosted
+    ? 'disabled aria-disabled="true" class="form-button-disabled" data-tooltip="you can only post here once!"'
+    : 'data-tooltip="please note: you can only post one message here!"';
+$content = str_replace('{status}', $status_html, $content);
+$content = str_replace('{post_button_attrs}', $button_state, $content);
+$html = str_replace('{content}', $content, $template);
+$html = str_replace('{title}', $title, $html);
+$html = str_replace('{description}', $description, $html);
+echo $html;
+?>

@@ -267,12 +267,12 @@ button[data-tooltip] {
 }
 
 #tab.active {
-    background-color: rgb(255, 255, 255);
+    background-color: var(--subtle);
     color: var(--bg);
 }
 
 #tab.active:hover {
-    background-color: rgb(255, 255, 255);
+    background-color: var(--subtle);
     color: var(--bg);
     cursor: default;
 }
@@ -1029,6 +1029,91 @@ hr {
 
 #post-edit-feed:hover {
     color: rgb(200, 200, 200);
+}
+
+.guestbook-post-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.guestbook-delete-form {
+    display: inline-flex;
+    align-items: center;
+    margin: 0;
+}
+
+.guestbook-delete-btn {
+    background: none;
+    border: none;
+    color: var(--subtle);
+    cursor: pointer;
+    padding: 0;
+    font-size: 12px;
+    width: 16px;
+    height: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+}
+
+.guestbook-delete-btn:hover {
+    color: rgb(200, 200, 200);
+}
+
+.guestbook-edit-btn {
+    color: var(--subtle);
+    text-decoration: none;
+    font-size: 12px;
+    width: 16px;
+    height: 16px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+}
+
+.guestbook-edit-btn:hover {
+    color: rgb(200, 200, 200);
+}
+
+.form-button-disabled {
+    opacity: 0.55;
+    filter: grayscale(100%);
+    cursor: not-allowed;
+}
+
+.guestbook-pagination {
+    display: flex;
+    gap: 8px;
+    margin-top: 16px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.guestbook-page-btn {
+    color: var(--subtle);
+    text-decoration: none;
+    border: 1px solid var(--border);
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-family: "MainRegular", monospace;
+    font-size: 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 26px;
+}
+
+.guestbook-page-btn:hover {
+    color: rgb(200, 200, 200);
+}
+
+.guestbook-page-btn.current {
+    background: var(--border);
+    color: var(--fg);
+    border-color: var(--border);
 }
 
 #post-bookmark-feed {

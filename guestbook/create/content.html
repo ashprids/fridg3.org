@@ -7,12 +7,11 @@ VMMMP"  VMMMP" dMMMMMP  VMMMP"   dMP   dMMMMP"  VMMMP"  VMMMP" dMP dMP
 </pre>                                                                               
 <br><br>
 <div id="status-area">{status}</div><br>
-<form action="/guestbook/create" method="GET" style="display:inline;">
-    <button id="form-button" {leave_button_attrs}>leave a message!</button>
+<form id="guestbook-form" method="POST" action="/guestbook/create">
+   <input id="textbox" name="name" type="text" maxlength="80" placeholder="your name (leave blank for anonymous)">
+   <br><br>
+   <textarea id="textbox" class="large" name="message" rows="6" maxlength="4000" placeholder="your message" required></textarea>
+   <br><br>
+   <button id="form-button" type="submit" {post_button_attrs}>post message</button>
 </form>
-<div id="posts">
-    {posts}
-</div>
-<div id="pagination">
-    {pagination}
 </div>

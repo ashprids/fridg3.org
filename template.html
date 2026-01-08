@@ -35,7 +35,7 @@
     <a href="/feed"><div id="tab" data-tooltip="short snippets and updates">feed</div></a>
     <a href="/journal"><div id="tab" data-tooltip="long-form updates and blog posts">journal</div></a>
     <a href="/email"><div id="tab" data-tooltip="send me an email">email</div></a>
-    <a href="/guestbook"><div id="tab" data-tooltip="exclusive live chat feed">guestbook</div></a>
+    <a href="/guestbook"><div id="tab" data-tooltip="leave a message about the website">guestbook</div></a>
     <a href="/music"><div id="tab" data-tooltip="listen to my music">music</div></a>
     <a href="/gallery"><div id="tab" data-tooltip="a listing of all images uploaded to the site">gallery</div></a>
     <a href="/merch"><div id="tab" data-tooltip="buy some of my merch">merch</div></a>
@@ -69,7 +69,8 @@
     </div>
 
     <div id="sidebar-footer">
-        <span id="footer-text">© 2025 fridg3.org</span>
+        <span id="footer-text">© <span id="footer-year"></span> fridg3.org</span>
+        <script>document.getElementById('footer-year').textContent = new Date().getFullYear();</script>
         <div id="footer-buttons">
             <a href="/"><div id="footer-button" data-tooltip="go to homepage"><i class="fa-solid fa-home"></i></div></a>
             <a href="/discord"><div id="footer-button" data-tooltip="join the community discord"><i class="fa-brands fa-discord"></i></div></a>

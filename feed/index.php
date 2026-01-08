@@ -3,6 +3,26 @@ session_start();
 
 $title = 'feed';
 $description = 'short snippets and updates.';
+$pageSizeDefault = 10;
+
+function render_feed_pagination(int $currentPage, int $totalPages, string $searchQuery): string {
+    if ($totalPages <= 1) {
+        return '';
+    }
+    $items = '';
+    for ($i = 1; $i <= $totalPages; $i++) {
+        $isCurrent = $i === $currentPage;
+        $class = 'guestbook-page-btn' . ($isCurrent ? ' current' : '');
+        $aria = $isCurrent ? ' aria-current="page"' : '';
+        $query = $searchQuery !== '' ? '&q=' . urlencode($searchQuery) : '';
+        if ($isCurrent) {
+            $items .= '<span class="' . $class . '"' . $aria . '>' . $i . '</span>';
+        } else {
+            $items .= '<a class="' . $class . '" href="/feed?page=' . $i . $query . '">' . $i . '</a>';
+        }
+    }
+    return '<div class="guestbook-pagination">' . $items . '</div>';
+}
 
 
 function find_template_file($filename) {
@@ -174,7 +194,7 @@ if (is_dir($postsDir)) {
     }
 
     // Pagination (10 posts per page, 50 for username search)
-    $perPage = ($isUsernameSearch && $searchUsername !== '') ? 50 : 10;
+    $perPage = ($isUsernameSearch && $searchUsername !== '') ? 50 : $pageSizeDefault;
     $totalPosts = count($postsData);
     $totalPages = max(1, (int)ceil($totalPosts / $perPage));
     $currentPage = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
@@ -232,20 +252,7 @@ if (is_dir($postsDir)) {
             . '</a>';
     }
 
-    // Build pagination controls (Prev/Next only) with fixed halves
-    if ($totalPages > 1) {
-        $prevBtn = ($currentPage > 1)
-            ? '<a href="/feed?page=' . ($currentPage - 1) . ($searchQuery !== '' ? '&q=' . urlencode($searchQuery) : '') . '" id="footer-button">Prev</a>'
-            : '';
-        $nextBtn = ($currentPage < $totalPages)
-            ? '<a href="/feed?page=' . ($currentPage + 1) . ($searchQuery !== '' ? '&q=' . urlencode($searchQuery) : '') . '" id="footer-button">Next</a>'
-            : '';
-
-        $paginationHtml .= '<div id="pagination" style="margin-top:16px; display:flex; gap:8px;">'
-            . '<div style="flex:1; display:flex; justify-content:flex-start;">' . $prevBtn . '</div>'
-            . '<div style="flex:1; display:flex; justify-content:flex-end;">' . $nextBtn . '</div>'
-            . '</div>';
-    }
+    $paginationHtml = render_feed_pagination($currentPage, $totalPages, $searchQuery);
 }
 
 // Replace the example posts block with generated posts

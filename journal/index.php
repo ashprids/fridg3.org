@@ -4,6 +4,7 @@ session_start();
 
 $title = 'journal';
 $description = 'long-form updates and blog posts.';
+$pageSizeDefault = 10;
 // Refresh permissions from accounts.json for the logged-in user so changes
 // to allowedPages take effect without requiring a new login
 if (isset($_SESSION['user']) && isset($_SESSION['user']['username'])) {
@@ -27,6 +28,25 @@ $isLoggedIn = isset($_SESSION['user']) && isset($_SESSION['user']['username']);
 $isAdmin = $_SESSION['user']['isAdmin'] ?? false;
 $allowedPages = $_SESSION['user']['allowedPages'] ?? [];
 $canCreateJournal = $isLoggedIn && ($isAdmin || in_array('journal', $allowedPages));
+
+function render_journal_pagination(int $currentPage, int $totalPages, string $searchQuery): string {
+    if ($totalPages <= 1) {
+        return '';
+    }
+    $items = '';
+    for ($i = 1; $i <= $totalPages; $i++) {
+        $isCurrent = $i === $currentPage;
+        $class = 'guestbook-page-btn' . ($isCurrent ? ' current' : '');
+        $aria = $isCurrent ? ' aria-current="page"' : '';
+        $query = $searchQuery !== '' ? '&q=' . urlencode($searchQuery) : '';
+        if ($isCurrent) {
+            $items .= '<span class="' . $class . '"' . $aria . '>' . $i . '</span>';
+        } else {
+            $items .= '<a class="' . $class . '" href="/journal?page=' . $i . $query . '">' . $i . '</a>';
+        }
+    }
+    return '<div class="guestbook-pagination">' . $items . '</div>';
+}
 
 
 function find_template_file($filename) {
@@ -75,7 +95,7 @@ if (!$content_path) {
 
 // Build journal grid from /data/journal
 $posts_dir = dirname(__DIR__) . DIRECTORY_SEPARATOR . 'data' . DIRECTORY_SEPARATOR . 'journal';
-$perPage = 10;
+$perPage = $pageSizeDefault;
 $page = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
 $searchQuery = trim($_GET['q'] ?? '');
 
@@ -166,20 +186,7 @@ if (is_dir($posts_dir)) {
         $post_items .= $item . "\n";
     }
 
-    if ($totalPages > 1) {
-        $queryParam = ($searchQuery !== '') ? '&q=' . urlencode($searchQuery) : '';
-        $prevBtn = ($page > 1)
-            ? '<a href="/journal?page=' . ($page - 1) . $queryParam . '" id="footer-button">Prev</a>'
-            : '';
-        $nextBtn = ($page < $totalPages)
-            ? '<a href="/journal?page=' . ($page + 1) . $queryParam . '" id="footer-button">Next</a>'
-            : '';
-
-        $paginationHtml .= '<div id="pagination" style="margin-top:16px; display:flex; gap:8px;">'
-            . '<div style="flex:1; display:flex; justify-content:flex-start;">' . $prevBtn . '</div>'
-            . '<div style="flex:1; display:flex; justify-content:flex-end;">' . $nextBtn . '</div>'
-            . '</div>';
-    }
+    $paginationHtml = render_journal_pagination($page, $totalPages, $searchQuery);
 }
 
 $content = file_get_contents($content_path);
