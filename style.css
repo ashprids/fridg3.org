@@ -1312,8 +1312,9 @@ hr {
     font-family: "MainRegular", monospace;
     font-size: 14px;
     box-sizing: border-box;
-    white-space: pre-wrap;
-    word-wrap: break-word;
+    white-space: normal;
+    overflow-wrap: break-word;
+    word-break: break-word;
 }#post-image {
     margin-top: 12px;
     max-width: 100%;
@@ -1366,13 +1367,13 @@ hr {
 }
 
 #bbcode-preview h3 {
-    margin-top: 8px;
-    margin-bottom: 4px;
+    margin-top: 24px;
+    margin-bottom: 8px;
 }
 
 #bbcode-preview h4 {
-    margin-top: 6px;
-    margin-bottom: 2px;
+    margin-top: 20px;
+    margin-bottom: 6px;
 }
 
 pre code.hljs {
