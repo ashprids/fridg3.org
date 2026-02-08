@@ -2425,7 +2425,9 @@ async function playToastStreamInMiniPlayer() {
         const candidates = buildToastStreamCandidates(resolved);
         if (!candidates.length) return;
 
+        // Store raw candidates for detection, but play via proxy to avoid mixed content/CORS
         window.__toastStreamCandidates = candidates.slice();
+        const proxyCandidates = candidates.map(c => '/api/stream-proxy/?url=' + encodeURIComponent(c));
 
         const titleEl = document.getElementById('mini-player-title-inner');
         if (titleEl) {
@@ -2442,14 +2444,14 @@ async function playToastStreamInMiniPlayer() {
 
         let currentIndex = 0;
         const tryPlay = (idx) => {
-            if (idx >= candidates.length) return;
-            audio.src = candidates[idx];
+            if (idx >= proxyCandidates.length) return;
+            audio.src = proxyCandidates[idx];
             audio.play().catch(() => {});
         };
 
         const onError = () => {
             currentIndex += 1;
-            if (currentIndex < candidates.length) {
+            if (currentIndex < proxyCandidates.length) {
                 tryPlay(currentIndex);
             }
         };
@@ -2501,26 +2503,11 @@ async function resolveToastStreamUrl(url) {
 
     const base = normalize(url);
 
-    if (!/\.m3u8?$|\.pls$/i.test(base)) {
-        return base;
-    }
-
     try {
-        const resp = await fetch(base);
-        const text = await resp.text();
-
-        if (/\.pls$/i.test(base)) {
-            const match = text.match(/File\d+\s*=\s*(.+)/i);
-            if (match && match[1]) {
-                return normalize(match[1]);
-            }
-        }
-
-        const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
-        for (const line of lines) {
-            if (line.startsWith('#')) continue;
-            return normalize(line);
-        }
+        const resolveUrl = '/api/stream-proxy/?resolve=1&url=' + encodeURIComponent(base);
+        const resp = await fetch(resolveUrl);
+        const data = await resp.json();
+        if (data && data.resolved) return data.resolved;
     } catch (_) { /* no-op */ }
 
     return base;
