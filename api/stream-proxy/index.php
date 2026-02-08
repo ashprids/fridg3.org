@@ -13,11 +13,15 @@ function normalize_url($url) {
 }
 
 function fetch_url($url, $timeout = 8) {
+    $headers = "User-Agent: Mozilla/5.0 (compatible; fridg3-stream-proxy)\r\n"
+             . "Icy-MetaData: 1\r\n"
+             . "Accept: */*\r\n"
+             . "Connection: close\r\n";
     $ctx = stream_context_create([
         'http' => [
             'timeout' => $timeout,
             'follow_location' => 1,
-            'header' => "User-Agent: fridg3-stream-proxy\r\n"
+            'header' => $headers
         ]
     ]);
 
@@ -29,7 +33,14 @@ function fetch_url($url, $timeout = 8) {
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
         curl_setopt($ch, CURLOPT_TIMEOUT, $timeout);
-        curl_setopt($ch, CURLOPT_USERAGENT, 'fridg3-stream-proxy');
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 6);
+        curl_setopt($ch, CURLOPT_NOSIGNAL, true);
+        curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (compatible; fridg3-stream-proxy)');
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+            'Icy-MetaData: 1',
+            'Accept: */*',
+            'Connection: close'
+        ]);
         $out = curl_exec($ch);
         curl_close($ch);
         if ($out !== false) return $out;
@@ -86,13 +97,20 @@ if (!$target) {
     exit;
 }
 
+$debug = isset($_GET['debug']) && $_GET['debug'] === '1';
+
 // Open remote stream
 // Try fopen first
+$headers = "User-Agent: Mozilla/5.0 (compatible; fridg3-stream-proxy)\r\n"
+         . "Icy-MetaData: 1\r\n"
+         . "Accept: */*\r\n"
+         . "Connection: close\r\n";
+
 $ctx = stream_context_create([
     'http' => [
         'timeout' => 10,
         'follow_location' => 1,
-        'header' => "User-Agent: fridg3-stream-proxy\r\n"
+        'header' => $headers
     ]
 ]);
 
@@ -131,7 +149,14 @@ if (function_exists('curl_init')) {
     $ch = curl_init($target);
     curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
     curl_setopt($ch, CURLOPT_TIMEOUT, 0);
-    curl_setopt($ch, CURLOPT_USERAGENT, 'fridg3-stream-proxy');
+    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 8);
+    curl_setopt($ch, CURLOPT_NOSIGNAL, true);
+    curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (compatible; fridg3-stream-proxy)');
+    curl_setopt($ch, CURLOPT_HTTPHEADER, [
+        'Icy-MetaData: 1',
+        'Accept: */*',
+        'Connection: close'
+    ]);
     curl_setopt($ch, CURLOPT_WRITEFUNCTION, function($ch, $data) {
         echo $data;
         @ob_flush();
@@ -140,8 +165,17 @@ if (function_exists('curl_init')) {
     });
 
     $ok = curl_exec($ch);
+    $err = curl_error($ch);
+    $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     curl_close($ch);
     if ($ok !== false) {
+        exit;
+    }
+    if ($debug) {
+        header('Content-Type: text/plain');
+        echo "cURL error: {$err}\n";
+        echo "HTTP code: {$code}\n";
+        echo "Target: {$target}\n";
         exit;
     }
 }
