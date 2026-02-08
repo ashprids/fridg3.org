@@ -361,8 +361,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     return $m[0];
                 }
                 $name = isset($m[2]) && strlen(trim($m[2])) ? trim($m[2]) : ($imageMap[$idx]['name'] ?? 'image');
-                // Include closing [/img] so the converter definitely picks it up when posting from a draft
-                return '[img=' . $imageMap[$idx]['url'] . '][name:' . $name . '][/img]';
+                return '[img=' . $imageMap[$idx]['url'] . '][name:' . $name . ']';
             }, $draftContent);
         }
 
