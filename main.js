@@ -407,6 +407,7 @@ function loadPageIntoContent(url, addToHistory = true) {
                 initScrollAndBookmarkIcons();
                 enhanceBookmarksPage();
                 initMiniPlayer();
+                initToastDiscordBotPage();
                 initBBCodeEditor();
                 setupSpaForms();
                 initEmailForm();
@@ -1731,6 +1732,19 @@ function initMiniPlayer() {
         const seekEl = document.getElementById('mini-player-seek');
         const volumeEl = document.getElementById('mini-player-volume');
 
+        const setLiveMode = (isLive) => {
+            if (!miniPlayerEl) return;
+            if (isLive) {
+                miniPlayerEl.classList.add('live-stream');
+                if (seekEl) seekEl.style.display = 'none';
+                if (downloadBtn) downloadBtn.style.display = 'none';
+            } else {
+                miniPlayerEl.classList.remove('live-stream');
+                if (seekEl) seekEl.style.display = '';
+                if (downloadBtn) downloadBtn.style.display = '';
+            }
+        };
+
         if (!audio || !playBtn || !muteBtn || !titleContainerEl || !titleEl) return;
 
         const trackLibrary = MINI_PLAYER_LIBRARY;
@@ -1740,6 +1754,8 @@ function initMiniPlayer() {
         // (re)bind album links so new /music content can control the
         // existing, already-playing audio element.
         if (audio.dataset.initialized === '1') {
+            // Ensure toast listen-along bindings still exist
+            initToastListenAlong();
             if (window.bindMiniPlayerAlbumLinks) {
                 window.bindMiniPlayerAlbumLinks();
             }
@@ -1747,6 +1763,7 @@ function initMiniPlayer() {
         }
 
         const PLAYER_STATE_KEY = 'miniPlayerStateV1';
+        setLiveMode(false);
 
         // Optional initial state from body data attributes
         const body = document.body;
@@ -1755,7 +1772,7 @@ function initMiniPlayer() {
         const initialArt = body.getAttribute('data-mini-player-art');
         if (initialSrc) audio.src = initialSrc;
         if (initialTitle) {
-            setNowPlayingTitle('now playing: ' + initialTitle);
+            setNowPlayingTitle(initialTitle);
         }
         if (artEl && initialArt) artEl.src = initialArt;
 
@@ -1919,6 +1936,7 @@ function initMiniPlayer() {
 
             audio.src = track.src;
             audio.play().catch(() => {});
+            setLiveMode(false);
             setPlayIcon(true);
             if (artEl && track.albumArt) {
                 artEl.src = track.albumArt;
@@ -2167,6 +2185,7 @@ function initMiniPlayer() {
                         }
                         audio.src = src;
                         audio.play().catch(() => {});
+                        setLiveMode(false);
                         setPlayIcon(true);
                         clearActiveTracks();
                         if (tracklistEl) {
@@ -2220,6 +2239,7 @@ function initMiniPlayer() {
                             if (!row.dataset.src) return;
                             audio.src = row.dataset.src;
                             audio.play().catch(() => {});
+                            setLiveMode(false);
                             setPlayIcon(true);
                             clearActiveTracks();
                             row.classList.add('active');
@@ -2349,7 +2369,186 @@ function initFooterActiveState() {
                 if (btn) btn.classList.add('active');
             }
         }
+
+        // Mark mini player initialized
+        audio.dataset.initialized = '1';
+
+        // Ensure toast listen-along bindings exist
+        initToastListenAlong();
     } catch (_) { /* no-op */ }
+}
+
+// Toast listen-along support (works with SPA navigation)
+function initToastListenAlong() {
+    if (window.__toastListenAlongBound) return;
+    window.__toastListenAlongBound = true;
+
+    document.addEventListener('click', (event) => {
+        const btn = event.target && event.target.closest ? event.target.closest('#form-button') : null;
+        if (!btn) return;
+        event.preventDefault();
+        playToastStreamInMiniPlayer();
+    });
+
+    const audio = document.getElementById('mini-player-audio');
+    if (audio && !audio.dataset.toastBound) {
+        audio.dataset.toastBound = '1';
+        audio.addEventListener('play', () => {
+            const src = audio.currentSrc || audio.src || '';
+            const candidates = (window.__toastStreamCandidates || []).map(c => (c || '').split('?')[0]);
+            const isToast = candidates.some(c => c && src.startsWith(c));
+            setToastLiveControls(isToast);
+            audio.dataset.toastLive = isToast ? '1' : '';
+        });
+    }
+}
+
+async function playToastStreamInMiniPlayer() {
+    try {
+        const response = await fetch('/api/discord-bot-status/');
+        const data = await response.json();
+
+        const streamUrlRaw = data && data.stream ? data.stream.url : '';
+        const streamName = (data && data.stream && data.stream.name) ? data.stream.name : 'live stream';
+
+        if (!streamUrlRaw) return;
+
+        const audio = document.getElementById('mini-player-audio');
+        if (!audio) {
+            window.location.href = '/music';
+            return;
+        }
+
+        const resolved = await resolveToastStreamUrl(streamUrlRaw);
+        if (!resolved) return;
+
+        const candidates = buildToastStreamCandidates(resolved);
+        if (!candidates.length) return;
+
+        window.__toastStreamCandidates = candidates.slice();
+
+        const titleEl = document.getElementById('mini-player-title-inner');
+        if (titleEl) {
+            titleEl.textContent = streamName;
+        }
+
+        const artEl = document.getElementById('mini-player-art');
+        const streamArt = 'https://images-ext-1.discordapp.net/external/S3f2i3R92rowfL9Uq5RmPFJtaqtluL-J7lVley9Ps7I/%3Fsize%3D4096/https/cdn.discordapp.com/avatars/1408177993284587794/2fd48df24ed679f3450b2532fce3f80b.png';
+        if (artEl) {
+            artEl.src = streamArt;
+        }
+
+        setToastLiveControls(true);
+
+        let currentIndex = 0;
+        const tryPlay = (idx) => {
+            if (idx >= candidates.length) return;
+            audio.src = candidates[idx];
+            audio.play().catch(() => {});
+        };
+
+        const onError = () => {
+            currentIndex += 1;
+            if (currentIndex < candidates.length) {
+                tryPlay(currentIndex);
+            }
+        };
+
+        audio.addEventListener('error', onError, { once: true });
+        tryPlay(0);
+
+        const playIcon = document.querySelector('#mini-player-play i');
+        if (playIcon) {
+            playIcon.classList.remove('fa-play');
+            playIcon.classList.add('fa-pause');
+        }
+
+        try {
+            const state = {
+                src: audio.src,
+                currentTime: 0,
+                paused: false,
+                volume: audio.volume,
+                muted: audio.muted,
+                title: titleEl ? titleEl.textContent : '',
+                art: streamArt
+            };
+            window.localStorage.setItem('miniPlayerStateV1', JSON.stringify(state));
+        } catch (_) { /* no-op */ }
+    } catch (err) {
+        console.error('Failed to start listen-along:', err);
+    }
+}
+
+function setToastLiveControls(isLive) {
+    const miniPlayerEl = document.getElementById('mini-player');
+    const seekEl = document.getElementById('mini-player-seek');
+    const downloadBtn = document.getElementById('mini-player-download');
+    if (miniPlayerEl) miniPlayerEl.classList.toggle('live-stream', !!isLive);
+    if (seekEl) seekEl.style.display = isLive ? 'none' : '';
+    if (downloadBtn) downloadBtn.style.display = isLive ? 'none' : '';
+}
+
+async function resolveToastStreamUrl(url) {
+    if (!url) return null;
+    const normalize = (u) => {
+        if (!u) return u;
+        const trimmed = u.trim();
+        if (/^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//.test(trimmed)) return trimmed;
+        if (trimmed.startsWith('//')) return 'http:' + trimmed;
+        return 'http://' + trimmed.replace(/\/$/, '');
+    };
+
+    const base = normalize(url);
+
+    if (!/\.m3u8?$|\.pls$/i.test(base)) {
+        return base;
+    }
+
+    try {
+        const resp = await fetch(base);
+        const text = await resp.text();
+
+        if (/\.pls$/i.test(base)) {
+            const match = text.match(/File\d+\s*=\s*(.+)/i);
+            if (match && match[1]) {
+                return normalize(match[1]);
+            }
+        }
+
+        const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+        for (const line of lines) {
+            if (line.startsWith('#')) continue;
+            return normalize(line);
+        }
+    } catch (_) { /* no-op */ }
+
+    return base;
+}
+
+function buildToastStreamCandidates(resolvedUrl) {
+    if (!resolvedUrl) return [];
+    try {
+        const urlObj = new URL(resolvedUrl, window.location.href);
+        const path = urlObj.pathname || '/';
+        const hasPath = path && path !== '/' && path !== '';
+        if (hasPath) return [urlObj.toString()];
+
+        const origins = urlObj.origin;
+        return [
+            origins + '/;stream.nsv',
+            origins + '/;?icy=http',
+            origins + '/;stream.mp3',
+            origins + '/;',
+            origins + '/stream',
+            origins + '/stream/',
+            origins + '/live',
+            origins + '/radio',
+            origins + '/'
+        ];
+    } catch (_) {
+        return [resolvedUrl];
+    }
 }
 
 window.addEventListener('DOMContentLoaded', initFooterActiveState);
@@ -2633,6 +2832,23 @@ document.addEventListener('click', function(e) {
 
     let targetImg = null;
     const clickedImg = e.target && e.target.closest ? e.target.closest('img') : null;
+
+    // If toast stream is playing, clicking cover art should navigate to the toast page
+    if (clickedImg && clickedImg.id === 'mini-player-art') {
+        const miniPlayerEl = document.getElementById('mini-player');
+        const isLive = miniPlayerEl && miniPlayerEl.classList.contains('live-stream');
+        if (isLive) {
+            e.preventDefault();
+            e.stopPropagation();
+            const targetUrl = '/others/toast-discord-bot';
+            if (typeof loadPageIntoContent === 'function') {
+                loadPageIntoContent(targetUrl);
+            } else {
+                window.location.href = targetUrl;
+            }
+            return;
+        }
+    }
 
     if (clickedImg && clickedImg.closest('.image-modal')) {
         return; // ignore clicks inside the modal itself
@@ -3416,4 +3632,118 @@ function parseBBCode(text) {
     // Remove a single <br> immediately before any h3 heading (collapse extra blank line)
     html = html.replace(/<br\s*\/?\s*>\s*(<h3[^>]*>)/gi, '$1');
     return html;
+}
+
+function initToastDiscordBotPage() {
+    try {
+        const hasToastPage = document.getElementById('status-grid-container') || document.getElementById('control-panel-container');
+        if (!hasToastPage) return;
+
+        ensureToastCardStyles();
+        toastCheckAdminStatus();
+        toastUpdateNowPlaying();
+
+        if (window.__toastStatusInterval) {
+            clearInterval(window.__toastStatusInterval);
+        }
+        window.__toastStatusInterval = setInterval(toastUpdateNowPlaying, 5000);
+    } catch (_) { /* no-op */ }
+}
+
+function ensureToastCardStyles() {
+    if (document.getElementById('toast-discord-card-style')) return;
+    const style = document.createElement('style');
+    style.id = 'toast-discord-card-style';
+    style.textContent = `
+@font-face { font-family: 'GG Sans'; src: url('/others/toast-discord-bot/gg-sans-regular.ttf') format('truetype'); font-weight: normal; font-style: normal; }
+@font-face { font-family: 'GG Sans'; src: url('/others/toast-discord-bot/gg-sans-bold.ttf') format('truetype'); font-weight: bold; font-style: normal; }
+.profile-card { font-family: 'GG Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+.profile-name { font-size: 15px; font-family: 'GG Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-weight: bold; line-height: 1.2; }
+.profile-username { font-size: 12px; line-height: 1.2; }
+.status-line { font-size: 12px; }
+.now-playing { font-size: 12px; }
+`;
+    document.head.appendChild(style);
+}
+
+async function toastCheckAdminStatus() {
+    try {
+        const response = await fetch('/api/account/is-admin/');
+        const data = await response.json();
+        const isAdmin = data && data.isAdmin === true;
+
+        const controlPanel = document.getElementById('control-panel-container');
+        if (controlPanel) {
+            controlPanel.style.display = isAdmin ? 'block' : 'none';
+        }
+
+        const updateBtn = document.getElementById('update-stream-button');
+        if (updateBtn) {
+            updateBtn.disabled = !isAdmin;
+            if (!isAdmin) {
+                updateBtn.style.opacity = '0.5';
+                updateBtn.style.cursor = 'not-allowed';
+            }
+        }
+    } catch (_) {
+        const controlPanel = document.getElementById('control-panel-container');
+        if (controlPanel) {
+            controlPanel.style.display = 'none';
+        }
+    }
+}
+
+async function toastUpdateNowPlaying() {
+    try {
+        const response = await fetch('/api/discord-bot-status/');
+        const data = await response.json();
+
+        const statusDot = document.querySelector('.status-dot');
+        const statusText = document.querySelector('.status-line .muted');
+        const nowPlayingEl = document.querySelector('.now-playing');
+
+        if (data && data.bot && data.bot.status) {
+            const isOnline = String(data.bot.status).toLowerCase() === 'online';
+            if (statusDot) statusDot.style.background = isOnline ? '#6ccf6c' : '#cf6c6c';
+            if (statusText) statusText.textContent = isOnline ? 'Online' : 'Offline';
+            if (nowPlayingEl) nowPlayingEl.style.display = isOnline ? 'block' : 'none';
+        }
+
+        if (data && data.stream && data.stream.name) {
+            const nameEl = document.getElementById('now-playing-name');
+            if (nameEl) nameEl.textContent = data.stream.name;
+        }
+
+        if (data && Array.isArray(data.updates)) {
+            toastUpdateStatusGrid(data.updates);
+        }
+    } catch (_) {
+        const statusDot = document.querySelector('.status-dot');
+        const statusText = document.querySelector('.status-line .muted');
+        const nowPlayingEl = document.querySelector('.now-playing');
+        if (statusDot) statusDot.style.background = '#cf6c6c';
+        if (statusText) statusText.textContent = 'Offline';
+        if (nowPlayingEl) nowPlayingEl.style.display = 'none';
+        const nameEl = document.getElementById('now-playing-name');
+        if (nameEl) nameEl.textContent = 'Unknown';
+    }
+}
+
+function toastUpdateStatusGrid(updates) {
+    const container = document.getElementById('status-grid-container');
+    if (!container) return;
+    const rows = container.querySelectorAll('.status-grid-row');
+    rows.forEach(row => row.remove());
+
+    updates.forEach(update => {
+        const timeRow = document.createElement('div');
+        timeRow.className = 'status-grid-row time';
+        timeRow.textContent = update.time || '';
+        container.appendChild(timeRow);
+
+        const statusRow = document.createElement('div');
+        statusRow.className = 'status-grid-row status';
+        statusRow.textContent = update.status || '';
+        container.appendChild(statusRow);
+    });
 }
