@@ -2439,8 +2439,17 @@ async function playToastStreamInMiniPlayer() {
         const rawCandidates = buildToastStreamCandidates(resolved);
         if (!rawCandidates.length) return;
 
+        // If a candidate is already https, play it directly; otherwise proxy to avoid mixed content
         const candidates = rawCandidates
-            .map((u) => buildToastProxyUrl(u))
+            .map((u) => {
+                try {
+                    const parsed = new URL(u, window.location.href);
+                    if (parsed.protocol === 'https:') return parsed.toString();
+                    return buildToastProxyUrl(parsed.toString());
+                } catch (_) {
+                    return buildToastProxyUrl(u);
+                }
+            })
             .filter(Boolean);
         if (!candidates.length) return;
 
