@@ -86,7 +86,8 @@ if (function_exists('curl_init')) {
             'Icy-MetaData: 1',
             'User-Agent: fridg3.org-stream-proxy'
         ],
-        CURLOPT_TIMEOUT => 20,
+        // Do not cap total time; streaming should run indefinitely
+        CURLOPT_TIMEOUT => 0,
         CURLOPT_CONNECTTIMEOUT => 8,
         CURLOPT_SSL_VERIFYPEER => true,
         CURLOPT_SSL_VERIFYHOST => 2,
@@ -122,7 +123,8 @@ $context = stream_context_create([
     'http' => [
         'method' => 'GET',
         'header' => "Icy-MetaData: 1\r\nUser-Agent: fridg3.org-stream-proxy\r\n",
-        'timeout' => 15,
+        // keep the connection open; stream_set_timeout below guards reads
+        'timeout' => 0,
     ],
     'ssl' => [
         'verify_peer' => true,
@@ -170,6 +172,8 @@ if (!$stream) {
     }
     header('Content-Type: ' . $contentType);
 
+    stream_set_timeout($socket, 0, 0);
+
     while (!feof($socket)) {
         $chunk = fread($socket, 8192);
         if ($chunk === false) break;
@@ -180,6 +184,9 @@ if (!$stream) {
     fclose($socket);
     exit;
 }
+
+// Never time out while reading the live stream
+@stream_set_timeout($stream, 0, 0);
 
 $meta = stream_get_meta_data($stream);
 $contentType = 'audio/mpeg';
