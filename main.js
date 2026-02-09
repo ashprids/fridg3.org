@@ -589,6 +589,7 @@ function bindSpaForm(form) {
                 enhanceBookmarksPage();
                 setupSpaForms();
                 initMiniPlayer();
+                ensureToastLiveControlsOnLoad();
                 initBBCodeEditor();
                 initEmailForm();
                 initOffTopicArchive();
@@ -2528,6 +2529,60 @@ function buildToastProxyUrl(targetUrl) {
     }
 }
 
+// If a toast stream is already loaded (e.g., after refresh), keep live controls hidden
+async function ensureToastLiveControlsOnLoad() {
+    try {
+        const audio = document.getElementById('mini-player-audio');
+        if (!audio) return;
+
+        const src = audio.currentSrc || audio.src || '';
+        if (!src) return;
+
+        const statusResp = await fetch('/api/discord-bot-status/');
+        if (!statusResp.ok) return;
+        const data = await statusResp.json();
+        const streamUrlRaw = data && data.stream ? data.stream.url : '';
+        if (!streamUrlRaw) return;
+
+        const resolved = await resolveToastStreamUrl(streamUrlRaw);
+        if (!resolved) return;
+
+        const rawCandidates = buildToastStreamCandidates(resolved);
+        if (!rawCandidates.length) return;
+
+        const candidates = rawCandidates
+            .map((u) => {
+                try {
+                    const parsed = new URL(u, window.location.href);
+                    if (parsed.protocol === 'https:') return parsed.toString();
+                    return buildToastProxyUrl(parsed.toString());
+                } catch (_) {
+                    return buildToastProxyUrl(u);
+                }
+            })
+            .filter(Boolean)
+            .map((u) => {
+                try {
+                    return new URL(u, window.location.origin).toString().split('?')[0];
+                } catch (_) {
+                    return (u || '').split('?')[0];
+                }
+            });
+
+        const audioSrc = (() => {
+            try { return new URL(src, window.location.origin).toString().split('?')[0]; }
+            catch (_) { return (src || '').split('?')[0]; }
+        })();
+
+        const isToast = candidates.some(c => c && audioSrc.startsWith(c));
+        if (isToast) {
+            window.__toastStreamCandidates = candidates.slice();
+            setToastLiveControls(true);
+            audio.dataset.toastLive = '1';
+        }
+    } catch (_) { /* no-op */ }
+}
+
 async function resolveToastStreamUrl(url) {
     if (!url) return null;
     const normalize = (u) => {
@@ -2591,6 +2646,7 @@ function buildToastStreamCandidates(resolvedUrl) {
 }
 
 window.addEventListener('DOMContentLoaded', initFooterActiveState);
+window.addEventListener('DOMContentLoaded', ensureToastLiveControlsOnLoad);
 
 // Sidebar active state based on current path
 function initSidebarActiveState() {

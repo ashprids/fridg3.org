@@ -204,7 +204,7 @@
 	<input id="stream-url-input" type="text" placeholder="m3u stream URL" required><br><br>
 	<input id="stream-name-input" type="text" placeholder="m3u stream name" required><br><br>
 	<button id="update-stream-button" data-tooltip="update the m3u stream URL and restart playback">update m3u stream</button>
-
+    <h5>HTTPS streams are recommended. Non-HTTPS streams need to be proxied through the webserver, which substantially increases server load.</h5>
 	<div id="stream-update-status" style="margin-top:12px; font-size:12px; display:none;"></div>
 </div>
 
@@ -263,10 +263,11 @@ async function updateNowPlaying() {
     
     if (data.bot && data.bot.status) {
       const isOnline = data.bot.status.toLowerCase() === 'online';
+      const streamName = (data.stream && data.stream.name) ? data.stream.name : 'music';
       
       if (isOnline) {
         statusDot.style.background = '#6ccf6c';
-        statusText.textContent = 'Online';
+        statusText.textContent = `Listening to ${streamName}`;
         nowPlayingEl.style.display = 'block';
         if (listenBtn) listenBtn.style.display = '';
       } else {
