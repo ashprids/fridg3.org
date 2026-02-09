@@ -4,6 +4,7 @@ Discord bot for fridg3.org - plays m3u internet streams
 """
 
 import discord
+from discord import app_commands
 from discord.ext import commands, tasks
 import json
 import os
@@ -248,6 +249,13 @@ async def on_ready():
     
     # Update Discord presence with stream name
     await update_discord_presence()
+
+    # Sync slash commands (one-time per connect)
+    try:
+        synced = await bot.tree.sync()
+        logger.info(f"Synced {len(synced)} application commands")
+    except Exception as e:
+        logger.error(f"Failed to sync application commands: {e}")
     
     # Try to join the voice channel and start playing
     await auto_play_stream()
@@ -362,22 +370,21 @@ async def auto_play_stream():
     except Exception as e:
         logger.error(f"Failed to play stream: {e}")
 
-@bot.command()
-async def play(ctx):
-    """Manually trigger stream playback"""
+@bot.tree.command(name="play", description="Start the toast radio stream")
+async def slash_play(interaction: discord.Interaction):
+    await interaction.response.defer(ephemeral=True)
     await auto_play_stream()
-    await ctx.send(f"🎵 Now playing: {config['stream']['name']}")
+    await interaction.followup.send(f"🎵 Now playing: {config['stream']['name']}", ephemeral=True)
 
-@bot.command()
-async def stop(ctx):
-    """Stop playback and disconnect from voice"""
+@bot.tree.command(name="stop", description="Stop playback and disconnect")
+async def slash_stop(interaction: discord.Interaction):
+    await interaction.response.defer(ephemeral=True)
     for vc in bot.voice_clients:
         await vc.disconnect()
-    await ctx.send("⏹️ Stopped playback")
+    await interaction.followup.send("⏹️ Stopped playback", ephemeral=True)
 
-@bot.command()
-async def status(ctx):
-    """Show bot status"""
+@bot.tree.command(name="status", description="Show bot status")
+async def slash_status(interaction: discord.Interaction):
     voice_clients = bot.voice_clients
     if voice_clients:
         vc = voice_clients[0]
@@ -385,8 +392,7 @@ async def status(ctx):
         status_str = f"▶️ Playing {config['stream']['name']}" if is_playing else "⏸️ Connected but not playing"
     else:
         status_str = "⭕ Disconnected"
-    
-    await ctx.send(f"Bot Status: {status_str}")
+    await interaction.response.send_message(f"Bot Status: {status_str}", ephemeral=True)
 
 async def main():
     """Start the bot"""
