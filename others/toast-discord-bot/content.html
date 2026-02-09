@@ -410,22 +410,13 @@ function buildStreamCandidates(resolvedUrl) {
     const resolved = await resolveStreamUrl(streamUrlRaw);
     if (!resolved) return;
 
-    let candidates = buildStreamCandidates(resolved);
-    if (!candidates.length) return;
+    const rawCandidates = buildStreamCandidates(resolved);
+    if (!rawCandidates.length) return;
 
-    // Prefer provided scheme but also try plain http if https fails (stream is http-only)
-    const withHttpFallback = [];
-    candidates.forEach((u) => {
-      if (!u) return;
-      withHttpFallback.push(u);
-      if (u.startsWith('https://')) {
-        const httpVersion = 'http://' + u.slice('https://'.length);
-        if (!withHttpFallback.includes(httpVersion)) {
-          withHttpFallback.push(httpVersion);
-        }
-      }
-    });
-    candidates = withHttpFallback;
+    const candidates = rawCandidates
+      .map((u) => buildProxyUrl(u))
+      .filter(Boolean);
+    if (!candidates.length) return;
 
     // Track toast stream sources for later detection
     window.__toastStreamCandidates = candidates.slice();
@@ -509,10 +500,27 @@ const miniAudio = document.getElementById('mini-player-audio');
 if (miniAudio) {
   miniAudio.addEventListener('play', () => {
     const src = miniAudio.currentSrc || miniAudio.src || '';
-    const candidates = (window.__toastStreamCandidates || []).map(c => c.split('?')[0]);
-    const isToast = candidates.some(c => src.startsWith(c));
+    const candidates = (window.__toastStreamCandidates || []).map((c) => {
+      try {
+        return new URL(c, window.location.origin).toString().split('?')[0];
+      } catch (_) {
+        return (c || '').split('?')[0];
+      }
+    });
+    const isToast = candidates.some(c => c && src.startsWith(c));
     setLiveControls(isToast);
   });
+}
+
+function buildProxyUrl(targetUrl) {
+  if (!targetUrl) return null;
+  try {
+    const parsed = new URL(targetUrl, window.location.href);
+    if (!/^https?:$/.test(parsed.protocol)) return null;
+    return '/api/stream-proxy/?u=' + encodeURIComponent(parsed.toString());
+  } catch (_) {
+    return null;
+  }
 }
 
 // Control panel script

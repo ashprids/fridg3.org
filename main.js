@@ -2401,7 +2401,13 @@ function initToastListenAlong() {
         audio.dataset.toastBound = '1';
         audio.addEventListener('play', () => {
             const src = audio.currentSrc || audio.src || '';
-            const candidates = (window.__toastStreamCandidates || []).map(c => (c || '').split('?')[0]);
+            const candidates = (window.__toastStreamCandidates || []).map((c) => {
+                try {
+                    return new URL(c, window.location.origin).toString().split('?')[0];
+                } catch (_) {
+                    return (c || '').split('?')[0];
+                }
+            });
             const isToast = candidates.some(c => c && src.startsWith(c));
             setToastLiveControls(isToast);
             audio.dataset.toastLive = isToast ? '1' : '';
@@ -2428,20 +2434,13 @@ async function playToastStreamInMiniPlayer() {
         const resolved = await resolveToastStreamUrl(streamUrlRaw);
         if (!resolved) return;
 
-        let candidates = buildToastStreamCandidates(resolved);
-        if (!candidates.length) return;
+        const rawCandidates = buildToastStreamCandidates(resolved);
+        if (!rawCandidates.length) return;
 
-        // If a stream only supports http, keep http candidates even on https pages
-        const expanded = [];
-        candidates.forEach((u) => {
-            if (!u) return;
-            expanded.push(u);
-            if (u.startsWith('https://')) {
-                const httpVersion = 'http://' + u.slice('https://'.length);
-                if (!expanded.includes(httpVersion)) expanded.push(httpVersion);
-            }
-        });
-        candidates = expanded;
+        const candidates = rawCandidates
+            .map((u) => buildToastProxyUrl(u))
+            .filter(Boolean);
+        if (!candidates.length) return;
 
         window.__toastStreamCandidates = candidates.slice();
 
@@ -2505,6 +2504,17 @@ function setToastLiveControls(isLive) {
     if (miniPlayerEl) miniPlayerEl.classList.toggle('live-stream', !!isLive);
     if (seekEl) seekEl.style.display = isLive ? 'none' : '';
     if (downloadBtn) downloadBtn.style.display = isLive ? 'none' : '';
+}
+
+function buildToastProxyUrl(targetUrl) {
+    if (!targetUrl) return null;
+    try {
+        const parsed = new URL(targetUrl, window.location.href);
+        if (!/^https?:$/.test(parsed.protocol)) return null;
+        return '/api/stream-proxy/?u=' + encodeURIComponent(parsed.toString());
+    } catch (_) {
+        return null;
+    }
 }
 
 async function resolveToastStreamUrl(url) {
