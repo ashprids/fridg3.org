@@ -263,11 +263,11 @@ async function updateNowPlaying() {
     
     if (data.bot && data.bot.status) {
       const isOnline = data.bot.status.toLowerCase() === 'online';
-      const streamName = (data.stream && data.stream.name) ? data.stream.name : 'music';
+      const streamName = (data.stream && data.stream.name) ? data.stream.name : 'stream';
       
       if (isOnline) {
         statusDot.style.background = '#6ccf6c';
-        statusText.textContent = `Listening to ${streamName}`;
+        statusText.textContent = 'Online';
         nowPlayingEl.style.display = 'block';
         if (listenBtn) listenBtn.style.display = '';
       } else {
@@ -276,11 +276,16 @@ async function updateNowPlaying() {
         nowPlayingEl.style.display = 'none';
         if (listenBtn) listenBtn.style.display = 'none';
       }
+
+      // Always show the current stream name below
+      if (data.stream && data.stream.name) {
+        document.getElementById('now-playing-name').textContent = `Listening to ${streamName}`;
+      }
     }
     
-    // Update stream name
-    if (data.stream && data.stream.name) {
-      document.getElementById('now-playing-name').textContent = data.stream.name;
+    // Update stream name (fallback if bot status missing)
+    if (data.stream && data.stream.name && (!data.bot || !data.bot.status)) {
+      document.getElementById('now-playing-name').textContent = `Listening to ${data.stream.name}`;
     }
     
     // Update status grid
