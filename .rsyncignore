@@ -5,3 +5,4 @@
 - .rsyncignore
 - .gitignore
 - .github
+- /others/toast-discord-bot/bot/venv/**
