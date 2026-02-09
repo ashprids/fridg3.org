@@ -72,6 +72,52 @@ if (!isset($baseParts['host'], $targetParts['host']) || strtolower($baseParts['h
 
 $targetUrl = $targetNorm;
 
+// Prefer cURL for robustness (avoids allow_url_fopen issues)
+if (function_exists('curl_init')) {
+    $sentHeaders = false;
+    $contentType = 'audio/mpeg';
+
+    $ch = curl_init($targetUrl);
+    curl_setopt_array($ch, [
+        CURLOPT_FOLLOWLOCATION => true,
+        CURLOPT_RETURNTRANSFER => false,
+        CURLOPT_HEADER => false,
+        CURLOPT_HTTPHEADER => [
+            'Icy-MetaData: 1',
+            'User-Agent: fridg3.org-stream-proxy'
+        ],
+        CURLOPT_TIMEOUT => 20,
+        CURLOPT_CONNECTTIMEOUT => 8,
+        CURLOPT_SSL_VERIFYPEER => true,
+        CURLOPT_SSL_VERIFYHOST => 2,
+        CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_0,
+        CURLOPT_IPRESOLVE => CURL_IPRESOLVE_V4,
+        CURLOPT_BUFFERSIZE => 8192,
+        CURLOPT_NOPROGRESS => true,
+        CURLOPT_WRITEFUNCTION => function($ch, $data) use (&$sentHeaders, &$contentType) {
+            if (!$sentHeaders) {
+                $ct = curl_getinfo($ch, CURLINFO_CONTENT_TYPE);
+                if ($ct) $contentType = $ct;
+                header('Content-Type: ' . $contentType);
+                $sentHeaders = true;
+            }
+            echo $data;
+            if (connection_aborted()) return 0; // stop streaming
+            return strlen($data);
+        },
+    ]);
+
+    $ok = curl_exec($ch);
+    $err = curl_errno($ch);
+    curl_close($ch);
+
+    if ($ok === false || $err !== 0) {
+        // fall back below
+    }
+    if ($ok !== false && $err === 0) exit;
+}
+
+// Fallback to stream context if cURL unavailable
 $context = stream_context_create([
     'http' => [
         'method' => 'GET',
@@ -86,8 +132,52 @@ $context = stream_context_create([
 
 $stream = @fopen($targetUrl, 'rb', false, $context);
 if (!$stream) {
-    http_response_code(502);
-    echo 'unable to fetch stream';
+    // Final fallback using raw socket (in case allow_url_fopen is disabled)
+    $scheme = strtolower($targetParts['scheme']);
+    $host = $targetParts['host'];
+    $port = isset($targetParts['port']) ? (int)$targetParts['port'] : ($scheme === 'https' ? 443 : 80);
+    $path = ($targetParts['path'] ?? '/') . (isset($targetParts['query']) ? '?' . $targetParts['query'] : '');
+    $remote = ($scheme === 'https' ? 'ssl://' : '') . $host . ':' . $port;
+    $socket = @stream_socket_client($remote, $errno, $errstr, 8, STREAM_CLIENT_CONNECT);
+    if (!$socket) {
+        http_response_code(502);
+        echo 'unable to fetch stream';
+        exit;
+    }
+
+    $headers = [
+        "GET {$path} HTTP/1.0",
+        "Host: {$host}",
+        'Icy-MetaData: 1',
+        'User-Agent: fridg3.org-stream-proxy',
+        'Connection: close',
+        '',
+        ''
+    ];
+    fwrite($socket, implode("\r\n", $headers));
+
+    $contentType = 'audio/mpeg';
+    $headerBuffer = '';
+    while (!feof($socket)) {
+        $line = fgets($socket, 2048);
+        if ($line === false) break;
+        $trim = trim($line);
+        if ($trim === '') break; // end of headers
+        $headerBuffer .= $line;
+        if (stripos($line, 'Content-Type:') === 0) {
+            $contentType = trim(substr($line, strlen('Content-Type:')));
+        }
+    }
+    header('Content-Type: ' . $contentType);
+
+    while (!feof($socket)) {
+        $chunk = fread($socket, 8192);
+        if ($chunk === false) break;
+        echo $chunk;
+        if (connection_aborted()) break;
+        flush();
+    }
+    fclose($socket);
     exit;
 }
 
@@ -107,9 +197,6 @@ while (!feof($stream)) {
     $chunk = fread($stream, 8192);
     if ($chunk === false) break;
     echo $chunk;
-    if (function_exists('fastcgi_finish_request')) {
-        // no-op: we want to keep streaming
-    }
     if (connection_aborted()) break;
     flush();
 }
