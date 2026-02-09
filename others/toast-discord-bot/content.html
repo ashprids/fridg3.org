@@ -170,7 +170,7 @@
 		</div>
 	</div>
 </div><br>
-<button id="form-button" data-tooltip="open the current station in the web player">listen along</button>
+<button id="listen-along-button" data-tooltip="open the current station in the web player">listen along</button>
 <br>
 <h3>status updates</h3><br>
 <div class="status-grid" id="status-grid-container">
@@ -241,7 +241,7 @@ async function updateNowPlaying() {
     const statusDot = document.querySelector('.status-dot');
     const statusText = document.querySelector('.status-line .muted');
     const nowPlayingEl = document.querySelector('.now-playing');
-    const listenBtn = document.getElementById('form-button');
+    const listenBtn = document.getElementById('listen-along-button');
     
     if (data.bot && data.bot.status) {
       const isOnline = data.bot.status.toLowerCase() === 'online';
@@ -274,7 +274,7 @@ async function updateNowPlaying() {
     const statusDot = document.querySelector('.status-dot');
     const statusText = document.querySelector('.status-line .muted');
     const nowPlayingEl = document.querySelector('.now-playing');
-    const listenBtn = document.getElementById('form-button');
+    const listenBtn = document.getElementById('listen-along-button');
     statusDot.style.background = '#cf6c6c';
     statusText.textContent = 'Offline';
     nowPlayingEl.style.display = 'none';
@@ -410,8 +410,22 @@ function buildStreamCandidates(resolvedUrl) {
     const resolved = await resolveStreamUrl(streamUrlRaw);
     if (!resolved) return;
 
-    const candidates = buildStreamCandidates(resolved);
+    let candidates = buildStreamCandidates(resolved);
     if (!candidates.length) return;
+
+    // Prefer provided scheme but also try plain http if https fails (stream is http-only)
+    const withHttpFallback = [];
+    candidates.forEach((u) => {
+      if (!u) return;
+      withHttpFallback.push(u);
+      if (u.startsWith('https://')) {
+        const httpVersion = 'http://' + u.slice('https://'.length);
+        if (!withHttpFallback.includes(httpVersion)) {
+          withHttpFallback.push(httpVersion);
+        }
+      }
+    });
+    candidates = withHttpFallback;
 
     // Track toast stream sources for later detection
     window.__toastStreamCandidates = candidates.slice();
@@ -481,7 +495,7 @@ function buildStreamCandidates(resolvedUrl) {
 updateNowPlaying();
 
   // Listen along button wiring
-  const listenBtn = document.getElementById('form-button');
+  const listenBtn = document.getElementById('listen-along-button');
   if (listenBtn) {
     listenBtn.addEventListener('click', (e) => {
       e.preventDefault();

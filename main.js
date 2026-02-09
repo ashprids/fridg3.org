@@ -641,10 +641,16 @@ function initEmailForm() {
         let correctAnswer = null;
 
         function generateQuestion() {
-            const a = Math.floor(Math.random() * 13);
-            const b = Math.floor(Math.random() * 13);
             const ops = ['+', '-', '*'];
             const op = ops[Math.floor(Math.random() * ops.length)];
+
+            let a = Math.floor(Math.random() * 10);
+            let b = Math.floor(Math.random() * 10);
+
+            // Keep subtraction answers non-negative for simplicity
+            if (op === '-' && b > a) {
+                [a, b] = [b, a];
+            }
 
             switch (op) {
                 case '+':
@@ -2384,7 +2390,7 @@ function initToastListenAlong() {
     window.__toastListenAlongBound = true;
 
     document.addEventListener('click', (event) => {
-        const btn = event.target && event.target.closest ? event.target.closest('#form-button') : null;
+        const btn = event.target && event.target.closest ? event.target.closest('#listen-along-button') : null;
         if (!btn) return;
         event.preventDefault();
         playToastStreamInMiniPlayer();
@@ -2422,8 +2428,20 @@ async function playToastStreamInMiniPlayer() {
         const resolved = await resolveToastStreamUrl(streamUrlRaw);
         if (!resolved) return;
 
-        const candidates = buildToastStreamCandidates(resolved);
+        let candidates = buildToastStreamCandidates(resolved);
         if (!candidates.length) return;
+
+        // If a stream only supports http, keep http candidates even on https pages
+        const expanded = [];
+        candidates.forEach((u) => {
+            if (!u) return;
+            expanded.push(u);
+            if (u.startsWith('https://')) {
+                const httpVersion = 'http://' + u.slice('https://'.length);
+                if (!expanded.includes(httpVersion)) expanded.push(httpVersion);
+            }
+        });
+        candidates = expanded;
 
         window.__toastStreamCandidates = candidates.slice();
 
