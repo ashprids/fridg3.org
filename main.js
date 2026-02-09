@@ -326,6 +326,8 @@ function isSpaEligibleLink(anchor) {
     if (!href || href === '#' || href.startsWith('mailto:') || href.startsWith('tel:')) return false;
     if (anchor.target && anchor.target === '_blank') return false;
     if (!href.startsWith('/')) return false; // same-origin path only
+    // login should always be a full navigation so session cookies + redirects work
+    if (href.startsWith('/account/login')) return false;
     // Always perform a full navigation for logout so that
     // server redirects (e.g. ?logged_out=1) are reflected in
     // the browser URL immediately.
