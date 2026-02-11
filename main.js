@@ -1772,6 +1772,8 @@ function initMiniPlayer() {
         }
 
         const PLAYER_STATE_KEY = 'miniPlayerStateV1';
+        // Default volume if no saved state
+        const DEFAULT_VOLUME = 0.3;
         setLiveMode(false);
 
         // Optional initial state from body data attributes
@@ -1784,6 +1786,35 @@ function initMiniPlayer() {
             setNowPlayingTitle(initialTitle);
         }
         if (artEl && initialArt) artEl.src = initialArt;
+
+        // Apply default volume unless we restore a saved state later
+        audio.volume = DEFAULT_VOLUME;
+
+        // Restore saved state if present (overrides default volume)
+        try {
+            const savedRaw = window.localStorage.getItem(PLAYER_STATE_KEY);
+            if (savedRaw) {
+                const saved = JSON.parse(savedRaw);
+                if (saved && typeof saved === 'object') {
+                    if (saved.src) audio.src = saved.src;
+                    if (typeof saved.currentTime === 'number' && !Number.isNaN(saved.currentTime)) {
+                        audio.currentTime = saved.currentTime;
+                    }
+                    if (typeof saved.volume === 'number' && saved.volume >= 0 && saved.volume <= 1) {
+                        audio.volume = saved.volume;
+                    }
+                    if (typeof saved.muted === 'boolean') {
+                        audio.muted = saved.muted;
+                    }
+                    if (saved.title && titleEl) {
+                        setNowPlayingTitle(saved.title);
+                    }
+                    if (saved.art && artEl) {
+                        artEl.src = saved.art;
+                    }
+                }
+            }
+        } catch (_) { /* no-op */ }
 
         const setPlayIcon = (isPlaying) => {
             const icon = playBtn.querySelector('i');
@@ -3731,7 +3762,7 @@ function parseBBCode(text) {
 
 function initToastDiscordBotPage() {
     try {
-        const hasToastPage = document.getElementById('status-grid-container') || document.getElementById('control-panel-container');
+        const hasToastPage = document.getElementById('control-panel-container') || document.getElementById('listen-along-button');
         if (!hasToastPage) return;
 
         ensureToastCardStyles();
@@ -3809,9 +3840,6 @@ async function toastUpdateNowPlaying() {
             if (nameEl) nameEl.textContent = data.stream.name;
         }
 
-        if (data && Array.isArray(data.updates)) {
-            toastUpdateStatusGrid(data.updates);
-        }
     } catch (_) {
         const statusDot = document.querySelector('.status-dot');
         const statusText = document.querySelector('.status-line .muted');
@@ -3822,23 +3850,4 @@ async function toastUpdateNowPlaying() {
         const nameEl = document.getElementById('now-playing-name');
         if (nameEl) nameEl.textContent = 'Unknown';
     }
-}
-
-function toastUpdateStatusGrid(updates) {
-    const container = document.getElementById('status-grid-container');
-    if (!container) return;
-    const rows = container.querySelectorAll('.status-grid-row');
-    rows.forEach(row => row.remove());
-
-    updates.forEach(update => {
-        const timeRow = document.createElement('div');
-        timeRow.className = 'status-grid-row time';
-        timeRow.textContent = update.time || '';
-        container.appendChild(timeRow);
-
-        const statusRow = document.createElement('div');
-        statusRow.className = 'status-grid-row status';
-        statusRow.textContent = update.status || '';
-        container.appendChild(statusRow);
-    });
 }

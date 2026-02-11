@@ -66,3 +66,16 @@ Quick start mental model
 - State sources: accounts.json (authoritative per-user prefs), localStorage (fast UX + anonymous users), wip file (site-wide maintenance), PHP session (auth/admin).
 - Rendering: PHP serves pages; main.js enhances with SPA navigation, theming, glow, BBCode.
 - Saving prefs: logged-in users sync to accounts.json via /api/settings; guests stay local.
+
+Toast Discord bot (others/toast-discord-bot)
+- Frontend page: now-playing status shows "Listening to <stream>" under the profile card; status label remains Online/Offline. Listen-along button styled to match site buttons and uses proxy only for http streams (skips proxy for https). Seek/download controls hide for live streams and are re-hidden on refresh if toast stream is active.
+- Listen-along logic: resolves playlists, builds candidate URLs; for http streams uses /api/stream-proxy to avoid mixed content; for https streams plays directly. Proxy no longer requests ICY metadata (reduced artifacts) and runs via curl/stream/socket fallbacks with no timeout.
+- Mini player: default volume 30% unless a saved state exists; state (src/time/volume/muted/title/art) persisted in localStorage miniPlayerStateV1.
+- Bot scripts: start-toast.sh launches bot in screen session "toast" (no PID file; stop via screen quit). Bot commands migrated to slash commands (/play, /stop, /status) with app_commands sync on ready.
+- Live status: bot now serves its online flag via local aiohttp endpoint http://127.0.0.1:8765/status; PHP /api/discord-bot-status/ consumes this instead of toast.json. The Python bot no longer writes online/offline into toast.json, preventing stale "offline" reads when the bot is still connected. Ensure aiohttp is installed and that PHP can reach 127.0.0.1:8765 from the same host; otherwise the API falls back to offline.
+
+Email page (/email)
+- Form now posts directly to FormSubmit (https://formsubmit.co/me@fridg3.org); server-side submit.php removed. Success banner shows on ?sent=1 redirect. Security question is a client-side random 1-digit math (+/-/*) gate; form blocked unless answered correctly.
+
+Login page (/account/login)
+- Page bypasses SPA navigation to allow full POST + redirect; CSRF token and IP-based attempt throttling remain. Login form uses data-no-spa to avoid interception.

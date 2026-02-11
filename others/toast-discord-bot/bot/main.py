@@ -9,8 +9,8 @@ from discord.ext import commands, tasks
 import json
 import os
 import logging
-import time
 import signal
+from aiohttp import web
 from pathlib import Path
 import re
 import shutil
@@ -169,49 +169,8 @@ def load_config():
         raise
 
 def update_bot_status(status: str):
-    """Update bot status in config file (online/offline)"""
-    global config
-    try:
-        config['bot']['status'] = status
-        with open(CONFIG_PATH, 'w') as f:
-            json.dump(config, f, indent=4)
-        logger.info(f"Updated bot status to: {status}")
-    except Exception as e:
-        logger.error(f"Failed to update bot status in config: {e}")
-
-def log_status_update(message: str):
-    """Log a status update to toast-updates.json"""
-    try:
-        updates_path = CONFIG_PATH.parent / 'toast-updates.json'
-        updates = []
-        
-        # Load existing updates
-        if updates_path.exists():
-            try:
-                with open(updates_path, 'r') as f:
-                    updates = json.load(f)
-                    if not isinstance(updates, list):
-                        updates = []
-            except:
-                updates = []
-        
-        # Add new update at the beginning (most recent)
-        from datetime import datetime
-        new_update = {
-            'time': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-            'status': message
-        }
-        updates.insert(0, new_update)
-        
-        # Keep only the last 15 updates
-        updates = updates[:15]
-        
-        # Write back to file
-        with open(updates_path, 'w') as f:
-            json.dump(updates, f, indent=4)
-        logger.info(f"Logged status update: {message}")
-    except Exception as e:
-        logger.error(f"Failed to log status update: {e}")
+    """Deprecated: retained for compatibility but no longer writes to disk."""
+    logger.info(f"Ignoring request to persist bot status: {status}")
 
 async def update_discord_presence():
     """Update Discord presence to show current stream name"""
@@ -226,8 +185,6 @@ async def update_discord_presence():
 # Load config on startup
 config = load_config()
 
-# Track config reload state
-last_config_reload_time = None
 signal_file_path = CONFIG_PATH.parent / '.stream-update-signal'
 
 # Initialize bot with intents
@@ -236,16 +193,18 @@ intents.message_content = True
 intents.voice_states = True
 
 bot = commands.Bot(command_prefix="!", intents=intents)
+bot_online = False
+
+# Local status server for PHP to query instead of reading toast.json
+status_app = web.Application()
 
 @bot.event
 async def on_ready():
     """Called when the bot connects to Discord"""
+    global bot_online
+    bot_online = True
     logger.info(f"Bot logged in as {bot.user}")
     logger.info(f"Bot ID: {bot.user.id}")
-    
-    # Update status to online
-    update_bot_status("online")
-    log_status_update("Bot connected to Discord")
     
     # Update Discord presence with stream name
     await update_discord_presence()
@@ -263,14 +222,14 @@ async def on_ready():
 @bot.event
 async def on_disconnect():
     """Called when the bot disconnects from Discord"""
+    global bot_online
+    bot_online = False
     logger.info("Bot disconnected from Discord")
-    update_bot_status("offline")
-    log_status_update("Bot disconnected from Discord")
 
 @tasks.loop(seconds=1)  # Check every second for immediate stream restart signal
 async def config_monitor():
     """Monitor for stream update signal and reload config + restart playback immediately"""
-    global config, last_config_reload_time
+    global config
     try:
         if signal_file_path.exists():
             logger.info("Stream update signal detected, reloading config and restarting stream...")
@@ -279,7 +238,6 @@ async def config_monitor():
                 old_stream_name = config.get('stream', {}).get('name', 'Unknown')
                 config = load_config()
                 new_stream_name = config.get('stream', {}).get('name', 'Unknown')
-                last_config_reload_time = time.time()
             except Exception as e:
                 logger.error(f"Failed to reload config: {e}")
                 return
@@ -289,9 +247,6 @@ async def config_monitor():
                 if vc.is_playing():
                     vc.stop()
                 await vc.disconnect()
-            
-            # Log stream change
-            log_status_update(f"Station changed from {old_stream_name} to {new_stream_name}")
             
             # Update Discord presence with new stream name
             await update_discord_presence()
@@ -394,16 +349,32 @@ async def slash_status(interaction: discord.Interaction):
         status_str = "⭕ Disconnected"
     await interaction.response.send_message(f"Bot Status: {status_str}", ephemeral=True)
 
+async def status_handler(request):
+    return web.json_response({
+        'online': bot_online and not bot.is_closed(),
+        'stream_name': config.get('stream', {}).get('name', 'Unknown Stream')
+    })
+
+
+async def start_status_server():
+    status_app.router.add_get('/status', status_handler)
+    runner = web.AppRunner(status_app)
+    await runner.setup()
+    site = web.TCPSite(runner, '127.0.0.1', 8765)
+    await site.start()
+    logger.info('Local status server started on http://127.0.0.1:8765/status')
+
+
 async def main():
     """Start the bot"""
     token = config['bot']['token']
     if token == "YOUR_DISCORD_BOT_TOKEN_HERE":
         logger.error("Bot token not set in toast.json")
         return
-    
-    # Set status to offline at startup (will be set to online on_ready)
-    update_bot_status("offline")
-    
+
+    # Start local status server before running the bot
+    await start_status_server()
+
     # Start monitoring tasks
     config_monitor.start()
     heartbeat.start()
@@ -432,13 +403,13 @@ async def main():
 async def shutdown_bot():
     """Gracefully close the bot and disconnect from voice"""
     try:
+        global bot_online
         logger.info("Disconnecting from voice channels...")
         for vc in bot.voice_clients:
             if vc.is_playing():
                 vc.stop()
             await vc.disconnect()
-        logger.info("Updating status to offline...")
-        update_bot_status("offline")
+        bot_online = False
         logger.info("Closing bot connection...")
         await bot.close()
     except Exception as e:

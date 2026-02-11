@@ -59,53 +59,6 @@
 	.profile-meta { font-size:14px; }
 }
 
-/* Status updates grid */
-.status-grid {
-	display: grid;
-	grid-template-columns: 180px 1fr;
-	gap: 0;
-	border: 1px solid var(--border);
-	border-radius: 6px;
-	overflow: hidden;
-	font-size: 13px;
-	max-width: 720px;
-}
-
-.status-grid-header {
-	background: rgba(255,255,255,0.05);
-	padding: 8px 12px;
-	font-family: 'MainBold', monospace;
-	color: var(--fg);
-	border-bottom: 1px solid var(--border);
-	border-right: 1px solid var(--border);
-}
-
-.status-grid-header:last-child {
-	border-right: none;
-}
-
-.status-grid-row {
-	padding: 8px 12px;
-	border-bottom: 1px solid #1a1a1a;
-	border-right: 1px solid #1a1a1a;
-	color: var(--fg);
-	word-break: break-word;
-}
-
-.status-grid-row:last-child {
-	border-bottom: none;
-}
-
-.status-grid-row.time {
-	color: var(--subtle);
-	font-size: 12px;
-	border-right: 1px solid var(--border);
-}
-
-.status-grid-row.status {
-	border-right: none;
-}
-
 /* Match site theme for control panel inputs and button */
 #stream-url-input,
 #stream-name-input {
@@ -190,12 +143,6 @@
 </div><br>
 <button id="listen-along-button" data-tooltip="open the current station in the web player">listen along</button>
 <br>
-<h3>status updates</h3><br>
-<div class="status-grid" id="status-grid-container">
-	<div class="status-grid-header time">time</div>
-	<div class="status-grid-header status">status</div>
-</div>
-
 <br><br>
 <div id="control-panel-container" style="display:none;">
 	<h3>control panel</h3>
@@ -288,10 +235,6 @@ async function updateNowPlaying() {
       document.getElementById('now-playing-name').textContent = `Listening to ${data.stream.name}`;
     }
     
-    // Update status grid
-    if (data.updates && Array.isArray(data.updates)) {
-      updateStatusGrid(data.updates);
-    }
   } catch (err) {
     console.error('Failed to fetch bot status:', err);
     // On error, show offline
@@ -305,28 +248,6 @@ async function updateNowPlaying() {
     if (listenBtn) listenBtn.style.display = 'none';
     document.getElementById('now-playing-name').textContent = 'Unknown';
   }
-}
-
-// Update status grid with new updates
-function updateStatusGrid(updates) {
-  const container = document.getElementById('status-grid-container');
-  
-  // Remove all rows except headers
-  const rows = container.querySelectorAll('.status-grid-row');
-  rows.forEach(row => row.remove());
-  
-  // Add new rows from updates
-  updates.forEach(update => {
-    const timeRow = document.createElement('div');
-    timeRow.className = 'status-grid-row time';
-    timeRow.textContent = update.time;
-    container.appendChild(timeRow);
-    
-    const statusRow = document.createElement('div');
-    statusRow.className = 'status-grid-row status';
-    statusRow.textContent = update.status;
-    container.appendChild(statusRow);
-  });
 }
 
 // Toggle seek/download visibility for live streams

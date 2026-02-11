@@ -33,50 +33,29 @@ if (!$config) {
     exit;
 }
 
-// Read status updates from log file
-$updates_path = find_template_file('data' . DIRECTORY_SEPARATOR . 'etc' . DIRECTORY_SEPARATOR . 'toast-updates.json');
-$updates = [];
-
-if ($updates_path && file_exists($updates_path)) {
-    try {
-        $updates_content = file_get_contents($updates_path);
-        $updates_data = json_decode($updates_content, true);
-        if (is_array($updates_data)) {
-            // Sort by timestamp, newest first
-            usort($updates_data, function($a, $b) {
-                return strtotime($b['time']) - strtotime($a['time']);
-            });
-            $updates = array_slice($updates_data, 0, 20); // Keep last 20 updates
+// Query local bot status server (fallback to offline)
+$bot_status = 'offline';
+try {
+    $ch = curl_init('http://127.0.0.1:8765/status');
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_TIMEOUT_MS, 800);
+    $resp = curl_exec($ch);
+    if ($resp !== false) {
+        $data = json_decode($resp, true);
+        if (is_array($data) && isset($data['online'])) {
+            $bot_status = $data['online'] ? 'online' : 'offline';
         }
-    } catch (Exception $e) {
-        // If file doesn't exist or is invalid, use empty array
-        $updates = [];
     }
-}
-
-// If no updates, create default ones
-if (empty($updates)) {
-    $updates = [
-        [
-            'time' => date('Y-m-d H:i:s', time()),
-            'status' => 'now playing ' . ($config['stream']['name'] ?? 'stream')
-        ],
-        [
-            'time' => date('Y-m-d H:i:s', time() - 7200),
-            'status' => 'radio stream online'
-        ],
-        [
-            'time' => date('Y-m-d H:i:s', time() - 14400),
-            'status' => 'chatbot initialized'
-        ]
-    ];
+    curl_close($ch);
+} catch (Exception $e) {
+    $bot_status = 'offline';
 }
 
 // Return bot status and stream info
 $response = [
     'bot' => [
         'name' => 'Toast',
-        'status' => $config['bot']['status'] ?? 'offline',
+        'status' => $bot_status,
         'avatar' => 'https://cdn.discordapp.com/embed/avatars/0.png',
         'username' => 'toast#9266'
     ],
@@ -85,7 +64,6 @@ $response = [
         'url' => $config['stream']['url'] ?? null,
         'playing' => true
     ],
-    'updates' => $updates,
     'timestamp' => date('Y-m-d H:i:s')
 ];
 
