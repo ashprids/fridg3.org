@@ -33,22 +33,10 @@ if (!$config) {
     exit;
 }
 
-// Query local bot status server (fallback to offline)
 $bot_status = 'offline';
-try {
-    $ch = curl_init('http://127.0.0.1:8765/status');
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_TIMEOUT_MS, 800);
-    $resp = curl_exec($ch);
-    if ($resp !== false) {
-        $data = json_decode($resp, true);
-        if (is_array($data) && isset($data['online'])) {
-            $bot_status = $data['online'] ? 'online' : 'offline';
-        }
-    }
-    curl_close($ch);
-} catch (Exception $e) {
-    $bot_status = 'offline';
+if (isset($config['bot']['status'])) {
+    $status_raw = strtolower((string)$config['bot']['status']);
+    $bot_status = $status_raw === 'online' ? 'online' : 'offline';
 }
 
 // Return bot status and stream info

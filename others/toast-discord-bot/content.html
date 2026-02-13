@@ -148,6 +148,11 @@
 	<h3>control panel</h3>
 	<h5>for admin users only</h5><br>
 
+  <label style="display:flex; align-items:center; gap:8px; margin-bottom:12px;">
+    <input id="status-toggle" type="checkbox" style="width:16px; height:16px;">
+    <span>show toast as online</span>
+  </label>
+
 	<input id="stream-url-input" type="text" placeholder="m3u stream URL" required><br><br>
 	<input id="stream-name-input" type="text" placeholder="m3u stream name" required><br><br>
 	<button id="update-stream-button" data-tooltip="update the m3u stream URL and restart playback">update m3u stream</button>
@@ -156,6 +161,59 @@
 </div>
 
 <script>
+// Manual online status toggle (admin-only control)
+const statusToggle = document.getElementById('status-toggle');
+const statusDot = document.querySelector('.status-dot');
+const statusText = document.querySelector('.status-line .muted');
+const nowPlayingEl = document.querySelector('.now-playing');
+const listenBtn = document.getElementById('listen-along-button');
+
+function applyManualStatus(isOnline) {
+  if (statusDot) statusDot.style.background = isOnline ? '#6ccf6c' : '#cf6c6c';
+  if (statusText) statusText.textContent = isOnline ? 'Online' : 'Offline';
+  if (nowPlayingEl) nowPlayingEl.style.display = isOnline ? 'block' : 'none';
+  if (listenBtn) listenBtn.style.display = isOnline ? '' : 'none';
+}
+
+function setStatusUI(isOnline) {
+  if (statusToggle) statusToggle.checked = !!isOnline;
+  applyManualStatus(!!isOnline);
+}
+
+async function persistStatus(isOnline) {
+  if (!statusToggle) return;
+  statusToggle.disabled = true;
+  showStatus(`Setting status to ${isOnline ? 'online' : 'offline'}...`);
+  try {
+    const response = await fetch('/api/discord-bot-control/status/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: isOnline ? 'online' : 'offline' })
+    });
+    const data = await response.json();
+    if (!response.ok || data.ok !== true) {
+      throw new Error(data.error || 'Failed to update status');
+    }
+    showStatus(`Status set to ${isOnline ? 'online' : 'offline'}.`);
+  } catch (err) {
+    showStatus(err.message, true);
+    setStatusUI(!isOnline);
+  } finally {
+    statusToggle.disabled = false;
+  }
+}
+
+if (statusToggle) {
+  statusToggle.addEventListener('change', () => {
+    const isOnline = !!statusToggle.checked;
+    setStatusUI(isOnline);
+    persistStatus(isOnline);
+  });
+}
+
+// Default to offline until server value arrives
+setStatusUI(false);
+
 // Check if user is admin
 async function checkAdminStatus() {
   try {
@@ -167,6 +225,11 @@ async function checkAdminStatus() {
     const controlPanel = document.getElementById('control-panel-container');
     if (controlPanel) {
       controlPanel.style.display = isAdmin ? 'block' : 'none';
+    }
+
+    const statusToggleEl = document.getElementById('status-toggle');
+    if (statusToggleEl) {
+      statusToggleEl.disabled = !isAdmin;
     }
     
     // Disable buttons if not admin
@@ -196,57 +259,27 @@ checkAdminStatus();
 
 // Default controls to non-live on load
 setLiveControls(false);
-// Fetch and display current station name and bot status
+// Fetch and display current station name + status from shared config
 async function updateNowPlaying() {
   try {
     const response = await fetch('/api/discord-bot-status/');
     const data = await response.json();
-    
-    // Update bot status indicator
-    const statusDot = document.querySelector('.status-dot');
-    const statusText = document.querySelector('.status-line .muted');
-    const nowPlayingEl = document.querySelector('.now-playing');
-    const listenBtn = document.getElementById('listen-along-button');
-    
-    if (data.bot && data.bot.status) {
-      const isOnline = data.bot.status.toLowerCase() === 'online';
-      const streamName = (data.stream && data.stream.name) ? data.stream.name : 'stream';
-      
-      if (isOnline) {
-        statusDot.style.background = '#6ccf6c';
-        statusText.textContent = 'Online';
-        nowPlayingEl.style.display = 'block';
-        if (listenBtn) listenBtn.style.display = '';
-      } else {
-        statusDot.style.background = '#cf6c6c';
-        statusText.textContent = 'Offline';
-        nowPlayingEl.style.display = 'none';
-        if (listenBtn) listenBtn.style.display = 'none';
-      }
 
-      // Always show the current stream name below
-      if (data.stream && data.stream.name) {
-        document.getElementById('now-playing-name').textContent = `Listening to ${streamName}`;
-      }
+    const streamName = (data.stream && data.stream.name) ? data.stream.name : null;
+    const nowPlayingName = document.getElementById('now-playing-name');
+    if (nowPlayingName) {
+      nowPlayingName.textContent = streamName ? `Listening to ${streamName}` : 'Unknown';
     }
-    
-    // Update stream name (fallback if bot status missing)
-    if (data.stream && data.stream.name && (!data.bot || !data.bot.status)) {
-      document.getElementById('now-playing-name').textContent = `Listening to ${data.stream.name}`;
-    }
-    
+
+    const isOnline = (data.bot && data.bot.status)
+      ? String(data.bot.status).toLowerCase() === 'online'
+      : false;
+    setStatusUI(isOnline);
   } catch (err) {
     console.error('Failed to fetch bot status:', err);
-    // On error, show offline
-    const statusDot = document.querySelector('.status-dot');
-    const statusText = document.querySelector('.status-line .muted');
-    const nowPlayingEl = document.querySelector('.now-playing');
-    const listenBtn = document.getElementById('listen-along-button');
-    statusDot.style.background = '#cf6c6c';
-    statusText.textContent = 'Offline';
-    nowPlayingEl.style.display = 'none';
-    if (listenBtn) listenBtn.style.display = 'none';
-    document.getElementById('now-playing-name').textContent = 'Unknown';
+    const nowPlayingName = document.getElementById('now-playing-name');
+    if (nowPlayingName) nowPlayingName.textContent = 'Unknown';
+    setStatusUI(false);
   }
 }
 
@@ -431,7 +464,6 @@ function buildStreamCandidates(resolvedUrl) {
 updateNowPlaying();
 
   // Listen along button wiring
-  const listenBtn = document.getElementById('listen-along-button');
   if (listenBtn) {
     listenBtn.addEventListener('click', (e) => {
       e.preventDefault();
