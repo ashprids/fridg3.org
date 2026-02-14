@@ -321,35 +321,22 @@ function initAsciiTime() {
         };
 
         const loadFonts = async () => {
-            const fallbackTimeGlyphs = [
-                { number: '0', font: " .d88b. \n d8P  Y8b\n d8P  Y8b\n 88    88\n 88    88\n Y8b  d8P\n  `Y88P' " },
-                { number: '1', font: "  d8  \n d88  \n  888 \n  888 \n  888 \n  888 \n888888" },
-                { number: '2', font: " .d888b. \nd8P  Y8b\n    .d88P\n .od88P\"  \n d88P\"    \n888\"      \n888888888\"" },
-                { number: '3', font: " .d888b. \nd8P  Y8b\n    .d88P\n    8888\" \n    \"Y8b.\nY88b  d88\n \"Y8888P\"\"" },
-                { number: '4', font: "   d888  \n  d8P88  \n d8P 88  \nd88  88  \n888888888\n     88  \n     88  " },
-                { number: '5', font: "888888888\n888      \n888      \n8888888b.\n     \"Y88b\nY88b  d88\n \"Y8888P\"\"" },
-                { number: '6', font: " .d888b. \nd88P  Y8b\n888      \n888d888b.\n888P  Y88\n888    888\n \"Y8888P\"\"" },
-                { number: '7', font: "888888888\n      d88\n     d88P\n    d88P \n   d88P  \n  d88P   \n d88P    " },
-                { number: '8', font: " .d888b. \nd88P  Y8b\nY88b. d88\n \"Y88888\"\n.d8P\"\"Y8b.\nY88b  d88\n \"Y8888P\"\"" },
-                { number: '9', font: " .d888b. \nd88P  Y88\n888    88\nY88b. d88\n \"Y888P88\n       88\nY88b d88P\"" },
-                { colon: "   \n ..\n ''\n   \n ..\n ''\n   " }
+            const timeGlyphs = [
+                { number: '1', font: "SsSSs.     \n  SSSSs    \n  S SSS    \n  S  SS    \n  S..SS    \n  S:::S    \n  S;;;S    \n  S%%%S    \nSsSSSSSsS  " },
+                { number: '2', font: ".sSSSSs.   \n`SSSS SSSs.\n      SSSSS\n.sSSSsSSSS'\nS..SS      \nS:::S SSSs.\nS;;;S SSSSS\nS%%%S SSSSS\nSSSSSsSSSSS" },
+                { number: '3', font: ".sSSSSSSs. \n`SSSS SSSSs\n      S SSS\n  .sS S  SS\n SSSSsS..SS\n  `:; S:::S\n      S;;;S\n.SSSS S%%%S\n`:;SSsSSSSS" },
+                { number: '4', font: ".sSSS s.   \nSSSSS SSSs.\nS SSS SSSSS\nS  SS SSSSS\nS..SSsSSSSS\n      SSSSS\n      SSSSS\n      SSSSS\n      SSSSS" },
+                { number: '5', font: "SSSSSSSSSs.\nSSSSS SSSS'\nS SSS      \nSSSSSsSSSs.\n      SSSSS\n.sSSS SSSSS\nS;;;S SSSSS\nS%%%S SSSSS\n`:;SSsSS;:'" },
+                { number: '6', font: ".sSSSSs.   \nSSSSSSSSSs.\nS SSS SSSS'\nS  SS      \nS...SsSSSa.\nS:::S SSSSS\nS;;;S SSSSS\nS%%%S SSSSS\n`:;SSsSS;:'" },
+                { number: '7', font: "SSSSSSSSSs.\nSSSSSSSSSSS\n     S SSS \n    S  SS  \n   S..SS   \n  S:::S    \n S;;;S     \nS%%%S      \nSSSSS      " },
+                { number: '8', font: ".sSSSSs.   \nSSSSS SSSs.\nS SSS SSSSS\nS  SS SSSSS\n`..SSsSSSs'\ns:::S SSSSs\nS;;;S SSSSS\nS%%%S SSSSS\n`:;SSsSS;:'" },
+                { number: '9', font: ".sSSSSs.   \nSSSSS SSSs.\nS SSS SSSSS\nS  SS SSSSS\n`..SSsSSSSS\n      SSSSS\n.sSSS SSSSS\nS%%%S SSSSS\n`:;SSsSS;:'" },
+                { number: '0', font: ".sSSSSs.   \nSSSSSSSSSs.\nS SSS SSSSS\nS  SS SSSSS\nS..SS\\SSSSS\nS:::S SSSSS\nS;;;S SSSSS\nS%%%S SSSSS\n`:;SSsSS;:'" },
+                { colon: " \n.sSs. \nS%%%S \n`:;:' \n      \n.sSs. \nS%%%S \n`:;:' " }
             ];
 
             try {
-                let data = fallbackTimeGlyphs;
-                const res = await fetch('/data/etc/ascii-time.json', { cache: 'no-store' });
-                const text = await res.text();
-                if (res.ok && text && text.trim()) {
-                    try {
-                        data = JSON.parse(text);
-                    } catch (parseErr) {
-                        console.error('Invalid ascii-time JSON, using fallback', parseErr);
-                    }
-                } else {
-                    console.warn('ascii-time fetch returned non-OK or empty payload, using fallback');
-                }
-
-                fontMap = buildMap(data);
+                fontMap = buildMap(timeGlyphs);
                 if (!maxLines) throw new Error('No glyphs loaded');
                 render();
                 el._asciiTimeInterval = window.setInterval(render, 1000);
@@ -383,19 +370,19 @@ function initAsciiUsage() {
         let glyphWidth = 8;
         const charGap = 1;
 
-        const fallbackPercentageGlyphs = [
-            { number: '1', font: "SsSSs.     \n  SSSSs    \n  S SSS    \n  S  SS    \n  S..SS    \n  S:::S    \n  S;;;S    \n  S%%%S    \nSsSSSSSsS  " },
-            { number: '2', font: ".sSSSSs.   \n`SSSS SSSs.\n      SSSSS\n.sSSSsSSSS'\nS..SS      \nS:::S SSSs.\nS;;;S SSSSS\nS%%%S SSSSS\nSSSSSsSSSSS" },
-            { number: '3', font: ".sSSSSSSs. \n`SSSS SSSSs\n      S SSS\n  .sS S  SS\n SSSSsS..SS\n  `:; S:::S\n      S;;;S\n.SSSS S%%%S\n`:;SSsSSSSS" },
-            { number: '4', font: ".sSSS s.   \nSSSSS SSSs.\nS SSS SSSSS\nS  SS SSSSS\nS..SSsSSSSS\n      SSSSS\n      SSSSS\n      SSSSS\n      SSSSS" },
-            { number: '5', font: "SSSSSSSSSs.\nSSSSS SSSS'\nS SSS      \nSSSSSsSSSs.\n      SSSSS\n.sSSS SSSSS\nS;;;S SSSSS\nS%%%S SSSSS\n`:;SSsSS;:'" },
-            { number: '6', font: ".sSSSSs.   \nSSSSSSSSSs.\nS SSS SSSS'\nS  SS      \nS...SsSSSa.\nS:::S SSSSS\nS;;;S SSSSS\nS%%%S SSSSS\n`:;SSsSS;:'" },
-            { number: '7', font: "SSSSSSSSSs.\nSSSSSSSSSSS\n     S SSS \n    S  SS  \n   S..SS   \n  S:::S    \n S;;;S     \nS%%%S      \nSSSSS      " },
-            { number: '8', font: ".sSSSSs.   \nSSSSS SSSs.\nS SSS SSSSS\nS  SS SSSSS\n`..SSsSSSs'\ns:::S SSSSs\nS;;;S SSSSS\nS%%%S SSSSS\n`:;SSsSS;:'" },
-            { number: '9', font: ".sSSSSs.   \nSSSSS SSSs.\nS SSS SSSSS\nS  SS SSSSS\n`..SSsSSSSS\n      SSSSS\n.sSSS SSSSS\nS%%%S SSSSS\n`:;SSsSS;:'" },
-            { number: '0', font: ".sSSSSs.   \nSSSSSSSSSs.\nS SSS SSSSS\nS  SS SSSSS\nS..SS\\SSSSS\nS:::S SSSSS\nS;;;S SSSSS\nS%%%S SSSSS\n`:;SSsSS;:'" },
+        const percentageGlyphs = [
+            { number: '1', font: " d888      \nd8888      \n  888      \n  888      \n  888      \n  888      \n  888      \n8888888    " },
+            { number: '2', font: " .d8888b.  \nd88P  Y88b \n       888 \n     .d88P \n .od888P\"  \nd88P\"      \n888\"       \n888888888  " },
+            { number: '3', font: " .d8888b.  \nd88P  Y88b \n     .d88P \n    8888\"  \n     \"Y8b. \n888    888 \nY88b  d88P \n \"Y8888P\"  " },
+            { number: '4', font: "    d8888  \n   d8P888  \n  d8P 888  \n d8P  888  \nd88   888  \n8888888888 \n      888  \n      888  " },
+            { number: '5', font: "888888888  \n888        \n888        \n8888888b.  \n     \"Y88b \n       888 \nY88b  d88P \n \"Y8888P\"  " },
+            { number: '6', font: " .d8888b.  \nd88P  Y88b \n888        \n888d888b.  \n888P \"Y88b \n888    888 \nY88b  d88P \n \"Y8888P\"  " },
+            { number: '7', font: "8888888888 \n      d88P \n     d88P  \n    d88P   \n 88888888  \n  d88P     \n d88P      \nd88P       " },
+            { number: '8', font: " .d8888b.  \nd88P  Y88b \nY88b. d88P \n \"Y88888\"  \n.d8P\"\"Y8b. \n888    888 \nY88b  d88P \n \"Y8888P\"  " },
+            { number: '9', font: " .d8888b.  \nd88P  Y88b \n888    888 \nY88b. d888 \n \"Y888P888 \n       888 \nY88b  d88P \n \"Y8888P\"  " },
+            { number: '0', font: " .d8888b.  \nd88P  Y88b \n888    888 \n888    888 \n888    888 \n888    888 \nY88b  d88P \n \"Y8888P\"  " },
             { question: " .sSSs.   \nS%%%%%S   \n    S%%   \n   S%%    \n  S%%     \n  S       \n          \n  S%%     \n  `:;'    " },
-            { percent: " \n.sSs. \nS%%%S \n`:;:' \n      \n.sSs. \nS%%%S \n`:;:' " }
+            { percent: "d88b   d88P\nY88P  d88P \n     d88P  \n    d88P   \n   d88P    \n  d88P     \n d88P  d88b\nd88P   Y88P" }
         ];
 
         const pad = (str, width) => (typeof str === 'string' ? str : '').padEnd(width, ' ');
@@ -449,24 +436,7 @@ function initAsciiUsage() {
         };
 
         const loadFonts = async () => {
-            let data = fallbackPercentageGlyphs;
-            try {
-                const res = await fetch('/data/etc/ascii-percentage.json', { cache: 'no-store' });
-                const text = await res.text();
-                if (text && text.trim()) {
-                    try {
-                        data = JSON.parse(text);
-                    } catch (err) {
-                        console.error('Invalid ascii-percentage JSON', err, text);
-                    }
-                } else {
-                    console.warn('Empty ascii-percentage payload, using fallback');
-                }
-            } catch (err) {
-                console.warn('Failed to fetch ascii-percentage, using fallback', err);
-            }
-
-            fontMap = buildMap(data);
+            fontMap = buildMap(percentageGlyphs);
             if (!maxLines) throw new Error('No glyphs loaded');
         };
 
