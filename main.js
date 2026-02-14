@@ -239,6 +239,280 @@ function autoScaleAsciiFont() {
 
 window.addEventListener('DOMContentLoaded', autoScaleAsciiFont);
 window.addEventListener('resize', autoScaleAsciiFont);
+window.addEventListener('DOMContentLoaded', initAsciiTime);
+window.addEventListener('DOMContentLoaded', initAsciiUsage);
+
+// ASCII time initializer (safe for SPA reloads)
+function initAsciiTime() {
+    try {
+        const el = document.getElementById('ascii-time');
+        const labelEl = document.getElementById('ascii-time-label');
+        if (!el || el.dataset.asciiTimeBound === '1') return;
+        el.dataset.asciiTimeBound = '1';
+
+        let fontMap = {};
+        let maxLines = 0;
+        let glyphWidth = 8;
+        const charGap = 1;
+
+        const pad = (str, width) => (typeof str === 'string' ? str : '').padEnd(width, ' ');
+
+        const glyphWidthFor = (glyph) => {
+            if (!Array.isArray(glyph) || !glyph.length) return glyphWidth;
+            return glyph.reduce((m, l) => Math.max(m, l.length), 0);
+        };
+
+        const buildMap = (entries) => {
+            const map = {};
+            if (!Array.isArray(entries)) return map;
+            entries.forEach((item) => {
+                if (item && typeof item === 'object') {
+                    if (typeof item.number === 'string' && typeof item.font === 'string') {
+                        map[item.number] = item.font.split(/\r?\n/);
+                    } else if (Object.prototype.hasOwnProperty.call(item, 'colon') && typeof item.colon === 'string') {
+                        map[':'] = item.colon.split(/\r?\n/);
+                    }
+                }
+            });
+            const lineHeights = Object.values(map).map((lines) => lines.length || 0);
+            const widths = Object.values(map).map((lines) => lines.reduce((m, l) => Math.max(m, l.length), 0));
+            maxLines = lineHeights.length ? Math.max(...lineHeights) : 0;
+            glyphWidth = widths.length ? Math.max(...widths) : glyphWidth;
+            return map;
+        };
+
+        const londonTzAbbrev = (date) => {
+            try {
+                const parts = new Intl.DateTimeFormat('en-GB', {
+                    timeZone: 'Europe/London',
+                    timeZoneName: 'short'
+                }).formatToParts(date);
+                const tzPart = parts.find((p) => p.type === 'timeZoneName');
+                return tzPart && tzPart.value ? tzPart.value.toUpperCase() : 'GMT';
+            } catch (_) {
+                return 'GMT';
+            }
+        };
+
+        const render = () => {
+            if (!maxLines || !Object.keys(fontMap).length) return;
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString('en-GB', {
+                hour12: false,
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                timeZone: 'Europe/London'
+            });
+            if (labelEl) {
+                const tz = londonTzAbbrev(now);
+                labelEl.textContent = `fridg3.org Server Time (${tz})`;
+            }
+            const rows = Array.from({ length: maxLines }, () => '');
+            timeStr.split('').forEach((ch) => {
+                const glyph = fontMap[ch] || [];
+                const width = ch === ':' ? glyphWidthFor(glyph) : glyphWidth;
+                const gap = ch === ':' ? 0 : charGap;
+                for (let i = 0; i < maxLines; i += 1) {
+                    rows[i] += pad(glyph[i] || '', width + gap);
+                }
+            });
+            el.textContent = rows.join('\n');
+        };
+
+        const loadFonts = async () => {
+            try {
+                const res = await fetch('/data/etc/ascii-time.json', { cache: 'no-store' });
+                const data = await res.json();
+                fontMap = buildMap(data);
+                if (!maxLines) throw new Error('No glyphs loaded');
+                render();
+                el._asciiTimeInterval = window.setInterval(render, 1000);
+            } catch (err) {
+                console.error('Failed to load ASCII time:', err);
+                el.textContent = 'time unavailable';
+            }
+        };
+
+        loadFonts();
+    } catch (_) { /* no-op */ }
+}
+
+// ASCII percentage renderer for system usage
+function initAsciiUsage() {
+    try {
+        const cpuEl = document.getElementById('usage-cpu-ascii');
+        const memEl = document.getElementById('usage-mem-ascii');
+        const diskEl = document.getElementById('usage-disk-ascii');
+        const diskAvailEl = document.getElementById('usage-disk-free-ascii');
+        const targets = [cpuEl, memEl, diskEl, diskAvailEl];
+        if (!targets.some(Boolean)) return;
+        if (cpuEl && cpuEl.dataset.asciiUsageBound === '1') return;
+        if (cpuEl) cpuEl.dataset.asciiUsageBound = '1';
+        if (memEl) memEl.dataset.asciiUsageBound = '1';
+        if (diskEl) diskEl.dataset.asciiUsageBound = '1';
+        if (diskAvailEl) diskAvailEl.dataset.asciiUsageBound = '1';
+
+        let fontMap = {};
+        let maxLines = 0;
+        let glyphWidth = 8;
+        const charGap = 1;
+
+        const fallbackPercentageGlyphs = [
+            { number: '1', font: "SsSSs.     \n  SSSSs    \n  S SSS    \n  S  SS    \n  S..SS    \n  S:::S    \n  S;;;S    \n  S%%%S    \nSsSSSSSsS  " },
+            { number: '2', font: ".sSSSSs.   \n`SSSS SSSs.\n      SSSSS\n.sSSSsSSSS'\nS..SS      \nS:::S SSSs.\nS;;;S SSSSS\nS%%%S SSSSS\nSSSSSsSSSSS" },
+            { number: '3', font: ".sSSSSSSs. \n`SSSS SSSSs\n      S SSS\n  .sS S  SS\n SSSSsS..SS\n  `:; S:::S\n      S;;;S\n.SSSS S%%%S\n`:;SSsSSSSS" },
+            { number: '4', font: ".sSSS s.   \nSSSSS SSSs.\nS SSS SSSSS\nS  SS SSSSS\nS..SSsSSSSS\n      SSSSS\n      SSSSS\n      SSSSS\n      SSSSS" },
+            { number: '5', font: "SSSSSSSSSs.\nSSSSS SSSS'\nS SSS      \nSSSSSsSSSs.\n      SSSSS\n.sSSS SSSSS\nS;;;S SSSSS\nS%%%S SSSSS\n`:;SSsSS;:'" },
+            { number: '6', font: ".sSSSSs.   \nSSSSSSSSSs.\nS SSS SSSS'\nS  SS      \nS...SsSSSa.\nS:::S SSSSS\nS;;;S SSSSS\nS%%%S SSSSS\n`:;SSsSS;:'" },
+            { number: '7', font: "SSSSSSSSSs.\nSSSSSSSSSSS\n     S SSS \n    S  SS  \n   S..SS   \n  S:::S    \n S;;;S     \nS%%%S      \nSSSSS      " },
+            { number: '8', font: ".sSSSSs.   \nSSSSS SSSs.\nS SSS SSSSS\nS  SS SSSSS\n`..SSsSSSs'\ns:::S SSSSs\nS;;;S SSSSS\nS%%%S SSSSS\n`:;SSsSS;:'" },
+            { number: '9', font: ".sSSSSs.   \nSSSSS SSSs.\nS SSS SSSSS\nS  SS SSSSS\n`..SSsSSSSS\n      SSSSS\n.sSSS SSSSS\nS%%%S SSSSS\n`:;SSsSS;:'" },
+            { number: '0', font: ".sSSSSs.   \nSSSSSSSSSs.\nS SSS SSSSS\nS  SS SSSSS\nS..SS\\SSSSS\nS:::S SSSSS\nS;;;S SSSSS\nS%%%S SSSSS\n`:;SSsSS;:'" },
+            { question: " .sSSs.   \nS%%%%%S   \n    S%%   \n   S%%    \n  S%%     \n  S       \n          \n  S%%     \n  `:;'    " },
+            { percent: " \n.sSs. \nS%%%S \n`:;:' \n      \n.sSs. \nS%%%S \n`:;:' " }
+        ];
+
+        const pad = (str, width) => (typeof str === 'string' ? str : '').padEnd(width, ' ');
+
+        const buildMap = (entries) => {
+            const map = {};
+            if (!Array.isArray(entries)) return map;
+            entries.forEach((item) => {
+                if (item && typeof item === 'object') {
+                    if (typeof item.number === 'string' && typeof item.font === 'string') {
+                        map[item.number] = item.font.split(/\r?\n/);
+                    } else if (Object.prototype.hasOwnProperty.call(item, 'percent') && typeof item.percent === 'string') {
+                        map['%'] = item.percent.split(/\r?\n/);
+                    } else if (Object.prototype.hasOwnProperty.call(item, 'question') && typeof item.question === 'string') {
+                        map['?'] = item.question.split(/\r?\n/);
+                    }
+                }
+            });
+            const lineHeights = Object.values(map).map((lines) => lines.length || 0);
+            const widths = Object.values(map).map((lines) => lines.reduce((m, l) => Math.max(m, l.length), 0));
+            maxLines = lineHeights.length ? Math.max(...lineHeights) : 0;
+            glyphWidth = widths.length ? Math.max(...widths) : glyphWidth;
+            return map;
+        };
+
+        const renderValue = (value) => {
+            if (!maxLines || !Object.keys(fontMap).length) return null;
+            const safeVal = Number.isFinite(value) ? Math.max(0, Math.min(100, Math.round(value))) : null;
+            const numStr = safeVal === null ? '??' : String(safeVal).padStart(2, '0');
+            const str = `${numStr}%`;
+            const rows = Array.from({ length: maxLines }, () => '');
+            str.split('').forEach((ch) => {
+                const glyph = fontMap[ch] || [];
+                const width = glyphWidth;
+                for (let i = 0; i < maxLines; i += 1) {
+                    rows[i] += pad(glyph[i] || '', width + charGap);
+                }
+            });
+            return rows.join('\n');
+        };
+
+        const applyReadings = (data) => {
+            const cpu = renderValue(data.cpu);
+            const mem = renderValue(data.memory);
+            const disk = renderValue(data.disk);
+            const diskAvail = renderValue(data.diskAvailable);
+            if (cpuEl) cpuEl.textContent = cpu || '??%';
+            if (memEl) memEl.textContent = mem || '??%';
+            if (diskEl) diskEl.textContent = disk || '??%';
+            if (diskAvailEl) diskAvailEl.textContent = diskAvail || '??%';
+        };
+
+        const loadFonts = async () => {
+            let data = fallbackPercentageGlyphs;
+            try {
+                const res = await fetch('/data/etc/ascii-percentage.json', { cache: 'no-store' });
+                const text = await res.text();
+                if (text && text.trim()) {
+                    try {
+                        data = JSON.parse(text);
+                    } catch (err) {
+                        console.error('Invalid ascii-percentage JSON', err, text);
+                    }
+                } else {
+                    console.warn('Empty ascii-percentage payload, using fallback');
+                }
+            } catch (err) {
+                console.warn('Failed to fetch ascii-percentage, using fallback', err);
+            }
+
+            fontMap = buildMap(data);
+            if (!maxLines) throw new Error('No glyphs loaded');
+        };
+
+        const fetchUsage = async () => {
+            const tryFetch = async (url) => {
+                const res = await fetch(url, { cache: 'no-store' });
+                const text = await res.text();
+                if (!text || !text.trim()) return {};
+                try {
+                    return JSON.parse(text) || {};
+                } catch (parseErr) {
+                    console.error('Invalid usage JSON from', url, parseErr, text);
+                    return {};
+                }
+            };
+
+            try {
+                const primary = await tryFetch('/api/system/usage/');
+                const ua = (navigator.userAgent || '').toLowerCase();
+                const isWinUa = ua.includes('windows');
+
+                // If we're on Windows and any metric is missing, attempt a Windows-targeted retry and merge missing fields
+                if (isWinUa && ([primary.cpu, primary.memory, primary.disk].some((v) => v == null))) {
+                    try {
+                        const winData = await tryFetch('/api/system/usage/?os=windows');
+                        const merged = {
+                            cpu: primary.cpu ?? winData.cpu,
+                            memory: primary.memory ?? winData.memory,
+                            disk: primary.disk ?? winData.disk,
+                            os: winData.os || primary.os,
+                            timestamp: winData.timestamp || primary.timestamp
+                        };
+                        applyReadings(merged);
+                        return;
+                    } catch (_) {
+                        /* fall through to primary */
+                    }
+                }
+
+                // derive disk available if we have used
+                const derived = { ...primary };
+                if (Number.isFinite(primary.disk)) {
+                    derived.diskAvailable = Math.max(0, Math.min(100, 100 - primary.disk));
+                }
+
+                applyReadings(derived);
+            } catch (err) {
+                console.error('Failed to load system usage:', err);
+                if (cpuEl) cpuEl.textContent = 'usage unavailable';
+                if (memEl) memEl.textContent = 'usage unavailable';
+                if (diskEl) diskEl.textContent = 'usage unavailable';
+                if (diskAvailEl) diskAvailEl.textContent = 'usage unavailable';
+            }
+        };
+
+        (async () => {
+            try {
+                await loadFonts();
+                await fetchUsage();
+                const interval = window.setInterval(fetchUsage, 5000);
+                if (cpuEl) cpuEl._usageInterval = interval;
+            } catch (err) {
+                console.error('Failed to init ASCII usage:', err);
+                if (cpuEl) cpuEl.textContent = 'usage unavailable';
+                if (memEl) memEl.textContent = 'usage unavailable';
+                if (diskEl) diskEl.textContent = 'usage unavailable';
+                if (diskAvailEl) diskAvailEl.textContent = 'usage unavailable';
+            }
+        })();
+    } catch (_) { /* no-op */ }
+}
 
 // Responsive ASCII art scaling
 function scaleAsciiBlocks() {
@@ -320,6 +594,30 @@ window.addEventListener('DOMContentLoaded', applyResponsiveScale);
 
 // Simple SPA-style navigation: load internal pages into #content
 // so the sidebar and mini player stay mounted (continuous audio).
+function getSpaLoadingEl() {
+    let el = document.getElementById('spa-loading');
+    if (!el) {
+        el = document.createElement('div');
+        el.id = 'spa-loading';
+        el.textContent = 'loading...';
+        document.body.appendChild(el);
+    }
+    return el;
+}
+
+function showSpaLoading() {
+    try {
+        getSpaLoadingEl().classList.add('visible');
+    } catch (_) { /* no-op */ }
+}
+
+function hideSpaLoading() {
+    try {
+        const el = document.getElementById('spa-loading');
+        if (el) el.classList.remove('visible');
+    } catch (_) { /* no-op */ }
+}
+
 function isSpaEligibleLink(anchor) {
     if (!anchor) return false;
     const href = anchor.getAttribute('href') || '';
@@ -346,6 +644,8 @@ function loadPageIntoContent(url, addToHistory = true) {
 
         // Remove any currently visible tooltips when navigating
         clearTooltips();
+
+        showSpaLoading();
 
         fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
             .then(resp => {
@@ -411,10 +711,12 @@ function loadPageIntoContent(url, addToHistory = true) {
                 initMiniPlayer();
                 initToastDiscordBotPage();
                 initBBCodeEditor();
+                initAsciiUsage();
                 setupSpaForms();
                 initEmailForm();
                 initOffTopicArchive();
                 initSettingsPage();
+                initAsciiTime();
                 autoScaleAsciiFont();
                 rerunAsciiScalingAfterContent();
                 initTooltips();
@@ -428,8 +730,12 @@ function loadPageIntoContent(url, addToHistory = true) {
             })
             .catch(() => {
                 window.location.href = url;
+            })
+            .finally(() => {
+                hideSpaLoading();
             });
     } catch (_) {
+        hideSpaLoading();
         window.location.href = url;
     }
 }
@@ -591,6 +897,8 @@ function bindSpaForm(form) {
                 initMiniPlayer();
                 ensureToastLiveControlsOnLoad();
                 initBBCodeEditor();
+                initAsciiUsage();
+                initAsciiTime();
                 initEmailForm();
                 initOffTopicArchive();
                 rerunAsciiScalingAfterContent();
