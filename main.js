@@ -3735,7 +3735,55 @@ function initBBCodeEditor() {
     // Image attachment
     const bbcodeImageBtn = document.getElementById('bbcode-image-btn');
     const bbcodeImageInput = document.getElementById('bbcode-image-input');
-    
+
+    const queueImageFile = async (file) => {
+        let processedFile = file;
+        try {
+            processedFile = await compressImageToJpegUnder1MB(file, 1000000);
+        } catch (_) {
+            processedFile = file;
+        }
+
+        const fileIndex = imageFileStore.files.length;
+        imageFileStore.items.add(processedFile);
+
+        return new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const imageData = event.target.result;
+                bbcodeImages.set(fileIndex, { data: imageData, name: processedFile.name });
+
+                const start = bbcodeTextbox.selectionStart;
+                const end = bbcodeTextbox.selectionEnd;
+                const beforeText = bbcodeTextbox.value.substring(0, start);
+                const afterText = bbcodeTextbox.value.substring(end);
+
+                const newText = `[img:${fileIndex}][name:${processedFile.name}]`;
+                bbcodeTextbox.value = beforeText + newText + afterText;
+                const newCursorPos = start + newText.length;
+                bbcodeTextbox.focus();
+                bbcodeTextbox.setSelectionRange(newCursorPos, newCursorPos);
+                resolve();
+            };
+            reader.readAsDataURL(processedFile);
+        });
+    };
+
+    const handleImageFiles = async (incomingFiles) => {
+        const files = (incomingFiles || []).filter(f => f && typeof f.type === 'string' && f.type.startsWith('image/'));
+        if (!files.length) return false;
+
+        // Process sequentially to keep placeholder order predictable
+        for (const file of files) {
+            await queueImageFile(file);
+        }
+
+        if (bbcodeImageInput) {
+            bbcodeImageInput.files = imageFileStore.files;
+        }
+        return true;
+    };
+
     if (bbcodeImageBtn && bbcodeImageInput) {
         bbcodeImageBtn.addEventListener('click', function() {
             const imageUrl = prompt('Enter image URL (or leave blank to select a file)', '');
@@ -3761,40 +3809,34 @@ function initBBCodeEditor() {
         });
         
         bbcodeImageInput.addEventListener('change', async function(e) {
-            const files = Array.from(e.target.files || []);
-            for (const file of files) {
-                let processedFile = file;
-                try {
-                    processedFile = await compressImageToJpegUnder1MB(file, 1000000);
-                } catch (err) {
-                    // If compression fails, fall back to original file (may still exceed limit)
-                    processedFile = file;
+            const used = await handleImageFiles(Array.from(e.target.files || []));
+            if (used) {
+                bbcodeImageInput.files = imageFileStore.files;
+            }
+        });
+    }
+
+    // Paste support for images into the editor
+    if (bbcodeTextbox) {
+        bbcodeTextbox.addEventListener('paste', async function(e) {
+            const files = [];
+            const items = e.clipboardData ? Array.from(e.clipboardData.items || []) : [];
+            items.forEach(item => {
+                if (item.kind === 'file') {
+                    const file = item.getAsFile();
+                    if (file && file.type && file.type.startsWith('image/')) {
+                        files.push(file);
+                    }
                 }
-
-                const fileIndex = imageFileStore.files.length;
-                imageFileStore.items.add(processedFile);
-
-                const reader = new FileReader();
-                reader.onload = function(event) {
-                    const imageData = event.target.result;
-                    bbcodeImages.set(fileIndex, { data: imageData, name: processedFile.name });
-
-                    const start = bbcodeTextbox.selectionStart;
-                    const end = bbcodeTextbox.selectionEnd;
-                    const beforeText = bbcodeTextbox.value.substring(0, start);
-                    const afterText = bbcodeTextbox.value.substring(end);
-
-                    const newText = `[img:${fileIndex}][name:${processedFile.name}]`;
-                    bbcodeTextbox.value = beforeText + newText + afterText;
-                    const newCursorPos = start + newText.length;
-                    bbcodeTextbox.focus();
-                    bbcodeTextbox.setSelectionRange(newCursorPos, newCursorPos);
-                };
-                reader.readAsDataURL(processedFile);
+            });
+            if (!files.length && e.clipboardData && e.clipboardData.files) {
+                files.push(...Array.from(e.clipboardData.files).filter(f => f && f.type && f.type.startsWith('image/')));
             }
 
-            // Persist accumulated files so multiple selections don't replace earlier ones
-            bbcodeImageInput.files = imageFileStore.files;
+            const used = await handleImageFiles(files);
+            if (used) {
+                e.preventDefault();
+            }
         });
     }
     
