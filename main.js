@@ -241,6 +241,7 @@ window.addEventListener('DOMContentLoaded', autoScaleAsciiFont);
 window.addEventListener('resize', autoScaleAsciiFont);
 window.addEventListener('DOMContentLoaded', initAsciiTime);
 window.addEventListener('DOMContentLoaded', initAsciiUsage);
+window.addEventListener('DOMContentLoaded', initHourlyBeep);
 
 // ASCII time initializer (safe for SPA reloads)
 function initAsciiTime() {
@@ -348,6 +349,53 @@ function initAsciiTime() {
 
         loadFonts();
     } catch (_) { /* no-op */ }
+}
+
+function millisUntilNextHour(timeZone) {
+    const now = new Date();
+    let minute = now.getMinutes();
+    let second = now.getSeconds();
+
+    try {
+        const parts = new Intl.DateTimeFormat('en-GB', {
+            timeZone,
+            hour12: false,
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit'
+        }).formatToParts(now);
+        minute = Number.parseInt((parts.find((p) => p.type === 'minute') || {}).value, 10) || minute;
+        second = Number.parseInt((parts.find((p) => p.type === 'second') || {}).value, 10) || second;
+    } catch (_) {
+        /* fall back to local time */
+    }
+
+    const msIntoHour = ((minute * 60) + second) * 1000 + now.getMilliseconds();
+    const msPerHour = 3600 * 1000;
+    return msPerHour - (msIntoHour % msPerHour);
+}
+
+function initHourlyBeep() {
+    const TIMER_KEY = '__hourlyBeepTimer';
+    if (window[TIMER_KEY]) return;
+
+    const audio = new Audio('/resources/beepbeep.ogg');
+    audio.preload = 'auto';
+
+    const playBeep = () => {
+        try { audio.currentTime = 0; } catch (_) { /* no-op */ }
+        audio.play().catch(() => {});
+    };
+
+    const schedule = () => {
+        const delay = millisUntilNextHour('Europe/London');
+        window[TIMER_KEY] = window.setTimeout(() => {
+            playBeep();
+            schedule();
+        }, delay);
+    };
+
+    schedule();
 }
 
 // ASCII percentage renderer for system usage
