@@ -677,6 +677,22 @@ function isSpaEligibleLink(anchor) {
     return true;
 }
 
+function executeInlineContentScripts(rootEl) {
+    try {
+        if (!rootEl) return;
+        const scripts = rootEl.querySelectorAll('script');
+        scripts.forEach((oldScript) => {
+            if (!oldScript || oldScript.src) return;
+            const newScript = document.createElement('script');
+            if (oldScript.type) {
+                newScript.type = oldScript.type;
+            }
+            newScript.textContent = oldScript.textContent || '';
+            oldScript.replaceWith(newScript);
+        });
+    } catch (_) { /* no-op */ }
+}
+
 function loadPageIntoContent(url, addToHistory = true) {
     try {
         const contentEl = document.getElementById('content');
@@ -705,6 +721,7 @@ function loadPageIntoContent(url, addToHistory = true) {
                 }
 
                 contentEl.innerHTML = newContent.innerHTML;
+                executeInlineContentScripts(contentEl);
 
                 const newTitle = doc.querySelector('title');
                 if (newTitle) {
@@ -890,6 +907,7 @@ function bindSpaForm(form) {
                 }
 
                 contentEl.innerHTML = newContent.innerHTML;
+                executeInlineContentScripts(contentEl);
 
                 const newTitle = doc.querySelector('title');
                 if (newTitle) {

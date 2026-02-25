@@ -1,0 +1,16 @@
+<h1>newsletters</h1>
+<h2>an archive of previously released newsletters, sent via email.</h2>
+<br>
+<style>
+	#post a, a#post, #post a:visited, a#post:visited {
+		text-decoration: none;
+	}
+</style>
+
+<form id="search" action="/email/newsletter" method="GET">
+	<input id="search-box" name="q" type="text" placeholder="search...">
+	<button id="search-button" type="submit"><i class="fa-solid fa-magnifying-glass"></i></button>
+</form>
+<a style="text-decoration: none;" href="/email/newsletter/create"><button id="form-button" type="button">create post</button></a>
+
+<div id="posts"></div>
