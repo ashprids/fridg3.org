@@ -306,6 +306,7 @@
 
 	// Lightweight helper to escape HTML so generated code stays safe in the preview.
 	const escapeHtml = (value) => value.replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
+	const formatMultilineText = (value) => escapeHtml(((value || '').trim())).replace(/\r?\n/g, '<br>');
 
 	// Newsletter template with a slot for repeated sections.
 	const baseTemplate = `<style type="text/css">
@@ -452,7 +453,7 @@ monthly personal updates and website insights
 
 	const buildSectionsMarkup = (sections) => sections.map((section) => {
 		const sectionTitle = escapeHtml(cleanTitle(section.title) || 'Untitled section');
-		const sectionBody = escapeHtml((section.body || '').trim());
+		const sectionBody = formatMultilineText(section.body || '');
 		return `<tr>
 <td style="padding:16px 0; border-top:1px solid #1c2730; font-family:'MainRegular',monospace;">
 <h2 style="margin:0 0 8px 0; font-size:17px; color:#eeeeee; font-family:'MainBold','MainRegular',monospace;">${sectionTitle}</h2>
@@ -567,7 +568,7 @@ monthly personal updates and website insights
 		filled = replaceAll(filled, '{{preheader_text}}', escapeHtml(preheader.trim()));
 		filled = replaceAll(filled, '{{newsletter_date}}', escapeHtml(date.trim()));
 		filled = replaceAll(filled, '{{headline}}', escapeHtml(headline.trim()));
-		filled = replaceAll(filled, '{{intro_paragraph}}', escapeHtml(intro.trim()));
+		filled = replaceAll(filled, '{{intro_paragraph}}', formatMultilineText(intro));
 		filled = replaceAll(filled, '{{newsletter_id}}', escapeHtml(id.trim()));
 		filled = replaceAll(filled, '{{sections}}', sectionsMarkup);
 
