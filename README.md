@@ -32,3 +32,26 @@ find /var/www/fridg3.org -type f -exec chmod 644 {} \;
 sudo chown -R http:http /var/www/fridg3.org/data && sudo chmod -R 755 /var/www/fridg3.org/data
 sudo chown -R http:http /var/www/fridg3.org/sitemap.xml && sudo chmod -R 755 /var/www/fridg3.org/sitemap.xml
 ```
+Here's a single command that bundles all of the above commands together:
+```bash
+sudo chown -R deploy:http /var/www/fridg3.org && find /var/www/fridg3.org -type d -exec chmod 755 {} \; && find /var/www/fridg3.org -type f -exec chmod 644 {} \; && sudo chown -R http:http /var/www/fridg3.org/data && sudo chmod -R 755 /var/www/fridg3.org/data && sudo chown -R http:http /var/www/fridg3.org/sitemap.xml && sudo chmod -R 755 /var/www/fridg3.org/sitemap.xml
+```
+
+## Development
+I've created two technical references to familiarise you with how the website backend works, how files are formatted, how JavaScript works and more. Both of these files are in the repository, and are consistently kept up-to-date.
+
+`TECHNICAL_REFERENCE_DEV.md` contains all the technical information in a human-readable format, such as:
+- The /data/ directory and how files are stored within it
+- An explanation on how every page works, and exactly what they do
+- How local data is stored (e.g. login sessions, user settings)
+- How all the pages are loaded and how dynamic content (i.e. journal and feed post listing) is displayed
+- How the API works and where it's used
+- And much more!
+
+If you need help understanding anything in this file, you can contact me and I'll be happy to help.
+
+`TECHNICAL_REFERENCE_AI.md` is the same as `TECHNICAL_REFERENCE_DEV.md`, but formatted to be used as a reference for an AI (e.g. GitHub CoPilot). 
+- I fully support the usage of AI in development for this project, as long as no frontend content (site styling, page text content, journal and feed posts, etc.) are AI-generated.
+- I recommend telling your AI to reference this file so it makes changes that respects how the website already works.
+- Make sure everything implemented is secure (e.g. if something should be server-side, make sure your AI isn't implementing it in JavaScript).
+
