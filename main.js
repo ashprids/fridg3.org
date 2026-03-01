@@ -3951,7 +3951,32 @@ function initBBCodeEditor() {
 
     // Preview toggle
     if (bbcodePreviewToggle && bbcodePreview) {
-        bbcodePreviewToggle.addEventListener('click', function() {
+        bbcodePreviewToggle.addEventListener('click', function(e) {
+            const createForm = document.getElementById('create-post-form');
+            const isJournalCreateForm = !!(createForm && createForm.querySelector('button[name="save_draft"]'));
+            if (isJournalCreateForm) {
+                e.preventDefault();
+                const addOrUpdateHidden = (name, value) => {
+                    let input = createForm.querySelector('input[name="' + name + '"]');
+                    if (!input) {
+                        input = document.createElement('input');
+                        input.type = 'hidden';
+                        input.name = name;
+                        createForm.appendChild(input);
+                    }
+                    input.value = value;
+                };
+
+                addOrUpdateHidden('save_draft', '1');
+                addOrUpdateHidden('open_preview', '1');
+                if (typeof createForm.requestSubmit === 'function') {
+                    createForm.requestSubmit();
+                } else {
+                    createForm.submit();
+                }
+                return;
+            }
+
             isPreviewMode = !isPreviewMode;
             
             if (isPreviewMode) {

@@ -4,7 +4,8 @@
 		<p id="journal-article-subtitle">{subtitle}</p>
 		<div id="journal-article-meta">
 			<time id="journal-article-date">{date}</time>
-			{edit_button}
+			<span id="journal-article-sep">•</span>
+			<a id="journal-preview-back" href="/journal/create">back to editor</a>
 		</div>
 	</header>
 	<section id="journal-article-content">
@@ -45,22 +46,22 @@
 		display: flex;
 		align-items: center;
 		gap: 8px;
+		flex-wrap: wrap;
 	}
 
-	#journal-article-date {
+	#journal-article-date,
+	#journal-article-sep {
 		font-family: "MainItalic", monospace;
 		font-size: 12px;
 		color: var(--subtle);
 	}
 
-	#journal-article-edit {
+	#journal-preview-back {
+		font-family: "MainItalic", monospace;
 		font-size: 12px;
-		color: var(--subtle);
-		text-decoration: none;
-	}
-
-	#journal-article-edit:hover {
-		color: rgb(200, 200, 200);
+		color: var(--links);
+		text-decoration: underline;
+		text-underline-offset: 2px;
 	}
 
 	#journal-article-content {

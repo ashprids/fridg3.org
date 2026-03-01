@@ -2,6 +2,21 @@
 
 session_start();
 
+if (isset($_SESSION['user']) && isset($_SESSION['user']['username'])) {
+    $accountsPath = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'data' . DIRECTORY_SEPARATOR . 'accounts' . DIRECTORY_SEPARATOR . 'accounts.json';
+    if (is_file($accountsPath)) {
+        $accountsData = json_decode(@file_get_contents($accountsPath), true);
+        if (is_array($accountsData) && isset($accountsData['accounts']) && is_array($accountsData['accounts'])) {
+            foreach ($accountsData['accounts'] as $account) {
+                if (isset($account['username']) && $account['username'] === $_SESSION['user']['username']) {
+                    $_SESSION['user']['isAdmin'] = (bool)($account['isAdmin'] ?? false);
+                    $_SESSION['user']['allowedPages'] = (array)($account['allowedPages'] ?? []);
+                    break;
+                }
+            }
+        }
+    }
+}
 
 $post = '';
 // Support /journal/posts/01 style URLs
@@ -75,6 +90,12 @@ $content = file_get_contents($content_path);
 $content = str_replace('{title}', $title, $content);
 $content = str_replace('{subtitle}', $subtitle, $content);
 $content = str_replace('{date}', $date, $content);
+$editButton = '';
+$isAdmin = $_SESSION['user']['isAdmin'] ?? false;
+if ($isAdmin && $post !== '') {
+    $editButton = '<a id="journal-article-edit" href="/journal/edit?post=' . urlencode($post) . '" data-tooltip="edit post"><i class="fa-solid fa-pencil"></i></a>';
+}
+$content = str_replace('{edit_button}', $editButton, $content);
 $content = str_replace('{content}', $content_html, $content);
 $html = str_replace('{content}', $content, $template);
 $html = str_replace('{title}', $title, $html);

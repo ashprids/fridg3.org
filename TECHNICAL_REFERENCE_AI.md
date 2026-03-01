@@ -97,15 +97,27 @@ This file explains how pages are rendered, where logic lives, how `/data` is str
   - reads `/data/journal/*.txt`, search + pagination.
   - permission refresh from accounts.json into session.
   - create button visible to admin or `allowedPages` contains `journal`.
+  - admin edit control is shown on journal cards (next to bookmark).
 - `/journal/create/index.php` + `content.html`
   - permission-gated create + drafts.
   - BBCode-to-HTML conversion server-side.
   - uploads images to `/data/images`.
   - published posts to `/data/journal/{N}.txt`.
   - drafts to `/data/journal/drafts/*.txt` with owner line (`USER:<username>`).
+  - preview redirect uses `/journal/create/preview?draft=...`.
+- `/journal/create/preview/index.php` + `content.html`
+  - render create draft preview from `/data/journal/drafts/*.txt`.
+  - if draft line 4 is `FORMAT:html`, preview renders body as raw HTML (skips BBCode parser).
 - `/journal/posts/index.php` + `content.html`
   - single post renderer from `/data/journal/{id}.txt`.
   - treats body as trusted HTML.
+  - admin edit control in post meta links to `/journal/edit?post={id}`.
+- `/journal/edit/index.php` + `content.html`
+  - admin-only journal editor for title, description, and raw HTML body.
+  - preview redirect uses `/journal/edit/preview?draft=...&post=...`.
+- `/journal/edit/preview/index.php` + `content.html`
+  - render edit draft preview from `/data/journal/drafts/*.txt`.
+  - supports `FORMAT:html` marker to force raw HTML rendering mode.
 
 ## 3.4 Guestbook pages
 
@@ -304,7 +316,11 @@ Expected structure:
   1. `USER:<username>`
   2. title
   3. description
-  4+. BBCode body
+  4. optional `FORMAT:html` marker (used by journal edit preview drafts)
+  5+. draft body (`BBCode` without marker, raw `HTML` with marker)
+
+Notes:
+- You can insert `FORMAT:html` manually in a draft file to switch preview/body interpretation from BBCode to raw HTML.
 
 ## 6.4 `/data/guestbook/`
 - Entry file (`*.txt`):
@@ -418,7 +434,7 @@ The following are the primary files that carry behavior and should be reviewed b
 - Root: `index.php`, `template.html`, `content.html`, `main.js`, `style.css`
 - Account: all `account/**/index.php` + corresponding `content.html`
 - Feed: `feed/index.php`, `feed/create/index.php`, `feed/edit/index.php`, `feed/posts/index.php` + all feed `content.html`
-- Journal: `journal/index.php`, `journal/create/index.php`, `journal/posts/index.php` + all journal `content.html`
+- Journal: `journal/index.php`, `journal/create/index.php`, `journal/create/preview/index.php`, `journal/edit/index.php`, `journal/edit/preview/index.php`, `journal/posts/index.php` + all journal `content.html`
 - Guestbook: `guestbook/index.php`, `guestbook/create/index.php`, `guestbook/edit/index.php` + all guestbook `content.html`
 - Email/Newsletter: `email/**/index.php` + all `email/**/*.html` templates
 - Music/Gallery/Bookmarks/Settings/Others: route `index.php` + route `content.html`

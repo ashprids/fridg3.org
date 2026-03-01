@@ -219,7 +219,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $description = trim($_POST['description'] ?? '');
     $content = trim($_POST['content'] ?? '');
 
-    $isDraft = isset($_POST['save_draft']);
+    $openPreview = isset($_POST['open_preview']);
+    $isDraft = isset($_POST['save_draft']) || $openPreview;
     $deleteDraftId = isset($_POST['delete_draft']) ? trim($_POST['delete_draft']) : '';
 
     // Handle draft deletion: delete draft file and any referenced images, then redirect
@@ -369,6 +370,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $ownerLine = 'USER:' . $username;
         $draftText = $ownerLine . PHP_EOL . $title . PHP_EOL . $description . PHP_EOL . $draftContent;
         @file_put_contents($draftPath, $draftText);
+
+        if ($openPreview) {
+            header('Location: /journal/create/preview?draft=' . urlencode(pathinfo($draftFilename, PATHINFO_FILENAME)));
+            exit;
+        }
 
         // For drafts, skip full post creation and fall through to template rendering
     } else {

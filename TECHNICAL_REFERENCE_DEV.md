@@ -70,10 +70,22 @@ Most routes do this in `index.php`:
 ## 2.4 Journal
 - `/journal/index.php` + `content.html`
   - list/search/pagination from `/data/journal/*.txt`
+  - admin edit controls on cards (edit button beside bookmark)
 - `/journal/create/index.php` + `content.html`
   - create post, manage drafts, upload images, BBCode conversion
+  - preview drafts via `/journal/create/preview`
+- `/journal/create/preview/index.php` + `content.html`
+  - render create-draft preview from `/data/journal/drafts/*.txt`
+  - if a draft includes a line `FORMAT:html` after title/description, preview uses raw HTML body instead of BBCode parsing
+- `/journal/edit/index.php` + `content.html`
+  - admin-only edit for title/description/body (raw HTML editor)
+  - preview drafts via `/journal/edit/preview`
+- `/journal/edit/preview/index.php` + `content.html`
+  - render edit-draft preview from `/data/journal/drafts/*.txt`
+  - `FORMAT:html` in draft files forces raw HTML rendering (no BBCode conversion)
 - `/journal/posts/index.php` + `content.html`
   - single journal post renderer
+  - admin edit control in post meta
 
 ## 2.5 Guestbook
 - `/guestbook/index.php` + `content.html`
@@ -203,7 +215,10 @@ Most routes do this in `index.php`:
   1. `USER:<username>`
   2. title
   3. description
-  4+. BBCode body
+  4. optional `FORMAT:html` (present for edit previews)
+  5+. draft body (`BBCode` when format line is absent, raw `HTML` when `FORMAT:html` is present)
+
+Note: You can manually insert `FORMAT:html` in a draft file to make preview treat the body as raw HTML instead of BBCode.
 
 ## 5.4 `/data/guestbook/`
 - entry (`*.txt`): timestamp, name, message
