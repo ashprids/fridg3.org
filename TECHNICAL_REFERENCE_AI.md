@@ -21,10 +21,12 @@ This file explains how pages are rendered, where logic lives, how `/data` is str
 - `template.html` is the global shell:
   - sidebar navigation
   - footer icons
+  - content footer views label (`#content-footer-views`)
   - `{user_greeting}` placeholder
   - `{content}` placeholder
   - includes `/style.css`, `/main.js`, Highlight.js, Font Awesome
 - `main.js` is a large SPA-like enhancement layer (navigation interception, bookmark behavior, settings, toast bot UI, usage ASCII, etc.).
+  - includes page-view footer updater (`updatePageViewFooter`) that refreshes on initial load and SPA transitions.
 - `style.css` is global styling and contains reusable IDs/classes expected by many `content.html` files.
 
 ### Session and login state behavior
@@ -231,6 +233,12 @@ Mailing list status pages (mostly wrappers):
 - `/api/stream-proxy`
   - same-origin stream proxy for toast audio playback; host-restricted to configured stream host.
 
+- `/api/page-view`
+  - POST JSON `{ path: "/route" }`.
+  - per-page unique view counting backed by `/data/etc/page_views.json`.
+  - uniqueness key is client IP (hashed before storage).
+  - used by footer text in `main.js` (`"X views"`, or first-view message when count is `1`).
+
 ---
 
 ## 5) HTML Template Rules (What to edit where)
@@ -394,6 +402,24 @@ Expected keys:
 - large Discord export object with `guild`, `channel`, `messages[]`.
 - frontend archive viewer expects message-level fields like `timestamp`, `content`, `author`, `attachments`, etc.
 
+### `page_views.json`
+- map of route-path to view metadata for `/api/page-view`.
+- stores total `count` and visitor hash map (hash derived from client IP).
+- expected shape:
+```json
+{
+  "pages": {
+    "/": {
+      "count": 12,
+      "visitors": {
+        "<sha256>": 1730931224
+      }
+    }
+  },
+  "updated_at": "2026-03-02T00:00:00Z"
+}
+```
+
 ## 6.10 `/data/downloads/`
 - downloadable artifacts surfaced by pages/links (e.g. binaries, preset files).
 
@@ -425,6 +451,7 @@ Expected keys:
 - Journal posts store HTML body directly; feed posts store raw text/BBCode.
 - Newsletter publish endpoint is under `/api/newsletter/publish` (not under `/email/newsletter/publish`).
 - `main.js` is large and route-sensitive; always re-test impacted route transitions when changing shared JS.
+- page-view updates are triggered from shared SPA flow; if SPA navigation hooks change, verify footer counts still refresh.
 
 ---
 

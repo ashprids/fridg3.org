@@ -30,6 +30,7 @@ Most routes do this in `index.php`:
 - `template.html`: shared shell (sidebar, footer, scripts, `{content}` placeholder)
 - `main.js`: frontend app behaviors (SPA-like nav, settings UI, bookmark interactions, toast controls, archive rendering)
 - `style.css`: global design and component styling
+- footer page-views text (`#content-footer-views`) is populated by `main.js` via `/api/page-view`
 
 ### Session/auth basics
 - Logged-in user state is `$_SESSION['user']`.
@@ -145,6 +146,7 @@ Most routes do this in `index.php`:
 - `/api/discord-bot-control` → update stream url/name
 - `/api/discord-bot-control/status` → toggle toast bot online/offline
 - `/api/stream-proxy` → same-origin stream proxy
+- `/api/page-view` → per-page unique view counter (IP-based uniqueness, persisted in `/data/etc/page_views.json`)
 
 ---
 
@@ -255,6 +257,7 @@ Note: You can manually insert `FORMAT:html` in a draft file to make preview trea
 - `toast.json` → bot/stream/channel/features config
 - `toast-updates.json` → status history array
 - `off-topic-archive.json` → Discord export blob
+- `page_views.json` → per-route view counts + visitor hashes (unique by client IP)
 
 ## 5.10 `/data/downloads/`
 - binary/download artifacts linked by pages
@@ -270,6 +273,7 @@ Note: You can manually insert `FORMAT:html` in a draft file to make preview trea
   - journal = HTML body in published files
 - Newsletter publish endpoint is `/api/newsletter/publish`.
 - `main.js` is large and route-sensitive: test SPA navigation after shared JS edits.
+- Page view footer copy comes from `main.js` (`"X views"`; count `1` => `"you're the first person to view this page!"`).
 
 ---
 
