@@ -226,6 +226,16 @@ body {
     word-break: break-word;
 }
 
+#content-layout {
+    min-height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+#content-main {
+    min-height: 0;
+}
+
 #sidebar a {
     text-decoration: none;
     display: block;
@@ -620,6 +630,23 @@ button[data-tooltip] {
     display: block;
     text-align: center;
     margin-bottom: 12px;
+}
+
+#content-footer {
+    margin-top: auto;
+    padding-top: 12px;
+    text-align: center;
+}
+
+#content.content-scrolls #content-footer {
+    margin-top: 24px;
+    margin-bottom: 26px;
+}
+
+#content-footer-views {
+    font-size: 12px;
+    font-family: "MainItalic", monospace;
+    color: #67676754;
 }
 
 /* Scrollbar theming */

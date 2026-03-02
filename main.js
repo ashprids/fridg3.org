@@ -693,6 +693,69 @@ function executeInlineContentScripts(rootEl) {
     } catch (_) { /* no-op */ }
 }
 
+function updateContentFooterSpacing() {
+    try {
+        const containerEl = document.getElementById('container');
+        const contentEl = document.getElementById('content');
+        if (!containerEl || !contentEl) return;
+        const isScrollable = containerEl.scrollHeight > (containerEl.clientHeight + 1);
+        contentEl.classList.toggle('content-scrolls', isScrollable);
+    } catch (_) { /* no-op */ }
+}
+
+let lastPageViewPathRequested = null;
+
+function normalizePageViewPath(rawUrl) {
+    try {
+        const base = window.location && window.location.origin ? window.location.origin : undefined;
+        const urlObj = new URL(rawUrl || window.location.href, base);
+        let path = urlObj.pathname || '/';
+        path = path.replace(/\/+$/, '') || '/';
+        path = path.replace(/\/index\.php$/i, '') || '/';
+        if (!path.startsWith('/')) path = '/' + path;
+        return path;
+    } catch (_) {
+        return '/';
+    }
+}
+
+function updatePageViewFooter(rawUrl) {
+    try {
+        const footerViewsEl = document.getElementById('content-footer-views');
+        if (!footerViewsEl) return;
+        const path = normalizePageViewPath(rawUrl);
+        if (!path || path.startsWith('/api/')) return;
+        if (lastPageViewPathRequested === path) return;
+        lastPageViewPathRequested = path;
+
+        fetch('/api/page-view/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            credentials: 'same-origin',
+            body: JSON.stringify({ path: path })
+        })
+            .then(resp => {
+                if (!resp.ok) throw new Error('view count request failed');
+                return resp.json();
+            })
+            .then(data => {
+                const count = (data && typeof data.count === 'number') ? data.count : null;
+                if (count === null) return;
+                if (count === 1) {
+                    footerViewsEl.textContent = "you're the first person to view this page!";
+                } else {
+                    footerViewsEl.textContent = count + ' views';
+                }
+            })
+            .catch(() => {
+                footerViewsEl.textContent = 'couldn\'t load page views';
+            });
+    } catch (_) { /* no-op */ }
+}
+
 function loadPageIntoContent(url, addToHistory = true) {
     try {
         const contentEl = document.getElementById('content');
@@ -780,6 +843,8 @@ function loadPageIntoContent(url, addToHistory = true) {
                 autoScaleAsciiFont();
                 rerunAsciiScalingAfterContent();
                 initTooltips();
+                updateContentFooterSpacing();
+                updatePageViewFooter(url);
 
                 // Re-run syntax highlighting on newly loaded content
                 if (typeof hljs !== 'undefined') {
@@ -828,6 +893,10 @@ function setupSpaNavigation() {
 }
 
 window.addEventListener('DOMContentLoaded', setupSpaNavigation);
+window.addEventListener('DOMContentLoaded', updateContentFooterSpacing);
+window.addEventListener('DOMContentLoaded', function() { updatePageViewFooter(window.location.href); });
+window.addEventListener('load', updateContentFooterSpacing);
+window.addEventListener('resize', updateContentFooterSpacing);
 
 // Dedicated handler for feed edit icons so clicking the pencil goes
 // to the edit view without breaking SPA navigation or bubbling to the
