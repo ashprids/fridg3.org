@@ -3060,6 +3060,7 @@ function initSidebarActiveState() {
         const routes = [
             '/feed',
             '/journal',
+            '/email/newsletter',
             '/email',
             '/guestbook',
             '/music',
