@@ -1,0 +1,446 @@
+:root {
+    color-scheme: dark;
+    --bg: #000000;
+    --fg: rgb(238, 238, 238);
+    --border: rgb(60, 120, 149);
+    --subtle: rgb(145, 125, 170);
+    --links: rgb(65, 95, 173);
+    --surface: #08090b;
+    --muted-fg: #b7b7c2;
+    --code-bg: #0e1014;
+    --table-stripe: #0a0c10;
+    line-height: 1.55;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.page {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 2rem 1rem 3rem;
+}
+
+.card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.25rem;
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+}
+
+/* Apply markdown formatting to common wrappers and direct card content. */
+.card,
+.markdown,
+.markdown-body,
+article {
+    color: var(--fg);
+}
+
+.card h1,
+.card h2,
+.card h3,
+.card h4,
+.card h5,
+.card h6,
+.markdown h1,
+.markdown h2,
+.markdown h3,
+.markdown h4,
+.markdown h5,
+.markdown h6,
+.markdown-body h1,
+.markdown-body h2,
+.markdown-body h3,
+.markdown-body h4,
+.markdown-body h5,
+.markdown-body h6,
+article h1,
+article h2,
+article h3,
+article h4,
+article h5,
+article h6 {
+    color: var(--subtle);
+    line-height: 1.25;
+    margin-top: 1.4em;
+    margin-bottom: 0.5em;
+    font-weight: 700;
+}
+
+.card h1,
+.markdown h1,
+.markdown-body h1,
+article h1 {
+    margin-top: 0;
+    font-size: 2rem;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 0.35rem;
+}
+
+.card h2,
+.markdown h2,
+.markdown-body h2,
+article h2 {
+    font-size: 1.55rem;
+    border-bottom: 1px solid rgba(60, 120, 149, 0.5);
+    padding-bottom: 0.25rem;
+}
+
+.card h3,
+.markdown h3,
+.markdown-body h3,
+article h3 {
+    font-size: 1.25rem;
+}
+
+.card h4,
+.markdown h4,
+.markdown-body h4,
+article h4 {
+    font-size: 1.1rem;
+}
+
+.card h5,
+.card h6,
+.markdown h5,
+.markdown h6,
+.markdown-body h5,
+.markdown-body h6,
+article h5,
+article h6 {
+    font-size: 1rem;
+}
+
+.card p,
+.card li,
+.markdown p,
+.markdown li,
+.markdown-body p,
+.markdown-body li,
+article p,
+article li {
+    color: var(--muted-fg);
+    margin-top: 0;
+}
+
+.card p,
+.markdown p,
+.markdown-body p,
+article p {
+    margin-bottom: 1rem;
+}
+
+.card strong,
+.card b,
+.markdown strong,
+.markdown b,
+.markdown-body strong,
+.markdown-body b,
+article strong,
+article b {
+    color: var(--fg);
+}
+
+.card em,
+.card i,
+.markdown em,
+.markdown i,
+.markdown-body em,
+.markdown-body i,
+article em,
+article i {
+    color: #cfc0e2;
+}
+
+.card a,
+.markdown a,
+.markdown-body a,
+article a {
+    color: var(--links);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+.card a:hover,
+.markdown a:hover,
+.markdown-body a:hover,
+article a:hover {
+    color: #8fb2ff;
+}
+
+.card hr,
+.markdown hr,
+.markdown-body hr,
+article hr {
+    border: 0;
+    border-top: 1px solid var(--border);
+    margin: 1.5rem 0;
+}
+
+.card ul,
+.card ol,
+.markdown ul,
+.markdown ol,
+.markdown-body ul,
+.markdown-body ol,
+article ul,
+article ol {
+    margin: 0 0 1rem 1.35rem;
+    padding: 0;
+}
+
+.card li,
+.markdown li,
+.markdown-body li,
+article li {
+    margin: 0.3rem 0;
+}
+
+.card blockquote,
+.markdown blockquote,
+.markdown-body blockquote,
+article blockquote {
+    margin: 1rem 0;
+    padding: 0.65rem 0.9rem;
+    border-left: 3px solid var(--subtle);
+    background: rgba(145, 125, 170, 0.08);
+    color: #d7cae7;
+}
+
+.card code,
+.markdown code,
+.markdown-body code,
+article code {
+    font-family: Consolas, "Courier New", monospace;
+    background: var(--code-bg);
+    border: 1px solid #1f2730;
+    border-radius: 5px;
+    padding: 0.12rem 0.35rem;
+    color: #b5dcff;
+    font-size: 0.92em;
+}
+
+.card pre,
+.markdown pre,
+.markdown-body pre,
+article pre {
+    overflow-x: auto;
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.8rem;
+    margin: 1rem 0;
+}
+
+.card pre code,
+.markdown pre code,
+.markdown-body pre code,
+article pre code {
+    background: transparent;
+    border: 0;
+    padding: 0;
+    color: #b5dcff;
+}
+
+.card table,
+.markdown table,
+.markdown-body table,
+article table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1rem 0;
+    border: 1px solid var(--border);
+}
+
+.card th,
+.card td,
+.markdown th,
+.markdown td,
+.markdown-body th,
+.markdown-body td,
+article th,
+article td {
+    border: 1px solid var(--border);
+    padding: 0.5rem 0.6rem;
+    text-align: left;
+}
+
+.card th,
+.markdown th,
+.markdown-body th,
+article th {
+    color: var(--fg);
+    background: rgba(60, 120, 149, 0.2);
+}
+
+.card tr:nth-child(even) td,
+.markdown tr:nth-child(even) td,
+.markdown-body tr:nth-child(even) td,
+article tr:nth-child(even) td {
+    background: var(--table-stripe);
+}
+
+.card img,
+.markdown img,
+.markdown-body img,
+article img {
+    max-width: 100%;
+    height: auto;
+    border: 1px solid #1c232b;
+    border-radius: 8px;
+}
+
+.card kbd,
+.markdown kbd,
+.markdown-body kbd,
+article kbd {
+    font-family: Consolas, "Courier New", monospace;
+    background: #111217;
+    border: 1px solid #2a3340;
+    border-bottom-color: #3a4a5f;
+    border-radius: 4px;
+    padding: 0.1rem 0.35rem;
+    color: #c8d8ef;
+}
+
+.card mark,
+.markdown mark,
+.markdown-body mark,
+article mark {
+    background: #4e4322;
+    color: #fff2b5;
+    padding: 0.05rem 0.2rem;
+    border-radius: 3px;
+}
+
+.card details,
+.markdown details,
+.markdown-body details,
+article details {
+    border: 1px solid #2a2c35;
+    border-radius: 8px;
+    padding: 0.6rem 0.8rem;
+    margin-bottom: 1rem;
+    background: #080b0f;
+}
+
+.card summary,
+.markdown summary,
+.markdown-body summary,
+article summary {
+    cursor: pointer;
+    color: var(--links);
+    font-weight: 600;
+}
+
+.card input[type="checkbox"],
+.markdown input[type="checkbox"],
+.markdown-body input[type="checkbox"],
+article input[type="checkbox"] {
+    accent-color: var(--links);
+    transform: translateY(1px);
+}
+
+.card ul.task-list,
+.markdown ul.task-list,
+.markdown-body ul.task-list,
+article ul.task-list {
+    list-style: none;
+    margin-left: 0;
+}
+
+@media (max-width: 700px) {
+    .page {
+        padding: 1rem 0.75rem 1.5rem;
+    }
+
+    .card {
+        padding: 0.95rem;
+        border-radius: 10px;
+    }
+
+    .card h1,
+    .markdown h1,
+    .markdown-body h1,
+    article h1 {
+        font-size: 1.55rem;
+    }
+}
+
+.mdpaste-controls {
+    margin-top: 1rem;
+}
+
+.control-row {
+    margin-bottom: 0.75rem;
+}
+
+#markdown-file {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    border: 0;
+}
+
+.field-label {
+    display: block;
+    margin-bottom: 0.35rem;
+    color: var(--subtle);
+    font-size: 0.92rem;
+}
+
+.markdown-input,
+.password-input {
+    width: 100%;
+    background: #06070a;
+    color: var(--fg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.65rem 0.75rem;
+    font-family: Consolas, "Courier New", monospace;
+    margin-bottom: 0.9rem;
+}
+
+.markdown-input {
+    min-height: 240px;
+    resize: vertical;
+    line-height: 1.45;
+}
+
+.password-input {
+    max-width: 320px;
+}
+
+.btn {
+    display: inline-block;
+    background: #0b1018;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--fg);
+    padding: 0.5rem 0.8rem;
+    font-family: inherit;
+    font-size: 0.95rem;
+    cursor: pointer;
+}
+
+.btn:hover {
+    border-color: var(--links);
+    color: #ffffff;
+}
+
+.markdown-preview {
+    margin-top: 1rem;
+}

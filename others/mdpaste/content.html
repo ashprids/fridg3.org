@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>mdpaste | fridg3.org</title>
+	<meta
+		name="description"
+		content="quickly paste markdown content and share with others."
+	>
+	<meta name="robots" content="noindex,nofollow">
+	<link rel="stylesheet" href="/others/mdpaste/style.css">
+
+    <!-- favicons + app formatting -->
+    <link rel="icon" type="image/png" href="/resources/favicon-96x96.png" sizes="96x96" />
+    <link rel="icon" type="image/svg+xml" href="/resources/favicon.svg" />
+    <link rel="shortcut icon" href="/resources/favicon.ico" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/resources/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-title" content="fridg3.org" />
+    <link rel="manifest" href="/resources/site.webmanifest" />
+</head>
+
+<body>
+	<main class="page">
+		<section class="card" aria-labelledby="page-title">
+			<h1 id="page-title">mdpaste</h1>
+			<p>
+				mdpaste is a tool for quickly pasting markdown content and sharing it with others. it's simple; paste your markdown into the textbox or upload a file, press "generate link" and share the result!
+                <br><br>
+                you may also choose to use a password. your file will be securely encrypted using that password, and will be inaccessible to anyone without it, even site administrators and developers.
+                <br><br>
+                all content is stored in the UK (London) and is automatically deleted after 30 days.
+			</p>
+
+			<div class="mdpaste-controls">
+				<div class="control-row">
+					<label for="markdown-file" class="btn" id="upload-trigger">upload .md file</label>
+					<input id="markdown-file" type="file" accept=".md,text/markdown" aria-label="Upload markdown file">
+				</div>
+
+				<label class="field-label" for="markdown-input">markdown text</label>
+				<textarea
+					id="markdown-input"
+					class="markdown-input"
+					placeholder="# Title&#10;&#10;Write markdown here or upload a .md file..."
+				></textarea>
+
+				<label class="field-label" for="password-input">password (optional)</label>
+				<input
+					id="password-input"
+					type="password"
+					class="password-input"
+					placeholder="enter password"
+				>
+
+				<button type="button" class="btn" id="create-link-btn">create link</button>
+			</div>
+
+			<section class="card markdown-preview" aria-labelledby="preview-title">
+				<article id="markdown-preview-body" class="markdown-body">
+					<p>your formatted markdown will appear here automatically.</p>
+				</article>
+			</section>
+		</section>
+	</main>
+	<script src="/others/mdpaste/main.js" defer></script>
+</body>
+</html>
