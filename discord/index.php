@@ -2,8 +2,8 @@
 
 session_start();
 
-$title = 'example title';
-$description = 'example description.';
+$title = 'discord';
+$description = 'join the fridg3.org discord server and stay up to date with the latest news and updates.';
 
 
 function find_template_file($filename) {
