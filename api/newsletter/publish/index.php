@@ -1,4 +1,5 @@
 <?php
+// API endpoint to publish a newsletter HTML file
 
 session_start();
 header('Content-Type: application/json');

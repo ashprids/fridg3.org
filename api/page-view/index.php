@@ -1,4 +1,6 @@
 <?php
+// API endpoint to track unique page views
+
 header('Content-Type: application/json');
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {

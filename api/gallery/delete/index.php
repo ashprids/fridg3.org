@@ -1,4 +1,6 @@
 <?php
+// Delete images listed in the gallery. Admin-only.
+
 session_start();
 
 header('Content-Type: application/json');
