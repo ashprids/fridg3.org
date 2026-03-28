@@ -14,6 +14,7 @@ jobs:
     env:
       REMOTE: deploy@45.76.134.105
       TARGET: /var/www/fridg3.org
+      REMOTE_BACKUP_DIR: /home/deploy
       GDRIVE_REMOTE: gdrive
       GDRIVE_FOLDER_ID: ${{ secrets.GDRIVE_BACKUP_FOLDER_ID }}
 
@@ -41,7 +42,7 @@ jobs:
               cd \"$TARGET\"
               command -v zip >/dev/null 2>&1 || { echo \"zip is not installed on the server\" >&2; exit 1; }
               archive_name=\$(date +\"%d-%m-%y_%H-%M-%S\").zip
-              archive_path=/tmp/\$archive_name
+              archive_path=\"${REMOTE_BACKUP_DIR}/\$archive_name\"
               rm -f \"\$archive_path\"
               zip -rq \"\$archive_path\" data
               printf \"%s\" \"\$archive_path\"
