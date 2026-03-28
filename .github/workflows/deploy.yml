@@ -7,8 +7,8 @@ on:
     branches: [ main ]
 
 jobs:
-  php-lint:
-    name: php lint
+  code-lint:
+    name: code lint
     runs-on: ubuntu-latest
 
     steps:
@@ -20,12 +20,23 @@ jobs:
         with:
           php-version: '8.3'
 
+      - name: set up node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
       - name: lint php files
         run: bash scripts/lint-php.sh
 
+      - name: lint javascript files
+        run: bash scripts/lint-javascript.sh
+
+      - name: lint css files
+        run: bash scripts/lint-css.sh
+
   deploy:
     if: github.event_name == 'push'
-    needs: php-lint
+    needs: code-lint
     runs-on: ubuntu-latest
 
     steps:
