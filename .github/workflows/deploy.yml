@@ -1,47 +1,20 @@
 name: deploy to fridg3.org
 
 on:
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
+  workflow_run:
+    workflows: [ "code lint" ]
+    types: [ completed ]
 
 jobs:
-  code-lint:
-    name: code lint
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: checkout repo
-        uses: actions/checkout@v4
-
-      - name: set up php
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: '8.3'
-
-      - name: set up node
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: lint php files
-        run: bash scripts/lint-php.sh
-
-      - name: lint javascript files
-        run: bash scripts/lint-javascript.sh
-
-      - name: lint css files
-        run: bash scripts/lint-css.sh
-
   deploy:
-    if: github.event_name == 'push'
-    needs: code-lint
+    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'main'
     runs-on: ubuntu-latest
 
     steps:
       - name: checkout repo
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
 
       # build step goes here if/when applicable
 
