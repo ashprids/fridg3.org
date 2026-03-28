@@ -1,0 +1,101 @@
+name: backup /data/ directory
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 0 * * *'
+
+jobs:
+  backup-data:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    env:
+      REMOTE: deploy@45.76.134.105
+      TARGET: /var/www/fridg3.org
+      GDRIVE_REMOTE: gdrive
+      GDRIVE_FOLDER_ID: ${{ secrets.GDRIVE_BACKUP_FOLDER_ID }}
+
+    steps:
+      - name: install ssh, rclone, and jq
+        run: sudo apt-get update && sudo apt-get install -y openssh-client rclone jq
+
+      - name: set up ssh
+        run: |
+          mkdir -p ~/.ssh ~/.config/rclone
+          echo "${{ secrets.DEPLOY_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H 45.76.134.105 >> ~/.ssh/known_hosts
+          printf '%s' "${{ secrets.RCLONE_CONFIG }}" > ~/.config/rclone/rclone.conf
+          chmod 600 ~/.config/rclone/rclone.conf
+
+      - name: create remote backup archive
+        id: remote-backup
+        run: |
+          set -euo pipefail
+
+          remote_archive_path="$(
+            ssh "$REMOTE" "bash -lc '
+              set -euo pipefail
+              cd \"$TARGET\"
+              command -v zip >/dev/null 2>&1 || { echo \"zip is not installed on the server\" >&2; exit 1; }
+              archive_name=\$(date +\"%d-%m-%y_%H-%M-%S\").zip
+              archive_path=/tmp/\$archive_name
+              rm -f \"\$archive_path\"
+              zip -rq \"\$archive_path\" data
+              printf \"%s\" \"\$archive_path\"
+            '"
+          )"
+
+          archive_name="$(basename "$remote_archive_path")"
+          echo "remote_archive_path=$remote_archive_path" >> "$GITHUB_OUTPUT"
+          echo "archive_name=$archive_name" >> "$GITHUB_OUTPUT"
+
+      - name: download backup archive
+        run: |
+          set -euo pipefail
+          scp "$REMOTE:${{ steps.remote-backup.outputs.remote_archive_path }}" "${{ steps.remote-backup.outputs.archive_name }}"
+
+      - name: upload backup to Google Drive
+        run: |
+          set -euo pipefail
+          rclone copy \
+            "${{ steps.remote-backup.outputs.archive_name }}" \
+            "${GDRIVE_REMOTE}:" \
+            --drive-root-folder-id "${GDRIVE_FOLDER_ID}"
+
+      - name: remove remote backup archive
+        run: |
+          set -euo pipefail
+          remote_archive_path="${{ steps.remote-backup.outputs.remote_archive_path }}"
+          [ -n "$remote_archive_path" ] || exit 0
+          ssh "$REMOTE" "rm -f '$remote_archive_path'"
+
+      - name: keep only the 10 newest backups
+        run: |
+          set -euo pipefail
+
+          old_files="$(
+            rclone lsjson "${GDRIVE_REMOTE}:" \
+              --drive-root-folder-id "${GDRIVE_FOLDER_ID}" \
+              --files-only \
+            | jq -r 'sort_by(.ModTime) | reverse | .[10:][]?.Path'
+          )"
+
+          if [ -z "$old_files" ]; then
+            echo "No old backups to delete."
+            exit 0
+          fi
+
+          while IFS= read -r file_path; do
+            [ -n "$file_path" ] || continue
+            rclone deletefile "${GDRIVE_REMOTE}:${file_path}" --drive-root-folder-id "${GDRIVE_FOLDER_ID}"
+          done <<< "$old_files"
+
+      - name: remove local backup archive
+        if: always()
+        run: |
+          archive_name="${{ steps.remote-backup.outputs.archive_name }}"
+          [ -n "$archive_name" ] || exit 0
+          rm -f "$archive_name"
