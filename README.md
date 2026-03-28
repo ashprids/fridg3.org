@@ -1,4 +1,6 @@
 [![deploy to fridg3.org](https://github.com/ashprids/fridg3.org/actions/workflows/deploy.yml/badge.svg?branch=main)](https://github.com/ashprids/fridg3.org/actions/workflows/deploy.yml)
+[![code lint](https://github.com/ashprids/fridg3.org/actions/workflows/code-lint.yml/badge.svg?branch=main)](https://github.com/ashprids/fridg3.org/actions/workflows/code-lint.yml)
+[![backup data directory](https://github.com/ashprids/fridg3.org/actions/workflows/backup-data.yml/badge.svg?branch=main)](https://github.com/ashprids/fridg3.org/actions/workflows/backup-data.yml)
 
 # fridg3.org
 This repository serves as a method to implement version control for the website, as well as allowing for a more modular workflow when creating future updates.
