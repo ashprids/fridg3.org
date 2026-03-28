@@ -6,4 +6,6 @@
 - .rsyncignore
 - .gitignore
 - .github
+- .vscode
+- .codex
 - /others/toast-discord-bot/bot/venv/**

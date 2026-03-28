@@ -3,9 +3,29 @@ name: deploy to fridg3.org
 on:
   push:
     branches: [ main ]
+  pull_request:
+    branches: [ main ]
 
 jobs:
+  php-lint:
+    name: php lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: checkout repo
+        uses: actions/checkout@v4
+
+      - name: set up php
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+
+      - name: lint php files
+        run: bash scripts/lint-php.sh
+
   deploy:
+    if: github.event_name == 'push'
+    needs: php-lint
     runs-on: ubuntu-latest
 
     steps:
