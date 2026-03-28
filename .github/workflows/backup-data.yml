@@ -65,6 +65,13 @@ jobs:
             "${GDRIVE_REMOTE}:" \
             --drive-root-folder-id "${GDRIVE_FOLDER_ID}"
 
+      - name: remove remote backup archive
+        run: |
+          set -euo pipefail
+          remote_archive_path="${{ steps.remote-backup.outputs.remote_archive_path }}"
+          [ -n "$remote_archive_path" ] || exit 0
+          ssh "$REMOTE" "rm -f '$remote_archive_path'"
+
       - name: keep only the 10 newest backups
         run: |
           set -euo pipefail
@@ -92,10 +99,3 @@ jobs:
           archive_name="${{ steps.remote-backup.outputs.archive_name }}"
           [ -n "$archive_name" ] || exit 0
           rm -f "$archive_name"
-
-      - name: remove remote backup archive
-        if: always()
-        run: |
-          remote_archive_path="${{ steps.remote-backup.outputs.remote_archive_path }}"
-          [ -n "$remote_archive_path" ] || exit 0
-          ssh "$REMOTE" "rm -f '$remote_archive_path'"
