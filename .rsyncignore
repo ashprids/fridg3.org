@@ -5,8 +5,8 @@
 - TECHNICAL_REFERENCE_DEV.md
 - .rsyncignore
 - .gitignore
-- .github
-- .vscode
-- .codex
+- .github/**
+- .vscode/**
+- .codex/**
 - /others/toast-discord-bot/bot/venv/**
 - /scripts/**
