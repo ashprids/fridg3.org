@@ -9,3 +9,4 @@
 - .vscode
 - .codex
 - /others/toast-discord-bot/bot/venv/**
+- /scripts/**
