@@ -30,6 +30,7 @@ jobs:
 
       - name: deploy with rsync
         env:
+          
           REMOTE: deploy@45.76.134.105
           TARGET: /var/www/fridg3.org
           DEPLOY_DIR: .   
