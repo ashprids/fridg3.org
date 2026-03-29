@@ -219,14 +219,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $description = trim($_POST['description'] ?? '');
     $content = trim($_POST['content'] ?? '');
 
-    $isDraft = isset($_POST['save_draft']);
+    $openPreview = isset($_POST['open_preview']);
+    $isDraft = isset($_POST['save_draft']) || $openPreview;
     $deleteDraftId = isset($_POST['delete_draft']) ? trim($_POST['delete_draft']) : '';
 
-    // Handle draft deletion: delete draft file and any referenced images, then redirect
+    // Handle draft deletion: delete draft file, then redirect
+    // Image deletion is commented out since images may be shared by multiple drafts 
+    // and posts; they can be manually removed if needed
     if ($deleteDraftId !== '') {
         $rootDir = dirname(__DIR__, 2);
         $draftsRoot = $rootDir . DIRECTORY_SEPARATOR . 'data' . DIRECTORY_SEPARATOR . 'journal' . DIRECTORY_SEPARATOR . 'drafts';
-        $imagesRoot = $rootDir . DIRECTORY_SEPARATOR . 'data' . DIRECTORY_SEPARATOR . 'images';
+        // $imagesRoot = $rootDir . DIRECTORY_SEPARATOR . 'data' . DIRECTORY_SEPARATOR . 'images';
         $safeId = preg_replace('/[^a-zA-Z0-9_\-]/', '', $deleteDraftId);
         if ($safeId !== '') {
             $target = $draftsRoot . DIRECTORY_SEPARATOR . $safeId . '.txt';
@@ -253,7 +256,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     exit;
                 }
 
-                $draftContent = implode(PHP_EOL, $lines);
+                /* $draftContent = implode(PHP_EOL, $lines);
                 if ($draftContent !== '' && is_dir($imagesRoot)) {
                     if (preg_match_all('#/data/images/([A-Za-z0-9_\-\.]+)#', $draftContent, $m)) {
                         foreach ($m[1] as $imgFile) {
@@ -263,7 +266,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             }
                         }
                     }
-                }
+                } */
 
                 @unlink($target);
             }
@@ -369,6 +372,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $ownerLine = 'USER:' . $username;
         $draftText = $ownerLine . PHP_EOL . $title . PHP_EOL . $description . PHP_EOL . $draftContent;
         @file_put_contents($draftPath, $draftText);
+
+        if ($openPreview) {
+            header('Location: /journal/create/preview?draft=' . urlencode(pathinfo($draftFilename, PATHINFO_FILENAME)));
+            exit;
+        }
 
         // For drafts, skip full post creation and fall through to template rendering
     } else {

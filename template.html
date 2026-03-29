@@ -35,6 +35,7 @@
     <a href="/feed"><div id="tab" data-tooltip="short snippets and updates">feed</div></a>
     <a href="/journal"><div id="tab" data-tooltip="long-form updates and blog posts">journal</div></a>
     <a href="/email"><div id="tab" data-tooltip="send me an email">email</div></a>
+    <a href="/email/newsletter"><div id="tab" data-tooltip="monthly website and personal updates">newsletter</div></a>
     <a href="/guestbook"><div id="tab" data-tooltip="leave a message about the website">guestbook</div></a>
     <a href="/music"><div id="tab" data-tooltip="listen to my music">music</div></a>
     <a href="/gallery"><div id="tab" data-tooltip="a listing of all images uploaded to the site">gallery</div></a>
@@ -84,6 +85,7 @@
 
 <div id="container">
 <div id="content">
+<div id="content-layout">
 <noscript>
     <span id="error">
     error - javascript disabled<br>
@@ -96,9 +98,13 @@
     once you've fixed the issue, refresh the page and things should work properly.<br><br><br>
     </span>
 </noscript>
+<div id="content-main">
 {content}
-<br>
-<span style="color:rgba(0, 0, 0, 0); user-select: none;">end of page</span> <!-- added for spacing -->
+</div>
+<div id="content-footer">
+    <span id="content-footer-views" data-tooltip="Counting unique user views per page, since 02/03/2026">...</span>
+</div>
+</div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
 <script src="/main.js"></script>
 </div>

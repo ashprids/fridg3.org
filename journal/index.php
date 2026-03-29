@@ -174,12 +174,19 @@ if (is_dir($posts_dir)) {
         $post_title = htmlspecialchars($post['title'] ?? '', ENT_QUOTES, 'UTF-8');
         $post_description = htmlspecialchars($post['description'] ?? '', ENT_QUOTES, 'UTF-8');
         $filename = basename($post['path'], '.txt');
+        $safeFilename = htmlspecialchars($filename, ENT_QUOTES, 'UTF-8');
         $bookmarkId = 'journal:' . $filename;
         $isBookmarked = in_array($bookmarkId, $userBookmarks, true);
         $iconClass = $isBookmarked ? 'fa-solid' : 'fa-regular';
+        $actionsHtml = '<span id="journal-post-actions" style="position:absolute;top:12px;right:12px;display:inline-flex;align-items:center;gap:8px;">';
+        if ($isAdmin) {
+            $actionsHtml .= '<span id="post-edit-feed" data-tooltip="edit post" data-edit-href="/journal/edit?post=' . urlencode($filename) . '" style="color: var(--subtle); font-size: 12px;"><i class="fa-solid fa-pencil"></i></span>';
+        }
+        $actionsHtml .= '<span id="post-bookmark" style="position:static;top:auto;right:auto;" data-tooltip="save post" data-post-id="journal:' . $safeFilename . '"><i class="' . $iconClass . ' fa-bookmark"></i></span>';
+        $actionsHtml .= '</span>';
         $item = '<a id="post" class="journal-post-link" href="/journal/posts/' . urlencode($filename) . '">' 
             . '<span id="post-date">' . $post_date . '</span>'
-            . '<span id="post-bookmark" data-tooltip="save post" data-post-id="journal:' . htmlspecialchars($filename, ENT_QUOTES, 'UTF-8') . '"><i class="' . $iconClass . ' fa-bookmark"></i></span>'
+            . $actionsHtml
             . '<span id="post-title">' . $post_title . '</span>'
             . '<span id="post-description">' . $post_description . '</span>'
             . '</a>';

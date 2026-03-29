@@ -1,0 +1,723 @@
+<div class="newsletter-builder">
+	<header class="builder-header">
+		<h1>create a newsletter</h1>
+		<p>generate HTML for a newsletter publication to be shown in mailing list emails</p>
+	</header>
+
+	<section class="builder-form">
+		<div class="field">
+			<label for="preheader">Preheader text</label>
+			<input id="preheader" type="text" placeholder="Short preview line" />
+		</div>
+		<div class="field">
+			<label for="newsletter_date">Newsletter date</label>
+			<input id="newsletter_date" type="text" placeholder="January 2026" />
+		</div>
+		<div class="field">
+			<label for="headline">Headline</label>
+			<input id="headline" type="text" placeholder="Catchy subject line" />
+		</div>
+		<div class="field">
+			<label for="intro_paragraph">Intro paragraph</label>
+			<textarea id="intro_paragraph" rows="3" placeholder="Short intro for this edition"></textarea>
+		</div>
+		<div class="field">
+			<label for="newsletter_id">Newsletter ID (slug)</label>
+			<input id="newsletter_id" type="text" placeholder="2026-02-25" />
+		</div>
+	</section>
+
+	<section class="sections-panel">
+		<div class="panel-heading">
+			<h2>Sections</h2>
+			<button type="button" class="add-section" id="add_section_btn">+ Add section</button>
+		</div>
+		<div id="sections_container"></div>
+	</section>
+
+	<section class="actions">
+		<button type="button" id="generate_btn" class="primary-button">Generate filled template</button>
+		<button type="button" id="clear_btn" class="secondary-button">Clear</button>
+	</section>
+	<br>
+	<section class="output">
+		<h2>Final HTML</h2>
+		<pre><code id="output_code"></code></pre>
+		<div class="output-actions">
+			<button type="button" id="copy_btn" class="primary-button">Copy</button>
+			<button type="button" id="preview_btn" class="secondary-button">Open preview</button>
+		</div>
+		<div class="publish-actions">
+			<button type="button" id="publish_btn" class="primary-button">Publish</button>
+			<span id="publish_status"></span>
+		</div>
+	</section>
+</div>
+
+<style>
+	:root {
+		--builder-bg: radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.04), transparent 32%),
+			radial-gradient(circle at 80% 0%, rgba(255, 255, 255, 0.03), transparent 34%),
+			radial-gradient(circle at 50% 100%, rgba(255, 255, 255, 0.02), transparent 45%),
+			#050505;
+		--builder-border: #4a4a4a;
+		--builder-panel: rgba(18, 18, 18, 0.92);
+		--builder-input: #0d0d0d;
+		--builder-text: #ededed;
+		--builder-subtle: #9a9a9a;
+		--builder-accent: #d6d6d6;
+	}
+
+	.newsletter-builder {
+		max-width: 980px;
+		margin: 0 auto;
+		padding: 26px 18px 48px;
+		color: var(--builder-text);
+		font-family: 'MainRegular', monospace;
+		background: var(--builder-bg);
+		border: 1px solid rgba(74, 74, 74, 0.5);
+		border-radius: 12px;
+		box-shadow: 0 20px 55px rgba(0, 0, 0, 0.45);
+		backdrop-filter: blur(4px);
+	}
+
+	.builder-header h1 {
+		margin: 0 0 6px 0;
+		font-size: 24px;
+		letter-spacing: 0.2px;
+	}
+	.builder-header p {
+		margin: 0 0 18px 0;
+		color: var(--builder-subtle);
+	}
+
+	.builder-form {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+		gap: 14px 16px;
+		margin-bottom: 18px;
+	}
+	.field {
+		display: flex;
+		flex-direction: column;
+		gap: 6px;
+	}
+	label {
+		font-size: 13px;
+		color: var(--builder-subtle);
+		letter-spacing: 0.2px;
+	}
+	input, textarea {
+		background: var(--builder-input);
+		border: 1px solid rgba(74, 74, 74, 0.55);
+		border-radius: 8px;
+		padding: 10px 12px;
+		color: var(--builder-text);
+		font-size: 14px;
+		font-family: inherit;
+		transition: border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+	}
+	input:focus, textarea:focus {
+		outline: none;
+		border-color: var(--builder-border);
+		box-shadow: 0 0 0 3px rgba(200, 200, 200, 0.15);
+		background: #111;
+	}
+	textarea {
+		resize: vertical;
+	}
+
+	.sections-panel {
+		background: var(--builder-panel);
+		border: 1px solid rgba(74, 74, 74, 0.4);
+		border-radius: 10px;
+		padding: 14px;
+		margin-bottom: 18px;
+		box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.02);
+	}
+	.panel-heading {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		margin-bottom: 12px;
+	}
+	.panel-heading h2 {
+		margin: 0;
+		font-size: 18px;
+	}
+	.add-section {
+		background: linear-gradient(120deg, rgba(60, 60, 60, 0.26), rgba(120, 120, 120, 0.18));
+		color: var(--builder-accent);
+		border: 1px solid rgba(100, 100, 100, 0.7);
+		border-radius: 7px;
+		padding: 8px 12px;
+		cursor: pointer;
+		font-family: inherit;
+		transition: background 0.2s ease, transform 0.1s ease, border-color 0.2s ease;
+	}
+	.add-section:hover {
+		background: linear-gradient(120deg, rgba(70, 70, 70, 0.32), rgba(140, 140, 140, 0.24));
+		border-color: rgba(210, 210, 210, 0.8);
+	}
+	.add-section:active {
+		transform: translateY(1px);
+	}
+
+	.section-block {
+		border: 1px solid rgba(90, 90, 90, 0.26);
+		border-radius: 10px;
+		padding: 12px;
+		background: rgba(14, 14, 14, 0.9);
+		margin-bottom: 12px;
+		box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
+	}
+	.section-block header {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		margin-bottom: 10px;
+	}
+	.section-block header h3 {
+		margin: 0;
+		font-size: 15px;
+	}
+	.remove-btn {
+		background: transparent;
+		color: #eaa1a1;
+		border: 1px solid rgba(234, 161, 161, 0.4);
+		border-radius: 6px;
+		padding: 6px 8px;
+		cursor: pointer;
+		font-family: inherit;
+		transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+	}
+	.remove-btn:hover {
+		border-color: rgba(234, 161, 161, 0.7);
+		color: #f3b4b4;
+		background: rgba(234, 161, 161, 0.08);
+	}
+
+	.section-grid {
+		display: grid;
+		grid-template-columns: 1fr;
+		gap: 12px 14px;
+	}
+	.section-grid textarea {
+		min-height: 120px;
+	}
+
+	.actions {
+		margin-bottom: 16px;
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+		gap: 10px;
+	}
+	.primary-button {
+		background: linear-gradient(120deg, rgba(80, 80, 80, 0.28), rgba(130, 130, 130, 0.22));
+		color: var(--builder-text);
+		border: 1px solid rgba(110, 110, 110, 0.75);
+		border-radius: 10px;
+		padding: 12px 16px;
+		cursor: pointer;
+		font-family: 'MainBold', monospace;
+		transition: background 0.2s ease, transform 0.1s ease, border-color 0.2s ease;
+		width: 100%;
+	}
+	.primary-button:hover {
+		background: linear-gradient(120deg, rgba(95, 95, 95, 0.36), rgba(145, 145, 145, 0.3));
+		border-color: rgba(220, 220, 220, 0.85);
+	}
+	.primary-button:active {
+		transform: translateY(1px);
+	}
+	.secondary-button {
+		background: rgba(40, 40, 40, 0.4);
+		color: var(--builder-text);
+		border: 1px solid rgba(100, 100, 100, 0.6);
+		border-radius: 10px;
+		padding: 12px 16px;
+		cursor: pointer;
+		font-family: 'MainRegular', monospace;
+		transition: background 0.2s ease, transform 0.1s ease, border-color 0.2s ease;
+	}
+	.secondary-button:hover {
+		background: rgba(70, 70, 70, 0.5);
+		border-color: rgba(160, 160, 160, 0.7);
+	}
+	.secondary-button:active {
+		transform: translateY(1px);
+	}
+
+	.output h2 {
+		margin-bottom: 10px;
+	}
+	.output pre {
+		background: rgba(10, 10, 10, 0.95);
+		border: 1px solid rgba(90, 90, 90, 0.35);
+		border-radius: 10px;
+		padding: 14px;
+		overflow-x: auto;
+		color: #d1dce7;
+		max-height: 520px;
+		white-space: pre;
+		box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.02);
+	}
+	.output code {
+		font-family: 'MainRegular', monospace;
+		font-size: 13px;
+		display: block;
+	}
+	.output-actions {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+		gap: 10px;
+		margin-top: 10px;
+	}
+	.publish-actions {
+		margin-top: 10px;
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		flex-wrap: wrap;
+	}
+	#publish_status {
+		font-size: 13px;
+		color: var(--builder-subtle);
+	}
+
+	@media (max-width: 640px) {
+		.newsletter-builder {
+			padding: 20px 14px 36px;
+		}
+		.panel-heading {
+			flex-direction: column;
+			gap: 8px;
+			align-items: flex-start;
+		}
+		#generate_btn {
+			font-size: 15px;
+		}
+	}
+</style>
+
+<script>
+	(() => {
+	const STORAGE_KEY = 'newsletterBuilderDraft';
+
+	// Lightweight helper to escape HTML so generated code stays safe in the preview.
+	const escapeHtml = (value) => value.replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
+	const formatMultilineText = (value) => escapeHtml(((value || '').trim())).replace(/\r?\n/g, '<br>');
+
+	// Newsletter template with a slot for repeated sections.
+	const baseTemplate = `<style type="text/css">
+@font-face {
+font-family: 'MainRegular';
+src: url('https://fridg3.org/resources/IosevkaFixedSS03-Regular.woff2') format('woff2');
+font-weight: 400;
+font-style: normal;
+}
+@font-face {
+font-family: 'MainBold';
+src: url('https://fridg3.org/resources/IosevkaFixedSS03-Bold.woff2') format('woff2');
+font-weight: 700;
+font-style: normal;
+}
+</style>
+
+<div style="display:none; visibility:hidden; opacity:0; height:0; width:0; overflow:hidden; mso-hide:all; font-size:1px; line-height:1px; color:transparent;">
+{{preheader_text}}
+</div>
+
+<table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0" align="center" style="margin:0; padding:24px 0; background:transparent; border-collapse:collapse; mso-table-lspace:0; mso-table-rspace:0; font-family:'MainRegular',monospace;">
+<tr>
+<td align="center" style="padding:0 12px; background:transparent; font-family:'MainRegular',monospace;">
+<table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width:640px; width:100%; background:#0a0a0a; border:1px solid #3c7895; border-radius:8px; overflow:hidden; border-collapse:collapse; mso-table-lspace:0; mso-table-rspace:0; font-family:'MainRegular',monospace;">
+<tr>
+<td align="left" style="padding:18px 20px; background:#0f0f0f; border-bottom:1px solid #3c7895; font-family:'MainRegular',monospace;">
+<a href="https://fridg3.org" style="text-decoration:none; color:#86d3cf; font-size:18px; font-weight:bold; display:inline-block; font-family:'MainBold','MainRegular',monospace;">fridg3.org</a><br>
+<span style="display:block; margin-top:4px; color:#917daa; font-size:12px;">
+monthly personal updates and website insights
+</span>
+</td>
+</tr>
+
+<tr>
+<td style="padding:22px 22px 12px 22px; font-family:'MainRegular',monospace;">
+<p style="margin:0 0 8px 0; font-size:12px; color:#917daa; font-family:'MainRegular',monospace;">
+{{newsletter_date}}
+</p>
+<h1 style="margin:0 0 12px 0; font-size:22px; font-weight:bold; color:#eeeeee; font-family:'MainBold','MainRegular',monospace;">
+{{headline}}
+</h1>
+<p style="margin:0 0 16px 0; font-size:15px; line-height:1.6; color:#e0e0e0; font-family:'MainRegular',monospace;">
+{{intro_paragraph}}
+</p>
+<table role="presentation" border="0" cellspacing="0" cellpadding="0" style="margin:0 0 16px 0; border-collapse:collapse;">
+<tr>
+<td align="left" style="border-radius:3px; border:1px solid #3c7895; background:#0f0f0f;">
+<a href="https://fridg3.org/email/newsletter/release/{{newsletter_id}}" style="display:inline-block; padding:8px 14px; font-size:13px; color:#86d3cf; text-decoration:none; font-weight:bold; font-family:'MainRegular',monospace; letter-spacing:0.2px;">view on fridg3.org</a>
+</td>
+</tr>
+</table>
+</td>
+</tr>
+
+<tr>
+<td style="padding:0 22px 4px 22px; font-family:'MainRegular',monospace;">
+<table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0" style="border-collapse:collapse;">
+{{sections}}
+</table>
+</td>
+</tr>
+
+<tr>
+<td style="padding:0 22px 4px 22px;">
+<table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0" style="border-collapse:collapse;">
+<tr>
+<td style="border-top:1px solid #1c2730; font-size:1px; line-height:1px;">&nbsp;</td>
+</tr>
+</table>
+</td>
+</tr>
+
+<tr><br><br>
+<td align="center" style="padding:0 22px 22px 22px; font-family:'MainRegular',monospace;"><br>
+<p style="margin:0; font-size:12px; color:#917daa;">You are receiving this because you subscribed to mail@fridg3.org.</p>
+<p style="margin:0 0 6px 0; font-size:12px; color:#917daa;">This inbox is not monitored, send emails to me@fridg3.org.</p>
+<a href="https://fridg3.org/email" style="font-size:12px; color:#86d3cf; text-decoration:underline;">Unsubscribe</a>
+</td>
+</tr>
+</table>
+</td>
+</tr>
+</table>
+`;
+
+	const sectionsContainer = document.getElementById('sections_container');
+	const outputCode = document.getElementById('output_code');
+	const addSectionBtn = document.getElementById('add_section_btn');
+	const generateBtn = document.getElementById('generate_btn');
+	const previewBtn = document.getElementById('preview_btn');
+	const clearBtn = document.getElementById('clear_btn');
+	const copyBtn = document.getElementById('copy_btn');
+	const publishBtn = document.getElementById('publish_btn');
+	const publishStatus = document.getElementById('publish_status');
+
+	const cleanTitle = (title) => {
+		const raw = (title || '').trim();
+		// strip common leading punctuation/noise (e.g., "$", "-", "•")
+		const stripped = raw.replace(/^[^\w]+/, '').trim();
+		const lower = stripped.toLowerCase();
+		if (lower === 'generate newsletter post' || lower === 'newsletter builder') return '';
+		return stripped;
+	};
+
+	const replaceAll = (template, key, value) => template.split(key).join(value);
+
+	const getCurrentDateDefaults = () => {
+		const now = new Date();
+		const newsletterDate = now.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+		const year = now.getFullYear();
+		const month = String(now.getMonth() + 1).padStart(2, '0');
+		const day = String(now.getDate()).padStart(2, '0');
+		const newsletterId = `${year}-${month}-${day}`;
+		return { newsletterDate, newsletterId };
+	};
+
+	const applyDateDefaultsIfEmpty = () => {
+		const newsletterDateInput = document.getElementById('newsletter_date');
+		const newsletterIdInput = document.getElementById('newsletter_id');
+		const { newsletterDate, newsletterId } = getCurrentDateDefaults();
+		let changed = false;
+
+		if (!newsletterDateInput.value.trim()) {
+			newsletterDateInput.value = newsletterDate;
+			changed = true;
+		}
+		if (!newsletterIdInput.value.trim()) {
+			newsletterIdInput.value = newsletterId;
+			changed = true;
+		}
+
+		return changed;
+	};
+
+	const refreshOutputHighlight = () => {
+		try {
+			if (typeof hljs === 'undefined' || !outputCode) return;
+			outputCode.classList.add('language-html');
+			outputCode.removeAttribute('data-highlighted');
+			hljs.highlightElement(outputCode);
+		} catch (_) { /* no-op */ }
+	};
+
+	const buildSectionsMarkup = (sections) => sections.map((section) => {
+		const sectionTitle = escapeHtml(cleanTitle(section.title) || 'Untitled section');
+		const sectionBody = formatMultilineText(section.body || '');
+		return `<tr>
+<td style="padding:16px 0; border-top:1px solid #1c2730; font-family:'MainRegular',monospace;">
+<h2 style="margin:0 0 8px 0; font-size:17px; color:#eeeeee; font-family:'MainBold','MainRegular',monospace;">${sectionTitle}</h2>
+<p style="margin:0 0 10px 0; font-size:14px; line-height:1.6; color:#d8d8d8; font-family:'MainRegular',monospace;">${sectionBody}</p>
+</td>
+</tr>`;
+	}).join('\n');
+
+	const getFormData = () => {
+		const preheader = document.getElementById('preheader').value;
+		const date = document.getElementById('newsletter_date').value;
+		const headline = document.getElementById('headline').value;
+		const intro = document.getElementById('intro_paragraph').value;
+		const id = document.getElementById('newsletter_id').value;
+
+		const sections = [...sectionsContainer.querySelectorAll('.section-block')].map((block) => {
+			const title = cleanTitle(block.querySelector('.section-title').value);
+			const body = block.querySelector('.section-body').value;
+			return { title, body };
+		});
+
+		return { preheader, date, headline, intro, id, sections };
+	};
+
+	const saveDraft = (filledHtmlOverride) => {
+		const draft = { ...getFormData(), filledHtml: filledHtmlOverride ?? (outputCode.textContent || '') };
+		try {
+			localStorage.setItem(STORAGE_KEY, JSON.stringify(draft));
+		} catch (err) {
+			console.warn('Unable to save draft', err);
+		}
+	};
+
+	const clearDraft = () => {
+		try {
+			localStorage.removeItem(STORAGE_KEY);
+		} catch (err) {
+			console.warn('Unable to clear draft', err);
+		}
+	};
+
+	const refreshSectionTitles = () => {
+		[...sectionsContainer.querySelectorAll('.section-block')].forEach((block, idx) => {
+			block.querySelector('h3').textContent = `Section ${idx + 1}`;
+		});
+	};
+
+	const createSectionBlock = (index, data = {}) => {
+		const wrapper = document.createElement('div');
+		wrapper.className = 'section-block';
+		wrapper.dataset.index = String(index);
+
+		const header = document.createElement('header');
+		const title = document.createElement('h3');
+		title.textContent = `Section ${index + 1}`;
+		const remove = document.createElement('button');
+		remove.type = 'button';
+		remove.className = 'remove-btn';
+		remove.textContent = 'Remove';
+		remove.addEventListener('click', () => {
+			wrapper.remove();
+			refreshSectionTitles();
+			saveDraft();
+		});
+
+		header.appendChild(title);
+		header.appendChild(remove);
+
+		const grid = document.createElement('div');
+		grid.className = 'section-grid';
+
+		const titleField = document.createElement('div');
+		titleField.className = 'field';
+		const titleLabel = document.createElement('label');
+		titleLabel.textContent = 'Section title';
+		const titleInput = document.createElement('input');
+		titleInput.type = 'text';
+		titleInput.placeholder = 'What this section is about';
+		titleInput.className = 'section-title';
+		titleInput.value = data.title || '';
+		titleInput.addEventListener('input', () => saveDraft());
+		titleField.append(titleLabel, titleInput);
+
+		const bodyField = document.createElement('div');
+		bodyField.className = 'field';
+		const bodyLabel = document.createElement('label');
+		bodyLabel.textContent = 'Section body';
+		const bodyInput = document.createElement('textarea');
+		bodyInput.rows = 5;
+		bodyInput.placeholder = 'A few sentences for this section';
+		bodyInput.className = 'section-body';
+		bodyInput.value = data.body || '';
+		bodyInput.addEventListener('input', () => saveDraft());
+		bodyField.append(bodyLabel, bodyInput);
+
+		grid.append(titleField, bodyField);
+		wrapper.append(header, grid);
+		return wrapper;
+	};
+
+	const addSection = (data = {}) => {
+		const block = createSectionBlock(sectionsContainer.children.length, data);
+		sectionsContainer.appendChild(block);
+		refreshSectionTitles();
+	};
+
+	const generateOutput = () => {
+		const { preheader, date, headline, intro, id, sections } = getFormData();
+		const sectionsMarkup = sections.length ? buildSectionsMarkup(sections) : '';
+
+		let filled = baseTemplate;
+		filled = replaceAll(filled, '{{preheader_text}}', escapeHtml(preheader.trim()));
+		filled = replaceAll(filled, '{{newsletter_date}}', escapeHtml(date.trim()));
+		filled = replaceAll(filled, '{{headline}}', escapeHtml(headline.trim()));
+		filled = replaceAll(filled, '{{intro_paragraph}}', formatMultilineText(intro));
+		filled = replaceAll(filled, '{{newsletter_id}}', escapeHtml(id.trim()));
+		filled = replaceAll(filled, '{{sections}}', sectionsMarkup);
+
+		outputCode.textContent = filled;
+		refreshOutputHighlight();
+		publishStatus.textContent = '';
+		saveDraft(filled);
+		return filled;
+	};
+
+	const sanitizeSections = (sections) => {
+		if (!Array.isArray(sections)) return [];
+		return sections
+			.filter((s) => s && typeof s === 'object')
+			.map((s) => ({
+				title: cleanTitle(s.title),
+				body: (s.body || ''),
+			}));
+	};
+
+	const restoreDraft = () => {
+		let draft = null;
+		try {
+			const raw = localStorage.getItem(STORAGE_KEY);
+			if (raw) draft = JSON.parse(raw);
+		} catch (err) {
+			console.warn('Unable to load draft', err);
+		}
+
+		if (draft) {
+			document.getElementById('preheader').value = draft.preheader || '';
+			document.getElementById('newsletter_date').value = draft.date || '';
+			document.getElementById('headline').value = draft.headline || '';
+			document.getElementById('intro_paragraph').value = draft.intro || '';
+			document.getElementById('newsletter_id').value = draft.id || '';
+			const defaultsApplied = applyDateDefaultsIfEmpty();
+
+			sectionsContainer.innerHTML = '';
+			const storedSections = sanitizeSections(draft.sections);
+			const sectionsToUse = storedSections.length ? storedSections : [{}];
+			sectionsToUse.forEach((section) => addSection(section));
+			refreshSectionTitles();
+
+			const hasRealTitles = sectionsToUse.some((s) => cleanTitle(s.title));
+			const looksStale = draft.filledHtml && /newsletter builder/i.test(draft.filledHtml);
+			if (draft.filledHtml && !(looksStale && hasRealTitles) && !defaultsApplied) {
+				outputCode.textContent = draft.filledHtml;
+				refreshOutputHighlight();
+			} else {
+				generateOutput();
+			}
+		} else {
+			applyDateDefaultsIfEmpty();
+			addSection();
+			generateOutput();
+		}
+	};
+
+	const resetForm = () => {
+		document.getElementById('preheader').value = '';
+		document.getElementById('newsletter_date').value = '';
+		document.getElementById('headline').value = '';
+		document.getElementById('intro_paragraph').value = '';
+		document.getElementById('newsletter_id').value = '';
+		applyDateDefaultsIfEmpty();
+		sectionsContainer.innerHTML = '';
+		addSection();
+		refreshSectionTitles();
+		outputCode.textContent = '';
+		publishStatus.textContent = '';
+	};
+
+	const publishNewsletter = async () => {
+		const html = outputCode.textContent || '';
+		const rawId = document.getElementById('newsletter_id').value || '';
+
+		if (!html.trim()) {
+			publishStatus.textContent = 'generate a template first.';
+			return;
+		}
+
+		publishBtn.disabled = true;
+		publishStatus.textContent = 'publishing...';
+
+		try {
+			const body = new URLSearchParams();
+			body.set('id', rawId.trim());
+			body.set('html', html);
+
+			const response = await fetch('/api/newsletter/publish/', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
+				body: body.toString(),
+			});
+
+			const payload = await response.json().catch(() => ({}));
+			if (!response.ok || !payload.ok) {
+				const errorText = payload.error ? String(payload.error) : 'publish_failed';
+				publishStatus.textContent = `publish failed: ${errorText}`;
+				return;
+			}
+
+			const publishedFile = typeof payload.file === 'string' ? payload.file : '';
+			const publishedSlug = publishedFile.replace(/\.html$/i, '');
+			if (publishedSlug) {
+				window.location.href = `/email/newsletter/release/${encodeURIComponent(publishedSlug)}`;
+				return;
+			}
+
+			publishStatus.textContent = `published: /${payload.path}`;
+		} catch (err) {
+			publishStatus.textContent = 'publish failed: network error';
+		} finally {
+			publishBtn.disabled = false;
+		}
+	};
+
+	addSectionBtn.addEventListener('click', () => {
+		addSection();
+		saveDraft();
+	});
+
+	generateBtn.addEventListener('click', generateOutput);
+	previewBtn.addEventListener('click', () => {
+		generateOutput();
+		window.location.href = '/email/newsletter/preview/';
+	});
+	publishBtn.addEventListener('click', publishNewsletter);
+	copyBtn.addEventListener('click', async () => {
+		const html = outputCode.textContent || '';
+		try {
+			await navigator.clipboard.writeText(html);
+			copyBtn.textContent = 'Copied!';
+			setTimeout(() => { copyBtn.textContent = 'Copy'; }, 1200);
+		} catch (err) {
+			copyBtn.textContent = 'Copy failed';
+			setTimeout(() => { copyBtn.textContent = 'Copy'; }, 1200);
+		}
+	});
+	clearBtn.addEventListener('click', () => {
+		clearDraft();
+		resetForm();
+	});
+
+	document.querySelectorAll('#preheader, #newsletter_date, #headline, #intro_paragraph, #newsletter_id').forEach((input) => {
+		input.addEventListener('input', () => saveDraft());
+	});
+
+	// Start by restoring any saved draft.
+	restoreDraft();
+	})();
+</script>

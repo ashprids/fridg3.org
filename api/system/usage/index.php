@@ -1,4 +1,6 @@
 <?php
+// Returns JSON with current system usage metrics: CPU, memory, and disk usage percentages.
+// Uses /proc on Linux and wmic/PowerShell on Windows.
 
 header('Content-Type: application/json');
 

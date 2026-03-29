@@ -1,8 +1,12 @@
 - /data/**
 - sitemap.xml
 - README.md
-- PROJECT_NOTES.txt
+- TECHNICAL_REFERENCE_AI.md
+- TECHNICAL_REFERENCE_DEV.md
 - .rsyncignore
 - .gitignore
-- .github
+- .github/**
+- .vscode/**
+- .codex/**
 - /others/toast-discord-bot/bot/venv/**
+- /scripts/**

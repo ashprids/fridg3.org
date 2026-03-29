@@ -677,6 +677,85 @@ function isSpaEligibleLink(anchor) {
     return true;
 }
 
+function executeInlineContentScripts(rootEl) {
+    try {
+        if (!rootEl) return;
+        const scripts = rootEl.querySelectorAll('script');
+        scripts.forEach((oldScript) => {
+            if (!oldScript || oldScript.src) return;
+            const newScript = document.createElement('script');
+            if (oldScript.type) {
+                newScript.type = oldScript.type;
+            }
+            newScript.textContent = oldScript.textContent || '';
+            oldScript.replaceWith(newScript);
+        });
+    } catch (_) { /* no-op */ }
+}
+
+function updateContentFooterSpacing() {
+    try {
+        const containerEl = document.getElementById('container');
+        const contentEl = document.getElementById('content');
+        if (!containerEl || !contentEl) return;
+        const isScrollable = containerEl.scrollHeight > (containerEl.clientHeight + 1);
+        contentEl.classList.toggle('content-scrolls', isScrollable);
+    } catch (_) { /* no-op */ }
+}
+
+let lastPageViewPathRequested = null;
+
+function normalizePageViewPath(rawUrl) {
+    try {
+        const base = window.location && window.location.origin ? window.location.origin : undefined;
+        const urlObj = new URL(rawUrl || window.location.href, base);
+        let path = urlObj.pathname || '/';
+        path = path.replace(/\/+$/, '') || '/';
+        path = path.replace(/\/index\.php$/i, '') || '/';
+        if (!path.startsWith('/')) path = '/' + path;
+        return path;
+    } catch (_) {
+        return '/';
+    }
+}
+
+function updatePageViewFooter(rawUrl) {
+    try {
+        const footerViewsEl = document.getElementById('content-footer-views');
+        if (!footerViewsEl) return;
+        const path = normalizePageViewPath(rawUrl);
+        if (!path || path.startsWith('/api/')) return;
+        if (lastPageViewPathRequested === path) return;
+        lastPageViewPathRequested = path;
+
+        fetch('/api/page-view/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            credentials: 'same-origin',
+            body: JSON.stringify({ path: path })
+        })
+            .then(resp => {
+                if (!resp.ok) throw new Error('view count request failed');
+                return resp.json();
+            })
+            .then(data => {
+                const count = (data && typeof data.count === 'number') ? data.count : null;
+                if (count === null) return;
+                if (count === 1) {
+                    footerViewsEl.textContent = "you're the first person to view this page!";
+                } else {
+                    footerViewsEl.textContent = count + ' views';
+                }
+            })
+            .catch(() => {
+                footerViewsEl.textContent = 'couldn\'t load page views';
+            });
+    } catch (_) { /* no-op */ }
+}
+
 function loadPageIntoContent(url, addToHistory = true) {
     try {
         const contentEl = document.getElementById('content');
@@ -705,6 +784,7 @@ function loadPageIntoContent(url, addToHistory = true) {
                 }
 
                 contentEl.innerHTML = newContent.innerHTML;
+                executeInlineContentScripts(contentEl);
 
                 const newTitle = doc.querySelector('title');
                 if (newTitle) {
@@ -763,6 +843,8 @@ function loadPageIntoContent(url, addToHistory = true) {
                 autoScaleAsciiFont();
                 rerunAsciiScalingAfterContent();
                 initTooltips();
+                updateContentFooterSpacing();
+                updatePageViewFooter(url);
 
                 // Re-run syntax highlighting on newly loaded content
                 if (typeof hljs !== 'undefined') {
@@ -811,6 +893,10 @@ function setupSpaNavigation() {
 }
 
 window.addEventListener('DOMContentLoaded', setupSpaNavigation);
+window.addEventListener('DOMContentLoaded', updateContentFooterSpacing);
+window.addEventListener('DOMContentLoaded', function() { updatePageViewFooter(window.location.href); });
+window.addEventListener('load', updateContentFooterSpacing);
+window.addEventListener('resize', updateContentFooterSpacing);
 
 // Dedicated handler for feed edit icons so clicking the pencil goes
 // to the edit view without breaking SPA navigation or bubbling to the
@@ -890,6 +976,7 @@ function bindSpaForm(form) {
                 }
 
                 contentEl.innerHTML = newContent.innerHTML;
+                executeInlineContentScripts(contentEl);
 
                 const newTitle = doc.querySelector('title');
                 if (newTitle) {
@@ -3042,6 +3129,7 @@ function initSidebarActiveState() {
         const routes = [
             '/feed',
             '/journal',
+            '/email/newsletter',
             '/email',
             '/guestbook',
             '/music',
@@ -3933,7 +4021,32 @@ function initBBCodeEditor() {
 
     // Preview toggle
     if (bbcodePreviewToggle && bbcodePreview) {
-        bbcodePreviewToggle.addEventListener('click', function() {
+        bbcodePreviewToggle.addEventListener('click', function(e) {
+            const createForm = document.getElementById('create-post-form');
+            const isJournalCreateForm = !!(createForm && createForm.querySelector('button[name="save_draft"]'));
+            if (isJournalCreateForm) {
+                e.preventDefault();
+                const addOrUpdateHidden = (name, value) => {
+                    let input = createForm.querySelector('input[name="' + name + '"]');
+                    if (!input) {
+                        input = document.createElement('input');
+                        input.type = 'hidden';
+                        input.name = name;
+                        createForm.appendChild(input);
+                    }
+                    input.value = value;
+                };
+
+                addOrUpdateHidden('save_draft', '1');
+                addOrUpdateHidden('open_preview', '1');
+                if (typeof createForm.requestSubmit === 'function') {
+                    createForm.requestSubmit();
+                } else {
+                    createForm.submit();
+                }
+                return;
+            }
+
             isPreviewMode = !isPreviewMode;
             
             if (isPreviewMode) {

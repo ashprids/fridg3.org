@@ -1,0 +1,62 @@
+<pre id="ascii" style="color:rgb(77, 164, 186);font-size:12px">                               
+                                         888          888    888                   
+                                         888          888    888                   
+                                         888          888    888                   
+88888b.   .d88b.  888  888  888 .d8888b  888  .d88b.  888888 888888 .d88b.  888d888
+888 "88b d8P  Y8b 888  888  888 88K      888 d8P  Y8b 888    888   d8P  Y8b 888P"  
+888  888 88888888 888  888  888 "Y8888b. 888 88888888 888    888   88888888 888    
+888  888 Y8b.     Y88b 888 d88P      X88 888 Y8b.     Y88b.  Y88b. Y8b.     888    
+888  888  "Y8888   "Y8888888P"   88888P' 888  "Y8888   "Y888  "Y888 "Y8888  888    
+</pre><br><br>
+
+<style>
+	#post a, a#post, #post a:visited, a#post:visited {
+		text-decoration: none;
+	}
+</style>
+
+<div class="form-card">
+	<h2>mailing list</h2>
+	<p>subscribe for website and personal life updates, straight to your email inbox, once a month. unsubscribe anytime.</p>
+
+	<form class="mailing-form" action="https://ml.kundenserver.de/cgi-bin/mailinglist.cgi" method="POST" target="_blank">
+		<div class="radio-group">
+			<label class="radio-label">
+				<input class="radio" checked name="subscribe_r" type="radio" value="subscribe">
+				<span>yes, I want to join the mailing list.</span>
+			</label>
+			<label class="radio-label">
+				<input class="radio" name="subscribe_r" type="radio" value="unsubscribe">
+				<span>please remove me from the mailing list.</span>
+			</label>
+		</div>
+		<br>
+		<div class="form-field">
+			<label for="mailing-email">email address</label>
+			<input class="text-input" id="mailing-email" maxlength="51" name="mailaccount_r" type="email" required>
+		</div>
+
+		<div class="form-field">
+			<label for="mailing-email-confirm">confirm email address</label>
+			<input class="text-input" id="mailing-email-confirm" maxlength="51" name="mailaccount2_r" type="email" required>
+		</div>
+		<br>
+		<button id="form-button" type="submit">send</button>
+
+		<input name="FBMLNAME" type="hidden" value="mail@fridg3.org">
+		<input name="FBLANG" type="hidden" value="en">
+		<input name="FBURLERROR_L" type="hidden" value="https://fridg3.org/email/mailinglist/error">
+		<input name="FBURLSUBSCRIBE_L" type="hidden" value="https://fridg3.org/email/mailinglist/subscribe">
+		<input name="FBURLUNSUBSCRIBE_L" type="hidden" value="https://fridg3.org/email/mailinglist/unsubscribe">
+		<input name="FBURLINVALID_L" type="hidden" value="https://fridg3.org/email/mailinglist/invalid">
+	</form>
+</div>
+<br>
+
+<form id="search" action="/email/newsletter" method="GET">
+	<input id="search-box" name="q" type="text" placeholder="search...">
+	<button id="search-button" type="submit"><i class="fa-solid fa-magnifying-glass"></i></button>
+</form>
+<a style="text-decoration: none;" href="/email/newsletter/create"><button id="form-button" type="button">create post</button></a>
+
+<div id="posts"></div>
