@@ -1070,76 +1070,116 @@ function initEmailForm() {
         const path = rawPath.replace(/\/+$/, '') || '/';
         if (!path.startsWith('/email')) return;
 
-        const form = document.querySelector('form[action^="https://formsubmit.co"]');
-        if (!form || form.dataset.securityBound === '1') return;
-        form.dataset.securityBound = '1';
-
-        const questionEl = form.querySelector('#security-question');
-        const answerInput = form.querySelector('input[name="security_answer"]');
-        const errorEl = form.querySelector('#security-error');
-        if (!questionEl || !answerInput) return;
-
-        let correctAnswer = null;
-
-        function generateQuestion() {
-            const ops = ['+', '-', '*'];
-            const op = ops[Math.floor(Math.random() * ops.length)];
-
-            let a = Math.floor(Math.random() * 10);
-            let b = Math.floor(Math.random() * 10);
-
-            // Keep subtraction answers non-negative for simplicity
-            if (op === '-' && b > a) {
-                [a, b] = [b, a];
-            }
-
-            switch (op) {
-                case '+':
-                    correctAnswer = a + b;
-                    break;
-                case '-':
-                    correctAnswer = a - b;
-                    break;
-                case '*':
-                default:
-                    correctAnswer = a * b;
-                    break;
-            }
-
-            questionEl.textContent = `what is ${a} ${op} ${b}?`;
-            if (errorEl) {
-                errorEl.style.display = 'none';
-            }
-            if (answerInput) {
-                answerInput.value = '';
-            }
-        }
-
-        // Initialize first question
-        generateQuestion();
-
-        form.addEventListener('submit', function(e) {
-            if (e.defaultPrevented) return;
-            const raw = (answerInput.value || '').trim();
-            const userVal = raw === '' ? NaN : parseInt(raw, 10);
-            if (!Number.isFinite(userVal) || userVal !== correctAnswer) {
-                e.preventDefault();
-                generateQuestion();
-                if (errorEl) {
-                    errorEl.style.display = 'block';
-                }
-                return;
-            }
-            if (errorEl) {
-                errorEl.style.display = 'none';
-            }
+        const forms = Array.from(document.querySelectorAll('form')).filter(function(form) {
+            return form.querySelector('#security-question') && form.querySelector('input[name="security_answer"]');
         });
 
-        if (answerInput && errorEl) {
-            answerInput.addEventListener('input', function() {
-                errorEl.style.display = 'none';
+        forms.forEach(function(form) {
+            if (form.dataset.securityBound === '1') return;
+            form.dataset.securityBound = '1';
+
+            const questionEl = form.querySelector('#security-question');
+            const answerInput = form.querySelector('input[name="security_answer"]');
+            const errorEl = form.querySelector('#security-error');
+            const securityField = form.querySelector('[data-security-field]');
+            const subscribeRadios = Array.from(form.querySelectorAll('input[name="subscribe_r"]'));
+            if (!questionEl || !answerInput) return;
+
+            let correctAnswer = null;
+
+            function generateQuestion() {
+                const ops = ['+', '-', '*'];
+                const op = ops[Math.floor(Math.random() * ops.length)];
+
+                let a = Math.floor(Math.random() * 10);
+                let b = Math.floor(Math.random() * 10);
+
+                // Keep subtraction answers non-negative for simplicity
+                if (op === '-' && b > a) {
+                    [a, b] = [b, a];
+                }
+
+                switch (op) {
+                    case '+':
+                        correctAnswer = a + b;
+                        break;
+                    case '-':
+                        correctAnswer = a - b;
+                        break;
+                    case '*':
+                    default:
+                        correctAnswer = a * b;
+                        break;
+                }
+
+                questionEl.textContent = `what is ${a} ${op} ${b}?`;
+                if (errorEl) {
+                    errorEl.style.display = 'none';
+                }
+                answerInput.value = '';
+            }
+
+            function isSecurityRequired() {
+                if (!subscribeRadios.length) return true;
+                return subscribeRadios.some(function(radio) {
+                    return radio.checked && radio.value === 'subscribe';
+                });
+            }
+
+            function syncSecurityVisibility() {
+                const shouldShow = isSecurityRequired();
+
+                if (securityField) {
+                    securityField.style.display = shouldShow ? '' : 'none';
+                }
+
+                answerInput.style.display = shouldShow ? '' : 'none';
+                answerInput.required = shouldShow;
+
+                if (!shouldShow) {
+                    answerInput.value = '';
+                    if (errorEl) {
+                        errorEl.style.display = 'none';
+                    }
+                }
+            }
+
+            generateQuestion();
+            syncSecurityVisibility();
+
+            form.addEventListener('submit', function(e) {
+                if (e.defaultPrevented || !isSecurityRequired()) return;
+
+                const raw = (answerInput.value || '').trim();
+                const userVal = raw === '' ? NaN : parseInt(raw, 10);
+                if (!Number.isFinite(userVal) || userVal !== correctAnswer) {
+                    e.preventDefault();
+                    generateQuestion();
+                    if (errorEl) {
+                        errorEl.style.display = 'block';
+                    }
+                    return;
+                }
+                if (errorEl) {
+                    errorEl.style.display = 'none';
+                }
             });
-        }
+
+            if (errorEl) {
+                answerInput.addEventListener('input', function() {
+                    errorEl.style.display = 'none';
+                });
+            }
+
+            subscribeRadios.forEach(function(radio) {
+                radio.addEventListener('change', function() {
+                    if (isSecurityRequired()) {
+                        generateQuestion();
+                    }
+                    syncSecurityVisibility();
+                });
+            });
+        });
     } catch (_) { /* no-op */ }
 }
 
