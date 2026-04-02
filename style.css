@@ -181,16 +181,15 @@ body {
     font-family: 'MainRegular', monospace;
     font-size: 15px;
     margin: 0;
-    width: 100vw;
-    height: 100dvh;
+    display: flex;
+    height: 100vh;
     overflow: hidden;
 }
 
 #page-wrapper {
     display: flex;
-    width: 100dvh;
-    height: 100vw;
-    transform: rotate(90deg) translateY(-100%);
+    width: 100%;
+    height: 100vh;
     transform-origin: top left;
 }
 
@@ -209,7 +208,7 @@ body {
 
 #container {
     display: flex;
-    height: 100%;
+    height: 100vh;
     width: 100%;
     overflow-y: scroll;
 }
@@ -217,7 +216,7 @@ body {
 #content {
     flex: 1;
     min-width: 0;
-    height: 100%;
+    height: 100vh;
     box-sizing: border-box;
     padding: 26px;
     max-width: 620px;
