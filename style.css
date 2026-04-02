@@ -188,10 +188,8 @@ body {
 
 #page-wrapper {
     display: flex;
-    width: 100dvh;
-    height: 100vw;
-    transform: rotate(90deg) translateY(-100%);
-    transform-origin: top left;
+    width: 100vw;
+    height: 100dvh;
 }
 
 #sidebar {
