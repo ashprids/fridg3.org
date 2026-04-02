@@ -137,11 +137,6 @@ This file explains how pages are rendered, where logic lives, how `/data` is str
 
 - `/email/index.php` + `content.html`
   - contact page; displays success notice via `?sent=1`.
-  - enforces one submission per visitor every 7 days.
-  - blocked cooldown retries over 3 times blacklist the client IP server-side.
-- `/email/submit/index.php`
-  - server-side cooldown/blacklist gate.
-  - proxies approved submissions to FormSubmit.
 - `/email/newsletter/index.php` + `content.html`
   - lists `/data/newsletter/*.html` as release archive.
   - create button shown only for admin.
@@ -455,7 +450,6 @@ Expected keys:
   - some older logic references `/data/users` patterns; keep bookmark source consistent with accounts.json unless intentionally migrating.
 - Journal posts store HTML body directly; feed posts store raw text/BBCode.
 - Newsletter publish endpoint is under `/api/newsletter/publish` (not under `/email/newsletter/publish`).
-- `/email` runtime state is stored in `/data/etc/email-submissions.json` and `/data/etc/email-blacklist.json`.
 - `main.js` is large and route-sensitive; always re-test impacted route transitions when changing shared JS.
 - page-view updates are triggered from shared SPA flow; if SPA navigation hooks change, verify footer counts still refresh.
 
