@@ -1070,13 +1070,63 @@ function initEmailForm() {
         const path = rawPath.replace(/\/+$/, '') || '/';
         if (!path.startsWith('/email')) return;
 
-        const form = document.querySelector('form[action^="https://formsubmit.co"]');
+        const form = document.querySelector('#email-contact-form');
         if (!form || form.dataset.securityBound === '1') return;
         form.dataset.securityBound = '1';
 
+        const submitButton = form.querySelector('[data-email-submit]');
         const questionEl = form.querySelector('#security-question');
         const answerInput = form.querySelector('input[name="security_answer"]');
         const errorEl = form.querySelector('#security-error');
+        if (submitButton && submitButton.dataset.emailBlacklisted === '1') {
+            submitButton.disabled = true;
+            submitButton.setAttribute('aria-disabled', 'true');
+        }
+
+        if (submitButton && submitButton.dataset.emailCooldown) {
+            let remaining = parseInt(submitButton.dataset.emailCooldown, 10);
+            const defaultLabel = submitButton.dataset.emailDefaultLabel || 'send';
+
+            const formatCountdown = function(totalSeconds) {
+                const safeSeconds = Math.max(0, totalSeconds | 0);
+                const days = Math.floor(safeSeconds / 86400);
+                const hours = Math.floor((safeSeconds % 86400) / 3600);
+                const minutes = Math.floor((safeSeconds % 3600) / 60);
+                const seconds = safeSeconds % 60;
+                const pad = function(value) {
+                    return String(value).padStart(2, '0');
+                };
+                return `${pad(days)}:${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
+            };
+
+            const renderCooldown = function() {
+                if (remaining > 0) {
+                    submitButton.textContent = formatCountdown(remaining);
+                    submitButton.disabled = true;
+                    submitButton.setAttribute('aria-disabled', 'true');
+                    return;
+                }
+
+                submitButton.textContent = defaultLabel;
+                submitButton.disabled = false;
+                submitButton.removeAttribute('aria-disabled');
+                submitButton.classList.remove('form-button-disabled');
+                delete submitButton.dataset.emailCooldown;
+            };
+
+            renderCooldown();
+
+            if (remaining > 0) {
+                const intervalId = window.setInterval(function() {
+                    remaining -= 1;
+                    renderCooldown();
+                    if (remaining <= 0) {
+                        window.clearInterval(intervalId);
+                    }
+                }, 1000);
+            }
+        }
+
         if (!questionEl || !answerInput) return;
 
         let correctAnswer = null;
