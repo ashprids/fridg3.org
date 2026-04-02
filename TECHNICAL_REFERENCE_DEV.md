@@ -99,6 +99,10 @@ Most routes do this in `index.php`:
 ## 2.6 Email + Newsletter
 - `/email/index.php` + `content.html`
   - contact page shell
+  - submission cooldown: one send per visitor every 7 days
+  - cooldown abuse over 3 blocked attempts blacklists the visitor IP via PHP
+- `/email/submit/index.php`
+  - server-side contact form gate + FormSubmit proxy
 - `/email/newsletter/index.php` + `content.html`
   - release archive from `/data/newsletter/*.html`
 - `/email/newsletter/create/index.php` + `content.html`
@@ -258,6 +262,8 @@ Note: You can manually insert `FORMAT:html` in a draft file to make preview trea
 - `toast-updates.json` → status history array
 - `off-topic-archive.json` → Discord export blob
 - `page_views.json` → per-route view counts + visitor hashes (unique by client IP)
+- `email-submissions.json` → `/email` cooldown records by visitor fingerprint and IP
+- `email-blacklist.json` → permanently blocked IPs for `/email`
 
 ## 5.10 `/data/downloads/`
 - binary/download artifacts linked by pages

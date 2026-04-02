@@ -8,12 +8,8 @@ d8P  Y8b 888 "888 "88b     "88b 888 888
 Y8b.     888  888  888 888  888 888 888
  "Y8888  888  888  888 "Y888888 888 888
 </pre><br><br>
-
-<form action="https://formsubmit.co/me@fridg3.org" method="POST">
-<input type="hidden" name="_captcha" value="false">
-<input type="hidden" name="_subject" value="From /email/">
-<input type="hidden" name="_template" value="table">
-<input type="hidden" name="_next" value="https://fridg3.org/email?sent=1">
+{status}
+<form id="email-contact-form" action="/email/submit" method="POST">
 <h3>your name</h3>
 <input id="textbox" type="text" name="name" required>
 <br><br>
@@ -28,5 +24,5 @@ Y8b.     888  888  888 888  888 888 888
 <input id="textbox" type="text" name="security_answer" inputmode="numeric" autocomplete="off" required>
 <div id="security-error" style="color:#e57373;display:none;margin-top:6px;">incorrect answer. try another question.</div>
 <br><br>
-<button id="form-button" type="submit" data-tooltip="send the above content as an email to me@fridg3.org">send</button>
+<button id="form-button" type="submit" data-email-submit="1" {submit_button_attrs}>{submit_button_label}</button>
 </form>
