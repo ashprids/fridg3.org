@@ -284,6 +284,13 @@
             overflow-x: auto;
         }
 
+        body.mobile-template #content-main #ascii,
+        body.mobile-template #content-main #ascii-time,
+        body.mobile-template #content-main .usage-ascii {
+            overflow-x: hidden !important;
+            overflow-y: hidden !important;
+        }
+
         @media (max-width: 420px) {
             .mobile-nav-grid {
                 grid-template-columns: 1fr;

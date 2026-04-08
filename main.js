@@ -151,6 +151,14 @@ function autoScaleAsciiFont() {
     let tooltip = document.getElementById('ascii-scale-tooltip');
     const hideSidebarBtn = document.getElementById('hide-sidebar');
     const TOOLTIP_KEY = 'asciiScaleTooltipDismissed';
+    if (isMobileTemplateActive()) {
+        if (tooltip) {
+            tooltip.style.display = 'none';
+            tooltip.style.opacity = '0';
+            if (tooltip.fadeTimeout) clearTimeout(tooltip.fadeTimeout);
+        }
+        return;
+    }
     if (localStorage.getItem(TOOLTIP_KEY) === '1') {
         if (tooltip) { tooltip.style.display = 'none'; tooltip.style.opacity = '0'; }
         return;
@@ -319,6 +327,7 @@ function initAsciiTime() {
                 }
             });
             el.textContent = rows.join('\n');
+            fitMobileAsciiLayout();
         };
 
         const loadFonts = async () => {
@@ -481,6 +490,7 @@ function initAsciiUsage() {
             if (memEl) memEl.textContent = mem || '??%';
             if (diskEl) diskEl.textContent = disk || '??%';
             if (diskAvailEl) diskAvailEl.textContent = diskAvail || '??%';
+            fitMobileAsciiLayout();
         };
 
         const loadFonts = async () => {
@@ -665,8 +675,70 @@ function applyResponsiveScale() {
     } catch (_) { /* no-op */ }
 }
 
+function fitAsciiTextElement(el, options = {}) {
+    try {
+        if (!el) return;
+        const container = options.container || el.parentElement;
+        if (!container) return;
+
+        const maxFontSize = options.maxFontSize ?? 12;
+        const minFontSize = options.minFontSize ?? 4;
+        const availableWidth = container.clientWidth || container.offsetWidth || 0;
+        if (!availableWidth) return;
+
+        el.style.fontSize = maxFontSize + 'px';
+
+        const naturalWidth = el.scrollWidth || 0;
+        if (!naturalWidth) return;
+        if (naturalWidth <= availableWidth) return;
+
+        const scale = availableWidth / naturalWidth;
+        const newFontSize = Math.max(minFontSize, maxFontSize * scale);
+        el.style.fontSize = newFontSize + 'px';
+    } catch (_) { /* no-op */ }
+}
+
+function fitMobileAsciiLayout() {
+    try {
+        if (!isMobileTemplateActive()) return;
+
+        const contentMain = document.getElementById('content-main');
+        document.querySelectorAll('#ascii').forEach((el) => {
+            fitAsciiTextElement(el, {
+                container: el.parentElement,
+                maxFontSize: 12,
+                minFontSize: 4
+            });
+        });
+
+        const asciiTime = document.getElementById('ascii-time');
+        if (asciiTime) {
+            fitAsciiTextElement(asciiTime, {
+                container: contentMain || asciiTime.parentElement,
+                maxFontSize: 12,
+                minFontSize: 4
+            });
+        }
+
+        document.querySelectorAll('.usage-ascii').forEach((el) => {
+            fitAsciiTextElement(el, {
+                container: el.closest('.usage-card') || el.parentElement,
+                maxFontSize: 11,
+                minFontSize: 4
+            });
+        });
+    } catch (_) { /* no-op */ }
+}
+
 window.addEventListener('resize', applyResponsiveScale);
 window.addEventListener('DOMContentLoaded', applyResponsiveScale);
+window.addEventListener('resize', fitMobileAsciiLayout);
+window.addEventListener('DOMContentLoaded', function() {
+    setTimeout(fitMobileAsciiLayout, 0);
+});
+window.addEventListener('load', function() {
+    setTimeout(fitMobileAsciiLayout, 0);
+});
 
 // Simple SPA-style navigation: load internal pages into #content
 // so the sidebar and mini player stay mounted (continuous audio).
@@ -879,6 +951,7 @@ function loadPageIntoContent(url, addToHistory = true) {
                 rerunAsciiScalingAfterContent();
                 initTooltips();
                 updateContentFooterSpacing();
+                fitMobileAsciiLayout();
                 updatePageViewFooter(url);
 
                 // Re-run syntax highlighting on newly loaded content
@@ -1068,6 +1141,7 @@ function bindSpaForm(form) {
                 initOffTopicArchive();
                 rerunAsciiScalingAfterContent();
                 initTooltips();
+                fitMobileAsciiLayout();
 
                 // Re-run syntax highlighting on newly loaded content
                 if (typeof hljs !== 'undefined') {
