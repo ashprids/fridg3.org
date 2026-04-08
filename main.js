@@ -605,8 +605,41 @@ function isMobileDevice() {
     );
 }
 
+function redirectMobileVisitorsToMobileHost() {
+    try {
+        const currentUrl = new URL(window.location.href);
+        const host = (currentUrl.hostname || '').toLowerCase();
+        const mobile = isMobileDevice();
+        syncMobileViewCookieWithCurrentHost();
+        const mobileViewPreference = readMobileViewCookie();
+
+        if (host === 'fridg3.org' && mobile && mobileViewPreference !== false) {
+            currentUrl.hostname = 'm.fridg3.org';
+            window.location.replace(currentUrl.toString());
+            return;
+        }
+
+        if (host === 'm.fridg3.org' && !mobile) {
+            currentUrl.hostname = 'fridg3.org';
+            window.location.replace(currentUrl.toString());
+        }
+    } catch (_) {
+        /* no-op */
+    }
+}
+
+redirectMobileVisitorsToMobileHost();
+
 const tooltips = document.querySelectorAll('[data-tooltip]');
 let activeTooltip = null;
+
+function isMobileTemplateActive() {
+    try {
+        return !!(document.body && document.body.classList && document.body.classList.contains('mobile-template'));
+    } catch (_) {
+        return false;
+    }
+}
 
 function clearTooltips() {
     document.querySelectorAll('.tooltip').forEach(el => el.remove());
@@ -763,6 +796,8 @@ function loadPageIntoContent(url, addToHistory = true) {
             window.location.href = url;
             return;
         }
+
+        closeMobileMenu();
 
         // Remove any currently visible tooltips when navigating
         clearTooltips();
@@ -1645,6 +1680,8 @@ const COLOR_DEFAULTS = {
     subtle: '#917DAA',
     links: '#415FAD',
 };
+const MOBILE_VIEW_COOKIE = 'mobile_friendly_view';
+const MOBILE_VIEW_DOMAIN = '.fridg3.org';
 
 // Apply saved color prefs early on page load so refreshes keep the scheme
 (() => {
@@ -1690,6 +1727,55 @@ function loadLocalColorPrefs() {
 function saveLocalColorPrefs(colors) {
     try {
         localStorage.setItem(COLOR_PREFS_KEY, JSON.stringify(colors));
+    } catch (_) { /* ignore */ }
+}
+
+function getCookie(name) {
+    try {
+        const parts = document.cookie ? document.cookie.split('; ') : [];
+        for (const part of parts) {
+            const eqIndex = part.indexOf('=');
+            const key = eqIndex >= 0 ? part.slice(0, eqIndex) : part;
+            if (key === name) {
+                return eqIndex >= 0 ? decodeURIComponent(part.slice(eqIndex + 1)) : '';
+            }
+        }
+    } catch (_) { /* ignore */ }
+    return null;
+}
+
+function shouldUseSharedFridg3CookieDomain() {
+    const host = ((window.location && window.location.hostname) ? window.location.hostname : '').toLowerCase();
+    return host === 'fridg3.org' || host === 'm.fridg3.org' || host.endsWith('.fridg3.org');
+}
+
+function setMobileViewCookie(enabled) {
+    try {
+        const maxAge = 60 * 60 * 24 * 365;
+        const value = enabled ? '1' : '0';
+        const secure = (window.location && window.location.protocol === 'https:') ? '; Secure' : '';
+        const domain = shouldUseSharedFridg3CookieDomain() ? `; Domain=${MOBILE_VIEW_DOMAIN}` : '';
+        document.cookie = `${MOBILE_VIEW_COOKIE}=${value}; Max-Age=${maxAge}; Path=/; SameSite=Lax${domain}${secure}`;
+    } catch (_) { /* ignore */ }
+}
+
+function readMobileViewCookie() {
+    const raw = getCookie(MOBILE_VIEW_COOKIE);
+    if (raw === null) return null;
+    return ['1', 'true', 'yes', 'y', 'on', 'enabled'].includes(String(raw).trim().toLowerCase());
+}
+
+function getCurrentHostName() {
+    return ((window.location && window.location.hostname) ? window.location.hostname : '').toLowerCase();
+}
+
+function syncMobileViewCookieWithCurrentHost() {
+    try {
+        const host = getCurrentHostName();
+        const cookieValue = readMobileViewCookie();
+        if (host === 'm.fridg3.org' && cookieValue === null) {
+            setMobileViewCookie(true);
+        }
     } catch (_) { /* ignore */ }
 }
 
@@ -1803,6 +1889,9 @@ function startGradientRotation(el, durationMs) {
 
 
 function initTooltips() {
+    if (isMobileTemplateActive()) {
+        clearTooltips();
+    }
     document.querySelectorAll('[data-tooltip]').forEach(element => {
         // Remove previous listeners to avoid duplicates
         element.removeEventListener('mouseenter', element._tooltipMouseEnter);
@@ -1810,7 +1899,7 @@ function initTooltips() {
         element.removeEventListener('mouseleave', element._tooltipMouseLeave);
         // Define handlers
         element._tooltipMouseEnter = function(e) {
-            if (typeof isMobileDevice === 'function' && isMobileDevice()) return;
+            if (isMobileTemplateActive()) return;
             let rawText = this.getAttribute('data-tooltip') || '';
             rawText = rawText.replace(/\\n/g, '<br>');
             const tooltip = document.createElement('div');
@@ -1864,6 +1953,7 @@ function initSettingsPage() {
         const adminSection = document.getElementById('admin-settings');
         const colorGroup = document.getElementById('color-scheme-group');
         const colorResetBtn = document.getElementById('color-reset');
+        const mobileViewToggle = document.getElementById('mobile-friendly-toggle');
         const saveBtn = document.getElementById('settings-save');
         const sitemapBtn = document.querySelector('[data-action="generate-sitemap"]');
         if (!glowGroup || !saveBtn) return;
@@ -1873,6 +1963,7 @@ function initSettingsPage() {
         const glowRadios = glowGroup.querySelectorAll('input[type="radio"][name="glow-intensity"]');
         const maintenanceRadios = maintenanceGroup ? maintenanceGroup.querySelectorAll('input[type="radio"][name="maintenance-mode"]') : [];
         const colorInputs = colorGroup ? colorGroup.querySelectorAll('input.color-input[data-color-key]') : [];
+        const host = getCurrentHostName();
         if (!glowRadios.length) return;
 
         let isAdmin = false;
@@ -1883,6 +1974,11 @@ function initSettingsPage() {
             maintenanceRadios.forEach(r => {
                 r.checked = (r.value === state);
             });
+        };
+
+        const setMobileViewToggle = (enabled) => {
+            if (!mobileViewToggle) return;
+            mobileViewToggle.checked = enabled === true;
         };
 
         const loadMaintenanceState = async () => {
@@ -2004,23 +2100,33 @@ function initSettingsPage() {
         const initialColors = Object.assign({}, COLOR_DEFAULTS, loadLocalColorPrefs() || {});
         setColorInputs(initialColors);
         applyColorVars(initialColors);
+        syncMobileViewCookieWithCurrentHost();
+        setMobileViewToggle(readMobileViewCookie());
 
         if (isLoggedIn && window.fetch) {
             fetch('/api/settings', {
                 method: 'GET',
                 headers: { 'X-Requested-With': 'XMLHttpRequest' },
             }).then(r => r.ok ? r.json() : null).then(data => {
-                if (!data || !data.ok || !data.settings || !data.settings.colors) return;
-                const serverColors = {};
-                COLOR_FIELDS.forEach(k => {
-                    const n = normalizeColor(data.settings.colors[k] ?? '');
-                    if (n) serverColors[k] = n;
-                });
-                if (Object.keys(serverColors).length) {
-                    const merged = Object.assign({}, COLOR_DEFAULTS, serverColors);
-                    setColorInputs(merged);
-                    applyColorVars(merged);
-                    saveLocalColorPrefs(merged);
+                if (!data || !data.ok || !data.settings) return;
+
+                if (data.settings.colors) {
+                    const serverColors = {};
+                    COLOR_FIELDS.forEach(k => {
+                        const n = normalizeColor(data.settings.colors[k] ?? '');
+                        if (n) serverColors[k] = n;
+                    });
+                    if (Object.keys(serverColors).length) {
+                        const merged = Object.assign({}, COLOR_DEFAULTS, serverColors);
+                        setColorInputs(merged);
+                        applyColorVars(merged);
+                        saveLocalColorPrefs(merged);
+                    }
+                }
+
+                if (typeof data.settings.mobileFriendlyView === 'boolean' && readMobileViewCookie() === null && host !== 'm.fridg3.org') {
+                    setMobileViewToggle(data.settings.mobileFriendlyView);
+                    setMobileViewCookie(data.settings.mobileFriendlyView);
                 }
             }).catch(() => {});
         }
@@ -2052,10 +2158,13 @@ function initSettingsPage() {
             const chosenColors = getColorValuesFromInputs();
             const mergedColors = Object.assign({}, COLOR_DEFAULTS, chosenColors);
             persistColors(mergedColors, { skipServer: isLoggedIn });
+            const mobileViewEnabled = !!(mobileViewToggle && mobileViewToggle.checked);
+            setMobileViewCookie(mobileViewEnabled);
 
             if (isLoggedIn && window.fetch) {
                 const params = new URLSearchParams();
                 params.append('glowIntensity', selected);
+                params.append('mobileFriendlyView', mobileViewEnabled ? 'on' : 'off');
 
                 if (Object.keys(mergedColors).length) {
                     // flatten colors into separate fields (merged so defaults persist server-side)
@@ -2115,17 +2224,44 @@ window.addEventListener('DOMContentLoaded', initSettingsPage);
 const hideSidebarBtn = document.getElementById('hide-sidebar');
 const showSidebarBtn = document.getElementById('show-sidebar');
 const sidebar = document.getElementById('sidebar');
+const mobileCollapsedHeader = document.getElementById('mobile-collapsed-header');
 const SIDEBAR_KEY = 'sidebarVisible';
+
+function updateMobileCollapsedHeader(visible) {
+    if (!isMobileTemplateActive()) return;
+    if (mobileCollapsedHeader) {
+        mobileCollapsedHeader.style.display = visible ? 'flex' : 'none';
+    }
+}
+
+function closeMobileMenu() {
+    if (!isMobileTemplateActive()) return;
+    if (sidebar) sidebar.style.display = 'none';
+    if (showSidebarBtn) showSidebarBtn.style.display = 'inline-block';
+    updateMobileCollapsedHeader(true);
+    try {
+        localStorage.setItem(SIDEBAR_KEY, 'false');
+    } catch (_) { /* no-op */ }
+}
 
 // Load sidebar state, apply glow/gradient, and BBCode formatting
 function initSidebarAndBBCode() {
     const isSidebarVisible = localStorage.getItem(SIDEBAR_KEY);
+    const defaultSidebarVisible = isMobileTemplateActive() ? 'false' : 'true';
     if (isSidebarVisible === null) {
-        // Default to visible if not set
-        localStorage.setItem(SIDEBAR_KEY, 'true');
+        // Mobile template starts closed by default; desktop starts open.
+        localStorage.setItem(SIDEBAR_KEY, defaultSidebarVisible);
+        if (defaultSidebarVisible === 'false' && sidebar && showSidebarBtn) {
+            sidebar.style.display = 'none';
+            showSidebarBtn.style.display = 'inline-block';
+            updateMobileCollapsedHeader(true);
+        }
     } else if (isSidebarVisible === 'false') {
-        sidebar.style.display = 'none';
-        showSidebarBtn.style.display = 'inline-block';
+        if (sidebar) sidebar.style.display = 'none';
+        if (showSidebarBtn) showSidebarBtn.style.display = 'inline-block';
+        updateMobileCollapsedHeader(true);
+    } else {
+        updateMobileCollapsedHeader(false);
     }
 
     // Apply global glow effect based on saved intensity
@@ -3204,6 +3340,7 @@ if (hideSidebarBtn) {
     hideSidebarBtn.addEventListener('click', function() {
         sidebar.style.display = 'none';
         showSidebarBtn.style.display = 'inline-block';
+        updateMobileCollapsedHeader(true);
         localStorage.setItem(SIDEBAR_KEY, 'false');
     });
 }
@@ -3212,6 +3349,7 @@ if (showSidebarBtn) {
     showSidebarBtn.addEventListener('click', function() {
         sidebar.style.display = 'flex';
         showSidebarBtn.style.display = 'none';
+        updateMobileCollapsedHeader(false);
         localStorage.setItem(SIDEBAR_KEY, 'true');
     });
 }

@@ -711,6 +711,50 @@ button[data-tooltip] {
     cursor: default;
 }
 
+body.mobile-template #footer-buttons {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 6px;
+    align-items: center;
+}
+
+body.mobile-template #footer-buttons > a.mobile-footer-link {
+    min-width: 0;
+    display: block !important;
+    flex: 0 0 auto !important;
+    text-decoration: none;
+}
+
+body.mobile-template #footer-buttons > a.mobile-footer-link > #footer-button.mobile-footer-button {
+    width: 100%;
+    min-height: 30px;
+    padding: 6px 0;
+    border-radius: 0;
+    background-color: #000000;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    line-height: 1;
+    box-sizing: border-box;
+}
+
+body.mobile-template #footer-buttons > a.mobile-footer-link > #footer-button.mobile-footer-button i {
+    font-size: 12px;
+    line-height: 1;
+}
+
+body.mobile-template #footer-buttons > a.mobile-footer-link > #footer-button.mobile-footer-button.active {
+    background-color: var(--fg);
+    color: var(--bg);
+    border-color: var(--fg);
+}
+
+@media (max-width: 420px) {
+    body.mobile-template #footer-buttons {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
 .checkbox-group {
     display: flex;
     flex-direction: column;
