@@ -110,10 +110,6 @@
             line-height: 1.2;
         }
 
-        .mobile-sidebar-intro {
-            padding: 10px 14px 0 14px;
-        }
-
         .mobile-nav-grid {
             display: grid;
             grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -187,6 +183,12 @@
         #mini-player-main {
             align-items: flex-start;
             gap: 6px;
+        }
+
+        body.mobile-template #header + #mini-player-tracks,
+        body.mobile-template #header + #mini-player-tracks + #mini-player,
+        body.mobile-template #header + #mini-player {
+            margin-top: 0;
         }
 
         #mini-player-controls {
@@ -332,26 +334,6 @@
         <br><span id="maintenance-banner" style="color: #c88420; display: none;"><i class="fa-solid fa-hand"></i> <b>maintenance mode</b></span>
     </div>
 
-    <div class="mobile-sidebar-intro">
-        <span id="footer-text" style="margin-bottom: 0; text-align: left;">you're on the mobile version of fridg3.org. same controls, less wasted space.</span>
-    </div>
-
-    <div class="mobile-nav-grid">
-        <a class="mobile-nav-link" href="/feed"><div id="tab" class="mobile-nav-button" data-tooltip="short snippets and updates">feed</div></a>
-        <a class="mobile-nav-link" href="/journal"><div id="tab" class="mobile-nav-button" data-tooltip="long-form updates and blog posts">journal</div></a>
-        <a class="mobile-nav-link" href="/email"><div id="tab" class="mobile-nav-button" data-tooltip="send me an email">email</div></a>
-        <a class="mobile-nav-link" href="/email/newsletter"><div id="tab" class="mobile-nav-button" data-tooltip="monthly website and personal updates">newsletter</div></a>
-        <a class="mobile-nav-link" href="/guestbook"><div id="tab" class="mobile-nav-button" data-tooltip="leave a message about the website">guestbook</div></a>
-        <a class="mobile-nav-link" href="/music"><div id="tab" class="mobile-nav-button" data-tooltip="listen to my music">music</div></a>
-        <a class="mobile-nav-link" href="/gallery"><div id="tab" class="mobile-nav-button" data-tooltip="a listing of all images uploaded to the site">gallery</div></a>
-        <a class="mobile-nav-link" href="/merch"><div id="tab" class="mobile-nav-button" data-tooltip="buy some of my merch">merch</div></a>
-        <a class="mobile-nav-link" href="/bookmarks"><div id="tab" class="mobile-nav-button" data-tooltip="all the stuff you've saved">saves</div></a>
-        <a class="mobile-nav-link" href="/others"><div id="tab" class="mobile-nav-button" data-tooltip="content that doesn't fit elsewhere">others</div></a>
-    </div>
-
-    {user_greeting}
-    <div id="sidebar-spacer"></div>
-
     <div id="mini-player-tracks"></div>
 
     <div id="mini-player" class="mini-inactive">
@@ -376,6 +358,22 @@
         </div>
         <audio id="mini-player-audio" preload="none"></audio>
     </div>
+
+    <div class="mobile-nav-grid">
+        <a class="mobile-nav-link" href="/feed"><div id="tab" class="mobile-nav-button" data-tooltip="short snippets and updates">feed</div></a>
+        <a class="mobile-nav-link" href="/journal"><div id="tab" class="mobile-nav-button" data-tooltip="long-form updates and blog posts">journal</div></a>
+        <a class="mobile-nav-link" href="/email"><div id="tab" class="mobile-nav-button" data-tooltip="send me an email">email</div></a>
+        <a class="mobile-nav-link" href="/email/newsletter"><div id="tab" class="mobile-nav-button" data-tooltip="monthly website and personal updates">newsletter</div></a>
+        <a class="mobile-nav-link" href="/guestbook"><div id="tab" class="mobile-nav-button" data-tooltip="leave a message about the website">guestbook</div></a>
+        <a class="mobile-nav-link" href="/music"><div id="tab" class="mobile-nav-button" data-tooltip="listen to my music">music</div></a>
+        <a class="mobile-nav-link" href="/gallery"><div id="tab" class="mobile-nav-button" data-tooltip="a listing of all images uploaded to the site">gallery</div></a>
+        <a class="mobile-nav-link" href="/merch"><div id="tab" class="mobile-nav-button" data-tooltip="buy some of my merch">merch</div></a>
+        <a class="mobile-nav-link" href="/bookmarks"><div id="tab" class="mobile-nav-button" data-tooltip="all the stuff you've saved">saves</div></a>
+        <a class="mobile-nav-link" href="/others"><div id="tab" class="mobile-nav-button" data-tooltip="content that doesn't fit elsewhere">others</div></a>
+    </div>
+
+    {user_greeting}
+    <div id="sidebar-spacer"></div>
 
     <div id="sidebar-footer">
         <span id="footer-text">© <span id="footer-year"></span> fridg3.org</span>
