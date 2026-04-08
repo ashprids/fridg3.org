@@ -254,7 +254,7 @@ function initAsciiTime() {
                 hour12: false,
                 hour: '2-digit',
                 minute: '2-digit',
-                second: '2-digit',
+                ...(isMobileTemplateActive() ? {} : { second: '2-digit' }),
                 timeZone: 'Europe/London'
             });
             if (labelEl) {
