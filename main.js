@@ -1,5 +1,6 @@
 // Global work-in-progress kill-switch; derived from /data/etc/wip
 let workInProgress = false;
+let hostRedirectInProgress = false;
 
 function hasAdminCookie() {
     try {
@@ -147,10 +148,10 @@ function autoScaleAsciiFont() {
         }
     });
 
-    // Tooltip logic for #hide-sidebar
+    // Offer switching to the mobile host instead of showing the old
+    // "screen too small" bubble on cramped screens.
     let tooltip = document.getElementById('ascii-scale-tooltip');
-    const hideSidebarBtn = document.getElementById('hide-sidebar');
-    const TOOLTIP_KEY = 'asciiScaleTooltipDismissed';
+    const TOOLTIP_KEY = 'mobileSitePromptDismissed';
     if (isMobileTemplateActive()) {
         if (tooltip) {
             tooltip.style.display = 'none';
@@ -163,80 +164,23 @@ function autoScaleAsciiFont() {
         if (tooltip) { tooltip.style.display = 'none'; tooltip.style.opacity = '0'; }
         return;
     }
-    if (scaled && hideSidebarBtn) {
-        if (!tooltip) {
-            tooltip = document.createElement('div');
-            tooltip.id = 'ascii-scale-tooltip';
-            tooltip.className = 'ascii-scale-tooltip-bubble';
-            tooltip.innerHTML = 'screen too small? click the <i class="fa-solid fa-square-caret-left" style="font-size:10px;vertical-align:middle;color:rgba(250, 250, 250, 0.43)"></i> button to hide this sidebar';
-            hideSidebarBtn.parentElement.style.position = 'relative';
-            hideSidebarBtn.after(tooltip);
-            // Inject style for speech bubble if not already present
-            if (!document.getElementById('ascii-scale-tooltip-style')) {
-                const style = document.createElement('style');
-                style.id = 'ascii-scale-tooltip-style';
-                style.textContent = `
-                .ascii-scale-tooltip-bubble {
-                    position: absolute;
-                    left: 50%;
-                    top: 100%;
-                    transform: translateX(-50%);
-                    background: rgba(0,0,0,0.95);
-                    color: white;
-                    padding: 8px 16px;
-                    border: 1px solid #305aad;
-                    border-radius: 8px;
-                    font-size: 13px;
-                    white-space: pre-line;
-                    z-index: 100;
-                    margin-top: 12px;
-                    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-                    min-width: 220px;
-                    max-width: 320px;
-                    text-align: left;
-                    opacity: 1;
-                    transition: opacity 0.5s;
-                }
-                .ascii-scale-tooltip-bubble::after {
-                    content: '';
-                    position: absolute;
-                    top: -12px;
-                    left: 50%;
-                    transform: translateX(-50%);
-                    width: 0;
-                    height: 0;
-                    border-left: 10px solid transparent;
-                    border-right: 10px solid transparent;
-                    border-bottom: 12px solid rgba(0,0,0,0.95);
-                    filter: drop-shadow(0 -1px 0 #305aad);
-                }
-                @media (max-width: 500px) {
-                  .ascii-scale-tooltip-bubble {
-                    min-width: 120px;
-                    font-size: 12px;
-                    padding: 6px 8px;
-                  }
-                }
-                `;
-                document.head.appendChild(style);
+    if (scaled) {
+        localStorage.setItem(TOOLTIP_KEY, '1');
+        const shouldSwitch = window.confirm('screen feels cramped. switch to the mobile site?');
+        if (shouldSwitch) {
+            try {
+                const targetUrl = new URL(window.location.href);
+                targetUrl.hostname = 'm.fridg3.org';
+                setMobileViewCookie(true);
+                hostRedirectInProgress = true;
+                hideSpaLoading();
+                window.setTimeout(() => {
+                    window.location.href = targetUrl.toString();
+                }, 0);
+                return;
+            } catch (_) {
+                /* no-op */
             }
-        }
-        tooltip.style.display = 'block';
-        tooltip.style.opacity = '1';
-        // Fade out after 5 seconds
-        if (tooltip.fadeTimeout) clearTimeout(tooltip.fadeTimeout);
-        tooltip.fadeTimeout = setTimeout(() => {
-            tooltip.style.opacity = '0';
-            setTimeout(() => { tooltip.style.display = 'none'; }, 500);
-        }, 5000);
-
-        // Only bind once
-        if (!hideSidebarBtn.dataset.asciiTooltipBound) {
-            hideSidebarBtn.addEventListener('click', function() {
-                localStorage.setItem(TOOLTIP_KEY, '1');
-                if (tooltip) { tooltip.style.display = 'none'; tooltip.style.opacity = '0'; }
-            });
-            hideSidebarBtn.dataset.asciiTooltipBound = '1';
         }
     } else if (tooltip) {
         tooltip.style.display = 'none';
