@@ -87,9 +87,20 @@ function find_template_file($filename) {
     return null;
 }
 
-$template_path = find_template_file('template.html');
+$render_helper_path = find_template_file('lib/render.php');
+if ($render_helper_path) {
+    require_once $render_helper_path;
+}
+
+$template_name = function_exists('get_preferred_template_name')
+    ? get_preferred_template_name(__DIR__)
+    : 'template.html';
+$template_path = find_template_file($template_name);
+if (!$template_path && $template_name !== 'template.html') {
+    $template_path = find_template_file('template.html');
+}
 if (!$template_path) {
-    die('template.html not found. report this issue to me@fridg3.org.');
+    die('page template not found. report this issue to me@fridg3.org.');
 }
 
 $template = file_get_contents($template_path);
