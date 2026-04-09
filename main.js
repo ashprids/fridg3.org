@@ -871,6 +871,8 @@ function loadPageIntoContent(url, addToHistory = true) {
                     }
                 } catch (_) { /* no-op */ }
 
+                syncAccountFooterButton();
+
                 if (addToHistory && window.history && window.history.pushState) {
                     window.history.pushState({ spa: true, url: url }, '', url);
                 }
@@ -1063,6 +1065,8 @@ function bindSpaForm(form) {
                         currentFooterButtons.innerHTML = newFooterButtons.innerHTML;
                     }
                 } catch (_) { /* no-op */ }
+
+                syncAccountFooterButton();
 
                 if (window.history && window.history.pushState) {
                     window.history.pushState({ spa: true, url: finalUrl }, '', finalUrl);
@@ -3014,6 +3018,28 @@ function initMiniPlayer() {
 }
 
 window.addEventListener('DOMContentLoaded', initMiniPlayer);
+
+function syncAccountFooterButton() {
+    try {
+        const footerButtons = document.getElementById('footer-buttons');
+        if (!footerButtons) return;
+
+        const accountLink = footerButtons.querySelector('a[href="/account"], a[href="/account/login"], a[href="/account/logout"]');
+        if (!accountLink) return;
+
+        const accountButton = accountLink.querySelector('#footer-button');
+        if (!accountButton) return;
+
+        const isLoggedInNow = !!document.getElementById('user-greeting');
+        accountLink.setAttribute('href', isLoggedInNow ? '/account/logout' : '/account');
+        accountButton.setAttribute('data-tooltip', isLoggedInNow ? 'log out' : 'access your fridg3.org account');
+        accountButton.innerHTML = isLoggedInNow
+            ? '<i class="fa-solid fa-right-from-bracket"></i>'
+            : '<i class="fa-solid fa-user"></i>';
+    } catch (_) { /* no-op */ }
+}
+
+window.addEventListener('DOMContentLoaded', syncAccountFooterButton);
 
 // Footer active state based on current path
 function initFooterActiveState() {
