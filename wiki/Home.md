@@ -6,14 +6,14 @@ when docs and code disagree, trust the code.
 
 ## Start Here
 
-- [Architecture](./Architecture.md)
-- [Routing and Rendering](./Routing-and-Rendering.md)
-- [Frontend and Templates](./Frontend-and-Templates.md)
-- [Routes and Features](./Routes-and-Features.md)
-- [API Reference](./API-Reference.md)
-- [Data Contracts](./Data-Contracts.md)
-- [Deployment and Operations](./Deployment-and-Operations.md)
-- [Development Workflow](./Development-Workflow.md)
+- [Architecture](Architecture)
+- [Routing and Rendering](Routing-and-Rendering)
+- [Frontend and Templates](Frontend-and-Templates)
+- [Routes and Features](Routes-and-Features)
+- [API Reference](API-Reference)
+- [Data Contracts](Data-Contracts)
+- [Deployment and Operations](Deployment-and-Operations)
+- [Development Workflow](Development-Workflow)
 
 ## Project Snapshot
 
