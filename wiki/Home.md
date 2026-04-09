@@ -6,18 +6,6 @@ these pages are mirrored on the GitHub repository's wiki (https://github.com/ash
 
 when docs and code disagree, trust the code.
 
-## Start Here
-
-- [Architecture](Architecture)
-- [Routing and Rendering](Routing-and-Rendering)
-- [Frontend and Templates](Frontend-and-Templates)
-- [Routes and Features](Routes-and-Features)
-- [API Reference](API-Reference)
-- [Data Contracts](Data-Contracts)
-- [Deployment and Operations](Deployment-and-Operations)
-- [Development Workflow](Development-Workflow)
-- [Development Environment Setup](Development-Environment-Setup)
-
 ## Project Snapshot
 
 `fridg3.org` is a PHP-first, file-backed personal site with a shared HTML shell, route-local content templates, and one big JavaScript layer for navigation and interactive features.
@@ -36,8 +24,6 @@ Core traits:
 Useful files:
 
 - `README.md`
-- `TECHNICAL_REFERENCE_DEV.md`
-- `TECHNICAL_REFERENCE_AI.md`
 - `lib/render.php`
 - `template.html`
 - `template_mobile.html`
@@ -45,18 +31,6 @@ Useful files:
 - `style.css`
 - `.github/workflows/*`
 - `scripts/*`
-
-## Stuff The Existing Docs Missed
-
-The current technical references are solid, but a few real routes/features live in code and were not fully covered there:
-
-- `account/admin/` and `account/admin/edit/`
-- `discord/`
-- `merch/`
-- `others/fridge-builds-websites/`
-- mobile template selection via `lib/render.php` and `template_mobile.html`
-- deploy exclusions in `.rsyncignore`
-- custom lint scripts in `/scripts`
 
 ## Practical Rule
 
