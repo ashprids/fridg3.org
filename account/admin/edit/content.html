@@ -1,0 +1,50 @@
+<h1>edit @{account_username}</h1>
+<h2>tweak the normal stuff here and yeet anything else through json.</h2>
+<br>
+
+<div id="error" style="{error_style}">{error_message}</div>
+<div id="result" style="{success_style}">{success_message}</div>
+
+<form id="admin-account-form" method="post">
+    <input type="hidden" name="csrf_token" value="{csrf_token}">
+    <input type="hidden" name="original_username" value="{original_username}">
+    <input type="hidden" name="account_action" value="save">
+
+    <input id="username" name="username" type="text" placeholder="username" value="{form_username}" autocomplete="off" required><br><br>
+    <input id="name" name="name" type="text" placeholder="name" value="{form_name}" autocomplete="off" required><br><br>
+
+    <div class="checkbox-group">
+        <label class="checkbox-label">
+            <input type="checkbox" class="checkbox" name="isAdmin" value="1" {is_admin_checked}>
+            <span>admin</span>
+        </label>
+        <label class="checkbox-label">
+            <input type="checkbox" class="checkbox" name="allowFeed" value="1" {allow_feed_checked}>
+            <span>can post in /feed/</span>
+        </label>
+        <label class="checkbox-label">
+            <input type="checkbox" class="checkbox" name="allowJournal" value="1" {allow_journal_checked}>
+            <span>can post in /journal/</span>
+        </label>
+        <label class="checkbox-label">
+            <input type="checkbox" class="checkbox" name="resetPassword" value="1" {reset_password_checked}>
+            <span>reset password to a random one on apply</span>
+        </label>
+    </div>
+
+    <br>
+    <label for="extra-json">other account values (json object)</label><br>
+    <textarea id="extra-json" name="extra_json" rows="14" spellcheck="false">{extra_json}</textarea>
+    <br><br>
+
+    <button id="form-button" type="submit">apply changes</button>
+</form>
+
+<form id="admin-account-delete-form" method="post" onsubmit="return confirm('delete this account? this cannot be undone.')">
+    <input type="hidden" name="csrf_token" value="{csrf_token}">
+    <input type="hidden" name="original_username" value="{original_username}">
+    <input type="hidden" name="account_action" value="delete">
+    <button class="danger-button" type="submit" {self_delete_disabled}>delete account</button>
+</form>
+
+<p><a href="/account/admin">back to account list</a></p>

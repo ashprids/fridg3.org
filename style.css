@@ -1559,6 +1559,110 @@ hr {
     border-color: rgb(77, 118, 201);
 }
 
+#admin-account-form input[type="text"],
+#admin-account-form textarea {
+    width: 100%;
+    font-family: "MainRegular", monospace;
+    font-size: 14px;
+    padding: 8px;
+    box-sizing: border-box;
+    border: 1px solid var(--border);
+    background-color: var(--bg);
+    color: var(--fg);
+    border-radius: 3px;
+}
+
+#admin-account-form input[type="text"] {
+    height: 32px;
+}
+
+#admin-account-form textarea {
+    min-height: 240px;
+    resize: vertical;
+}
+
+#admin-account-form input[type="text"]:focus,
+#admin-account-form textarea:focus {
+    outline: none;
+    border-color: rgb(77, 118, 201);
+}
+
+.account-admin-list {
+    display: grid;
+    gap: 12px;
+}
+
+.account-admin-card {
+    display: block;
+    padding: 14px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.02);
+    text-decoration: none;
+    color: inherit;
+    transition: border-color 0.2s, transform 0.2s, background-color 0.2s;
+}
+
+.account-admin-card:hover {
+    border-color: rgb(77, 118, 201);
+    background: rgba(77, 118, 201, 0.08);
+    transform: translateY(-1px);
+}
+
+.account-admin-card strong,
+.account-admin-card span {
+    display: block;
+}
+
+.account-admin-card span {
+    margin-top: 4px;
+}
+
+.account-admin-meta {
+    display: flex !important;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 10px !important;
+}
+
+.account-admin-badge,
+.account-page-badge {
+    display: inline-block !important;
+    padding: 2px 8px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    font-size: 12px;
+    color: var(--subtle);
+}
+
+#admin-account-delete-form {
+    margin-top: 8px;
+}
+
+.danger-button {
+    display: block;
+    width: 100%;
+    padding: 8px 16px;
+    border: 1px solid #8f3434;
+    background-color: rgba(143, 52, 52, 0.12);
+    color: #ffb3b3;
+    font-family: "MainRegular", monospace;
+    font-size: 14px;
+    cursor: pointer;
+    box-sizing: border-box;
+    transition: background-color 0.2s, border-color 0.2s;
+}
+
+.danger-button:hover {
+    background-color: rgba(143, 52, 52, 0.22);
+    border-color: #b84747;
+}
+
+.danger-button:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+}
+
 #bbcode-preview h3 {
     margin-top: 24px;
     margin-bottom: 8px;
