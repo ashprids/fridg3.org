@@ -1,6 +1,8 @@
 # fridg3.org Developer Wiki
 
-this wiki is the repo-shaped version of the project docs. it pulls from `README.md`, `TECHNICAL_REFERENCE_AI.md`, `TECHNICAL_REFERENCE_DEV.md`, and the codebase itself.
+this wiki serves to provide documentation to developers and AI agents developing the website. 
+
+these pages are mirrored on the GitHub repository's wiki (https://github.com/ashprids/fridg3.org/wiki) and the website itself (https://fridg3.org/wiki).
 
 when docs and code disagree, trust the code.
 
@@ -14,6 +16,7 @@ when docs and code disagree, trust the code.
 - [Data Contracts](Data-Contracts)
 - [Deployment and Operations](Deployment-and-Operations)
 - [Development Workflow](Development-Workflow)
+- [Development Environment Setup](Development-Environment-Setup)
 
 ## Project Snapshot
 
