@@ -78,7 +78,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             } else {
                 array_splice($accountsData['accounts'], $accountIndex, 1);
                 if (!account_admin_save_accounts($accountsData)) {
-                    $errorMessage = 'failed to delete account. please try again.';
+                    $saveError = account_admin_get_save_error();
+                    $errorMessage = 'failed to delete account. '
+                        . ($saveError !== '' ? $saveError : 'please try again.');
                 } else {
                     header('Location: /account/admin?deleted=' . rawurlencode($selectedUsername));
                     exit;
@@ -155,7 +157,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $accountsData['accounts'][$accountIndex] = $updatedAccount;
 
                         if (!account_admin_save_accounts($accountsData)) {
-                            $errorMessage = 'failed to save account changes. please try again.';
+                            $saveError = account_admin_get_save_error();
+                            $errorMessage = 'failed to save account changes. '
+                                . ($saveError !== '' ? $saveError : 'please try again.');
                             $generatedPassword = '';
                         } else {
                             if (isset($_SESSION['user']['username']) && (string)$_SESSION['user']['username'] === $selectedUsername) {

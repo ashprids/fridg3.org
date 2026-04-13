@@ -1,5 +1,22 @@
 <?php
 
+function account_admin_set_save_error(string $message): void {
+    $GLOBALS['account_admin_save_error'] = $message;
+}
+
+function account_admin_get_save_error(): string {
+    $value = $GLOBALS['account_admin_save_error'] ?? '';
+    return is_string($value) ? $value : '';
+}
+
+function account_admin_get_last_php_error_message(): string {
+    $lastError = error_get_last();
+    if (!is_array($lastError) || !isset($lastError['message'])) {
+        return '';
+    }
+    return trim((string)$lastError['message']);
+}
+
 function account_admin_find_template_file(string $filename): ?string {
     $dir = __DIR__;
     $prevDir = '';
@@ -39,25 +56,38 @@ function account_admin_load_accounts(): array {
 }
 
 function account_admin_save_accounts(array $accountsData): bool {
+    account_admin_set_save_error('');
     $encoded = json_encode($accountsData, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
     if ($encoded === false) {
+        account_admin_set_save_error('failed to encode accounts json.');
         return false;
     }
 
     $accountsPath = account_admin_accounts_path();
     $directory = dirname($accountsPath);
     if (!is_dir($directory)) {
+        account_admin_set_save_error('accounts directory does not exist: ' . $directory);
         return false;
     }
 
     $tempPath = tempnam($directory, 'accounts_');
     if ($tempPath === false) {
-        return @file_put_contents($accountsPath, $encoded, LOCK_EX) !== false;
+        $fallbackWrite = @file_put_contents($accountsPath, $encoded, LOCK_EX);
+        if ($fallbackWrite === false) {
+            $phpError = account_admin_get_last_php_error_message();
+            account_admin_set_save_error('could not create temp file or write accounts.json.'
+                . ($phpError !== '' ? ' php said: ' . $phpError : ''));
+            return false;
+        }
+        return true;
     }
 
     $existingPerms = @fileperms($accountsPath);
     $writeOk = @file_put_contents($tempPath, $encoded, LOCK_EX) !== false;
     if (!$writeOk) {
+        $phpError = account_admin_get_last_php_error_message();
+        account_admin_set_save_error('failed writing temp accounts file.'
+            . ($phpError !== '' ? ' php said: ' . $phpError : ''));
         @unlink($tempPath);
         return false;
     }
@@ -67,8 +97,17 @@ function account_admin_save_accounts(array $accountsData): bool {
     }
 
     if (!@rename($tempPath, $accountsPath)) {
+        $renameError = account_admin_get_last_php_error_message();
         @unlink($tempPath);
-        return @file_put_contents($accountsPath, $encoded, LOCK_EX) !== false;
+        $fallbackWrite = @file_put_contents($accountsPath, $encoded, LOCK_EX);
+        if ($fallbackWrite === false) {
+            $phpError = account_admin_get_last_php_error_message();
+            account_admin_set_save_error('failed replacing accounts.json after temp write.'
+                . ($renameError !== '' ? ' rename error: ' . $renameError . '.' : '')
+                . ($phpError !== '' ? ' php said: ' . $phpError : ''));
+            return false;
+        }
+        return true;
     }
 
     clearstatcache(true, $accountsPath);
