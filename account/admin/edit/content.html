@@ -4,6 +4,7 @@
 
 <div id="error" style="{error_style}">{error_message}</div>
 <div id="result" style="{success_style}">{success_message}</div>
+{error_alert_script}
 
 <form id="admin-account-form" method="post" action="/account/admin/edit?username={original_username}" data-no-spa="1">
     <input type="hidden" name="csrf_token" value="{csrf_token}">
