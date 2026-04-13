@@ -69,7 +69,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!hash_equals((string)$_SESSION['csrf_token'], $submittedToken)) {
         $errorMessage = 'invalid request. please try again.';
     } else {
-        $requestedAction = (string)($_POST['account_action'] ?? 'save');
+        $requestedAction = 'save';
+        if (isset($_POST['delete_account'])) {
+            $requestedAction = 'delete';
+        } elseif (isset($_POST['account_action'])) {
+            $requestedAction = (string)$_POST['account_action'];
+        }
 
         if ($requestedAction === 'delete') {
             $currentSessionUsername = isset($_SESSION['user']['username']) ? (string)$_SESSION['user']['username'] : '';
