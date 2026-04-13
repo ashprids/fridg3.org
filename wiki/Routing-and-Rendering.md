@@ -33,13 +33,15 @@ admin account pages use equivalent helpers in `account/admin/helpers.php`.
 
 typical route flow:
 
-1. start session
+1. start session through `fridg3_start_session()` from `lib/session.php`
 2. optionally enforce auth/admin checks
 3. load render helper from `lib/render.php`
 4. choose template with `get_preferred_template_name(__DIR__)`
 5. load local `content.html`
 6. inject placeholders like `{content}`, `{title}`, `{description}`, `{user_greeting}`
 7. optionally swap account footer button to logout when logged in
+
+some routes also pull in extra shared libs like `lib/feed.php` for route-specific persistence helpers instead of keeping all that logic inline.
 
 ## Homepage Special Case
 

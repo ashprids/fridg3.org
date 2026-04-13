@@ -40,6 +40,7 @@ this is not just a tiny CSS tweak. it is a separate HTML shell, so shared struct
 - off-topic archive rendering
 - ASCII time / usage widgets
 - route-specific enhancements
+- BBCode mention highlighting for feed-style content
 
 translation: if you change shared ids, buttons, or route transitions, test more than one page or you will summon weird bugs.
 
@@ -81,6 +82,7 @@ server-backed user state is exposed through:
 - some routes and helpers do not use the exact same logout icon markup, so template edits there deserve extra care
 - `main.js` is route-sensitive and very DOM-id-sensitive
 - bookmark UI exists in both server and client paths
+- `/bookmarks` also rehydrates anonymous saves client-side, so shared bookmark helpers in `main.js` are exposed on `window`
 
 ## Rule Of Thumb
 

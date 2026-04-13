@@ -153,7 +153,9 @@ example:
       "name": "dev user",
       "password": "",
       "isAdmin": true,
-      "allowedPages": ["feed", "journal"],
+      "mustResetPassword": false,
+      "discordUserId": "",
+      "allowedPages": ["feed", "journal", "comments"],
       "bookmarks": [],
       "glowIntensity": "medium",
       "mobileFriendlyView": false,
@@ -176,9 +178,11 @@ using an empty password is convenient for local-only setup, but obviously don’
 some features depend on data or services that may not exist in local dev:
 
 - feed/journal content if your local `data` folders are empty
+- feed replies if `data/feed/replies` is missing
 - newsletter archive if `data/newsletter` is empty
 - music listings if `data/music` and `data/audio` are missing
 - toast bot controls if `data/etc/toast.json` is missing
+- discord-linking, feed notification DMs, and the toast DM inbox if the local bot service on `127.0.0.1:8765` is not running
 - off-topic archive if `data/etc/off-topic-archive.json` is missing
 - deploy/backup workflows because those are GitHub Actions + server side
 

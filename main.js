@@ -3450,6 +3450,7 @@ function syncBookmarkIcons() {
         }
     });
 }
+window.syncBookmarkIcons = syncBookmarkIcons;
 
 function attachBookmarkBehavior(bookmark) {
     const icon = bookmark.querySelector('i');
@@ -3579,6 +3580,7 @@ function attachBookmarkBehavior(bookmark) {
         }
     });
 }
+window.attachBookmarkBehavior = attachBookmarkBehavior;
 
 function initScrollAndBookmarkIcons() {
     // Restore scroll position if set

@@ -40,6 +40,7 @@ this setup is simple but honestly pretty smart for a repo with lots of inline ma
 - `main.js` is large and route-sensitive
 - feed and journal have different storage models
 - bookmarks have both server and localStorage behavior
+- newsletter bookmarks reuse the same bookmark flow, but their archive/release UI is rendered separately from feed/journal
 - some old code still references legacy bookmark storage patterns
 - mobile view is both a cookie and an account setting
 

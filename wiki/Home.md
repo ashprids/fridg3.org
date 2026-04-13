@@ -17,6 +17,7 @@ Core traits:
 - `template.html` is the default shell
 - `template_mobile.html` is selected when mobile view is enabled
 - `main.js` adds SPA-ish navigation, settings, bookmarks, toast bot UI, page views, and other client behaviors
+- shared PHP helpers now live in `lib/render.php`, `lib/session.php`, and `lib/feed.php`
 - runtime content lives under `/data` and is intentionally excluded from deployment sync
 
 ## Source Of Truth
