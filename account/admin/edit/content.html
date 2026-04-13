@@ -17,7 +17,7 @@ window.addEventListener('DOMContentLoaded', function () {
 });
 </script>
 
-<form id="admin-account-form" method="post" action="/account/admin/edit?username={original_username}" data-no-spa="1">
+<form id="admin-account-form" method="post" action="/account/admin/edit/index.php?username={original_username}" data-no-spa="1">
     <input type="hidden" name="csrf_token" value="{csrf_token}">
     <input type="hidden" name="original_username" value="{original_username}">
     <input type="hidden" name="account_action" value="save">
@@ -56,7 +56,7 @@ window.addEventListener('DOMContentLoaded', function () {
     <button id="form-button" type="submit">apply changes</button>
 </form>
 
-<form id="admin-account-delete-form" method="post" action="/account/admin/edit?username={original_username}" data-no-spa="1" novalidate onsubmit="return confirm('delete this account? this cannot be undone.')">
+<form id="admin-account-delete-form" method="post" action="/account/admin/edit/index.php?username={original_username}" data-no-spa="1" novalidate onsubmit="return confirm('delete this account? this cannot be undone.')">
     <input type="hidden" name="csrf_token" value="{csrf_token}">
     <input type="hidden" name="original_username" value="{original_username}">
     <input type="hidden" name="account_action" value="delete">
