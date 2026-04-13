@@ -1,6 +1,11 @@
 <?php
 
-session_start();
+$sessionBootstrapDir = __DIR__;
+while (!file_exists($sessionBootstrapDir . "/lib/session.php") && dirname($sessionBootstrapDir) !== $sessionBootstrapDir) {
+    $sessionBootstrapDir = dirname($sessionBootstrapDir);
+}
+require_once $sessionBootstrapDir . "/lib/session.php";
+fridg3_start_session();
 
 $title = 'discord';
 $description = 'join the fridg3.org discord server and stay up to date with the latest news and updates.';

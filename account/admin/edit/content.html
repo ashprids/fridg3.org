@@ -5,7 +5,7 @@
 <div id="error" style="{error_style}">{error_message}</div>
 <div id="result" style="{success_style}">{success_message}</div>
 
-<form id="admin-account-form" method="post">
+<form id="admin-account-form" method="post" action="/account/admin/edit?username={original_username}" data-no-spa="1">
     <input type="hidden" name="csrf_token" value="{csrf_token}">
     <input type="hidden" name="original_username" value="{original_username}">
     <input type="hidden" name="account_action" value="save">
@@ -27,6 +27,10 @@
             <span>can post in /journal/</span>
         </label>
         <label class="checkbox-label">
+            <input type="checkbox" class="checkbox" name="allowComments" value="1" {allow_comments_checked}>
+            <span>can post comments</span>
+        </label>
+        <label class="checkbox-label">
             <input type="checkbox" class="checkbox" name="resetPassword" value="1" {reset_password_checked}>
             <span>reset password to a random one on apply</span>
         </label>
@@ -40,11 +44,11 @@
     <button id="form-button" type="submit">apply changes</button>
 </form>
 
-<form id="admin-account-delete-form" method="post" onsubmit="return confirm('delete this account? this cannot be undone.')">
+<form id="admin-account-delete-form" method="post" action="/account/admin/edit?username={original_username}" data-no-spa="1" onsubmit="return confirm('delete this account? this cannot be undone.')">
     <input type="hidden" name="csrf_token" value="{csrf_token}">
     <input type="hidden" name="original_username" value="{original_username}">
     <input type="hidden" name="account_action" value="delete">
-    <button class="danger-button" type="submit" {self_delete_disabled}>delete account</button>
+    <button class="danger-button" type="submit" formnovalidate {self_delete_disabled}>delete account</button>
 </form>
 
 <p><a href="/account/admin">back to account list</a></p>

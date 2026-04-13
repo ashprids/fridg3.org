@@ -1115,6 +1115,9 @@ function setupSpaForms() {
 
         const createPostForm = document.getElementById('create-post-form');
         if (createPostForm) bindSpaForm(createPostForm);
+
+        const feedReplyForm = document.getElementById('feed-reply-form');
+        if (feedReplyForm) bindSpaForm(feedReplyForm);
     } catch (_) { /* no-op */ }
 }
 
@@ -2796,7 +2799,7 @@ function initMiniPlayer() {
 
         // Album grid integration: clicking entries controls the mini player.
         const bindAlbumLinks = () => {
-            const albumLinks = document.querySelectorAll('.album-link:not([data-no-viewer])');
+            const albumLinks = document.querySelectorAll('.album-link');
             if (!albumLinks.length || !tracklistEl) return;
 
             // Rebuild track library from current album definitions
@@ -3620,6 +3623,14 @@ document.addEventListener('click', function(e) {
     let targetImg = null;
     const clickedImg = e.target && e.target.closest ? e.target.closest('img') : null;
 
+    if (clickedImg && clickedImg.closest('.album-link')) {
+        return;
+    }
+
+    if (clickedImg && clickedImg.closest('.no-image-viewer')) {
+        return;
+    }
+
     // If toast stream is playing, clicking cover art should navigate to the toast page
     if (clickedImg && clickedImg.id === 'mini-player-art') {
         const miniPlayerEl = document.getElementById('mini-player');
@@ -4415,6 +4426,9 @@ function parseBBCode(text) {
     html = html.replace(/\[h5\](.*?)\[\/h5\]/gi, '<h5>$1</h5>');
     html = html.replace(/\[spoiler\](.*?)\[\/spoiler\]/gi, '<span class="spoiler">$1</span>');
     html = html.replace(/\[color:(#[0-9A-F]{6})\](.*?)\[\/color\]/gi, '<span style="color: $1;">$2</span>');
+    html = html.replace(/(^|[\s([{"'>])@([a-zA-Z0-9_-]{1,50})(?=$|[\s)\]}",.!?:;<])/g, function(match, prefix, username) {
+        return `${prefix}<span class="inline-mention">@${username}</span>`;
+    });
     // Lists: [list]line1\nline2[/list] -> <ul><li>line1</li><li>line2</li></ul>
     html = html.replace(/\[list\]([\s\S]*?)\[\/list\]/gi, function(match, inner) {
         const lines = inner.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);

@@ -1,5 +1,10 @@
 <?php
-session_start();
+$sessionBootstrapDir = __DIR__;
+while (!file_exists($sessionBootstrapDir . "/lib/session.php") && dirname($sessionBootstrapDir) !== $sessionBootstrapDir) {
+    $sessionBootstrapDir = dirname($sessionBootstrapDir);
+}
+require_once $sessionBootstrapDir . "/lib/session.php";
+fridg3_start_session();
 
 $title = 'change password';
 $description = 'change your fridg3.org account password.';
@@ -53,6 +58,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     foreach ($accounts_data['accounts'] as &$account) {
                         if ($account['username'] === $_SESSION['user']['username']) {
                             $account['password'] = $new_hash;
+                            $account['mustResetPassword'] = false;
                             $updated = true;
                             break;
                         }
@@ -60,6 +66,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
                 
                 if ($updated && file_put_contents($accounts_path, json_encode($accounts_data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES))) {
+                    $_SESSION['user']['mustResetPassword'] = false;
                     $password_message = 'password changed successfully.';
                     $message_type = 'success';
                 } else {

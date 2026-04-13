@@ -1,6 +1,11 @@
 <?php
 
-session_start();
+$sessionBootstrapDir = __DIR__;
+while (!file_exists($sessionBootstrapDir . "/lib/session.php") && dirname($sessionBootstrapDir) !== $sessionBootstrapDir) {
+    $sessionBootstrapDir = dirname($sessionBootstrapDir);
+}
+require_once $sessionBootstrapDir . "/lib/session.php";
+fridg3_start_session();
 
 $title = '#off-topic - robloxforum.com discord';
 $description = 'a searchable archive of the #off-topic channel from the robloxforum.com discord server, containing all posts from before 08/01/2026.';

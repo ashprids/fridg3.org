@@ -80,7 +80,8 @@
 	border-color: rgb(77, 118, 201);
 }
 
-#update-stream-button {
+#update-stream-button,
+#toast-inbox-button {
 	display: block;
 	padding: 8px 16px;
 	border: 1px solid var(--border);
@@ -96,11 +97,13 @@
 	border-radius: 3px;
 }
 
-#update-stream-button:hover {
+#update-stream-button:hover,
+#toast-inbox-button:hover {
 	background-color: rgb(30, 30, 30);
 }
 
-#update-stream-button:disabled {
+#update-stream-button:disabled,
+#toast-inbox-button:disabled {
 	opacity: 0.65;
 	cursor: not-allowed;
 }
@@ -147,6 +150,8 @@
 <div id="control-panel-container" style="display:none;">
 	<h3>control panel</h3>
 	<h5>for admin users only</h5><br>
+
+    <button id="toast-inbox-button" type="button" onclick="window.location='/others/toast-discord-bot/messages'" data-tooltip="open toast's dm inbox">open private messages</button>
 
   <label style="display:flex; align-items:center; gap:8px; margin-bottom:12px;">
     <input id="status-toggle" type="checkbox" style="width:16px; height:16px;">

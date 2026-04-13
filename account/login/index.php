@@ -1,13 +1,10 @@
 <?php
-// Secure session configuration
-ini_set('session.cookie_httponly', 1);
-ini_set('session.use_only_cookies', 1);
-ini_set('session.cookie_samesite', 'Strict');
-if (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') {
-    ini_set('session.cookie_secure', 1);
+$sessionBootstrapDir = __DIR__;
+while (!file_exists($sessionBootstrapDir . '/lib/session.php') && dirname($sessionBootstrapDir) !== $sessionBootstrapDir) {
+    $sessionBootstrapDir = dirname($sessionBootstrapDir);
 }
-
-session_start();
+require_once $sessionBootstrapDir . '/lib/session.php';
+fridg3_start_session();
 
 $title = 'login';
 $description = 'log into your fridg3.org account.';
@@ -116,21 +113,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                     'username' => htmlspecialchars($account['username'], ENT_QUOTES, 'UTF-8'),
                                     'name' => htmlspecialchars($account['name'], ENT_QUOTES, 'UTF-8'),
                                     'isAdmin' => (bool)($account['isAdmin'] ?? false),
+                                    'mustResetPassword' => !empty($account['mustResetPassword']),
                                     'allowedPages' => array_map(function ($page) {
                                         return htmlspecialchars($page, ENT_QUOTES, 'UTF-8');
                                     }, (array)($account['allowedPages'] ?? []))
                                 ];
 
                                 // Expose admin flag to client for WIP bypass (non-HttpOnly)
-                                $isAdminFlag = $_SESSION['user']['isAdmin'] ? '1' : '0';
-                                $secureFlag = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on';
-                                setcookie('is_admin', $isAdminFlag, [
-                                    'expires' => 0,
-                                    'path' => '/',
-                                    'secure' => $secureFlag,
-                                    'httponly' => false,
-                                    'samesite' => 'Lax'
-                                ]);
+                                fridg3_refresh_is_admin_cookie($_SESSION['user']['isAdmin']);
 
                                 // Rotate CSRF token after a successful login
                                 $_SESSION['csrf_token'] = bin2hex(random_bytes(32));

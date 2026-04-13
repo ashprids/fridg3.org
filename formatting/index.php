@@ -1,5 +1,10 @@
 <?php
-session_start();
+$sessionBootstrapDir = __DIR__;
+while (!file_exists($sessionBootstrapDir . "/lib/session.php") && dirname($sessionBootstrapDir) !== $sessionBootstrapDir) {
+    $sessionBootstrapDir = dirname($sessionBootstrapDir);
+}
+require_once $sessionBootstrapDir . "/lib/session.php";
+fridg3_start_session();
 
 $title = 'formatting';
 $description = 'the all-in-one page for theme customization.';

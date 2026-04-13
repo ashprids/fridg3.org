@@ -1,6 +1,11 @@
 <?php
 
-session_start();
+$sessionBootstrapDir = __DIR__;
+while (!file_exists($sessionBootstrapDir . "/lib/session.php") && dirname($sessionBootstrapDir) !== $sessionBootstrapDir) {
+    $sessionBootstrapDir = dirname($sessionBootstrapDir);
+}
+require_once $sessionBootstrapDir . "/lib/session.php";
+fridg3_start_session();
 
 $title = 'fridge builds websites';
 $description = 'need a cool web design for your portfolio or project? i got you! check out what i offer and pricing for a fully custom website.';

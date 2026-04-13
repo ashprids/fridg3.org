@@ -1,6 +1,11 @@
 <?php
 
-session_start();
+$sessionBootstrapDir = __DIR__;
+while (!file_exists($sessionBootstrapDir . "/lib/session.php") && dirname($sessionBootstrapDir) !== $sessionBootstrapDir) {
+    $sessionBootstrapDir = dirname($sessionBootstrapDir);
+}
+require_once $sessionBootstrapDir . "/lib/session.php";
+fridg3_start_session();
 
 require_once __DIR__ . DIRECTORY_SEPARATOR . 'helpers.php';
 
@@ -8,6 +13,7 @@ account_admin_require_admin();
 
 $title = 'manage accounts';
 $description = 'manage and configure all made accounts.';
+$deletedUsername = trim((string)($_GET['deleted'] ?? ''));
 
 $accountsData = account_admin_load_accounts();
 $cards = [];
@@ -39,6 +45,9 @@ foreach ($accountsData['accounts'] as $account) {
 
 $contentPath = __DIR__ . DIRECTORY_SEPARATOR . 'content.html';
 $content = (string)file_get_contents($contentPath);
+if ($deletedUsername !== '') {
+    $content = '<div id="result">deleted @' . htmlspecialchars($deletedUsername, ENT_QUOTES, 'UTF-8') . '.</div><br>' . $content;
+}
 $content = str_replace(
     ['{account_count}', '{account_cards}'],
     [

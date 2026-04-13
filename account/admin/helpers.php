@@ -44,7 +44,35 @@ function account_admin_save_accounts(array $accountsData): bool {
         return false;
     }
 
-    return @file_put_contents(account_admin_accounts_path(), $encoded, LOCK_EX) !== false;
+    $accountsPath = account_admin_accounts_path();
+    $directory = dirname($accountsPath);
+    if (!is_dir($directory)) {
+        return false;
+    }
+
+    $tempPath = tempnam($directory, 'accounts_');
+    if ($tempPath === false) {
+        return @file_put_contents($accountsPath, $encoded, LOCK_EX) !== false;
+    }
+
+    $existingPerms = @fileperms($accountsPath);
+    $writeOk = @file_put_contents($tempPath, $encoded, LOCK_EX) !== false;
+    if (!$writeOk) {
+        @unlink($tempPath);
+        return false;
+    }
+
+    if ($existingPerms !== false) {
+        @chmod($tempPath, $existingPerms & 0777);
+    }
+
+    if (!@rename($tempPath, $accountsPath)) {
+        @unlink($tempPath);
+        return @file_put_contents($accountsPath, $encoded, LOCK_EX) !== false;
+    }
+
+    clearstatcache(true, $accountsPath);
+    return true;
 }
 
 function account_admin_generate_password(int $length = 15): string {

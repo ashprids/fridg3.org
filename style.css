@@ -1303,6 +1303,139 @@ hr {
     margin-bottom: 4px;
 }
 
+.feed-reply-count {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.feed-thread-page #post,
+.feed-thread-page .feed-reply,
+.feed-thread-page .feed-reply-textbox,
+.feed-thread-page .bbcode-toolbar,
+.feed-thread-page .bbcode-btn,
+.feed-thread-page .bbcode-dropdown,
+.feed-thread-page #bbcode-textbox,
+.feed-thread-page #bbcode-preview,
+.feed-thread-page #form-button {
+    border-radius: 0;
+}
+
+.feed-replies-shell {
+    margin-top: 18px;
+}
+
+.feed-replies-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.feed-reply {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px;
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.feed-reply-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 8px;
+}
+
+.feed-reply-username {
+    font-family: "MainBold", monospace;
+    font-size: 13px;
+}
+
+.feed-reply-date {
+    font-family: "MainItalic", monospace;
+    font-size: 12px;
+    color: var(--subtle);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.feed-reply-body {
+    font-family: "MainRegular", monospace;
+    font-size: 14px;
+    line-height: 1.4;
+}
+
+.feed-reply-textbox {
+    width: 100%;
+    min-height: 110px;
+    resize: vertical;
+    margin-bottom: 12px;
+    font-family: "MainRegular", monospace;
+    font-size: 14px;
+    color: var(--fg);
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px;
+    box-sizing: border-box;
+}
+
+.feed-reply-notice {
+    margin-bottom: 12px;
+    font-family: "MainRegular", monospace;
+    font-size: 13px;
+}
+
+.feed-reply-notice.success {
+    color: rgb(120, 200, 120);
+}
+
+.feed-reply-notice.error {
+    color: rgb(220, 120, 120);
+}
+
+.feed-reply-empty,
+.feed-reply-login {
+    font-family: "MainItalic", monospace;
+    font-size: 13px;
+    color: var(--subtle);
+    margin-bottom: 12px;
+}
+
+.feed-reply-actions,
+.feed-reply-delete-form {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.feed-reply-delete-form {
+    margin: 0;
+}
+
+.feed-reply-action-link,
+.feed-reply-action-button {
+    color: var(--subtle);
+    background: none;
+    border: none;
+    padding: 0;
+    font-size: 12px;
+    cursor: pointer;
+    text-decoration: none;
+}
+
+.feed-reply-action-link:hover,
+.feed-reply-action-button:hover {
+    color: rgb(200, 200, 200);
+}
+
+.feed-reply-edit-box {
+    margin-top: 12px;
+}
+
 #post-image {
     cursor: pointer;
     max-width: 100%;
@@ -1689,6 +1822,17 @@ pre {
 }
 pre code.hljs {
     display: block;
+}
+
+.inline-mention {
+    display: inline-block;
+    padding: 1px 6px;
+    border: 1px solid var(--border);
+    background-color: rgba(255, 255, 255, 0.06);
+    font-family: "MainRegular", monospace;
+    font-size: 0.95em;
+    line-height: 1.2;
+    vertical-align: baseline;
 }
 
 #form-button,

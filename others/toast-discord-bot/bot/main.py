@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Discord bot for fridg3.org - plays m3u internet streams
+Discord bot for fridg3.org - plays m3u internet streams and handles Discord notifications
 """
 
 import discord
@@ -15,6 +15,8 @@ from pathlib import Path
 import re
 import shutil
 import getpass
+import asyncio
+import hashlib
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -186,14 +188,397 @@ async def update_discord_presence():
 config = load_config()
 
 signal_file_path = CONFIG_PATH.parent / '.stream-update-signal'
+feed_notify_state_path = CONFIG_PATH.parent / 'toast-feed-notify-state.json'
+dm_history_path = CONFIG_PATH.parent / 'toast-dm-history.json'
 
 # Initialize bot with intents
 intents = discord.Intents.default()
 intents.message_content = True
 intents.voice_states = True
+intents.members = True
 
 bot = commands.Bot(command_prefix="!", intents=intents)
 bot_online = False
+
+MENTION_PATTERN = re.compile(r'@([A-Za-z0-9_-]{1,50})')
+
+def find_accounts_path():
+    cur = Path(__file__).resolve().parent
+    root = cur
+    while True:
+        candidate = root / 'data' / 'accounts' / 'accounts.json'
+        if candidate.exists():
+            return candidate
+        if root.parent == root:
+            break
+        root = root.parent
+    return Path(__file__).resolve().parent.parent / 'data' / 'accounts' / 'accounts.json'
+
+def find_feed_posts_dir():
+    cur = Path(__file__).resolve().parent
+    root = cur
+    while True:
+        candidate = root / 'data' / 'feed'
+        if candidate.exists():
+            return candidate
+        if root.parent == root:
+            break
+        root = root.parent
+    return Path(__file__).resolve().parent.parent / 'data' / 'feed'
+
+def load_accounts_index():
+    accounts_path = find_accounts_path()
+    try:
+        with open(accounts_path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+    except Exception as e:
+        logger.error(f"Failed to load accounts.json: {e}")
+        return {}
+
+    index = {}
+    for account in data.get('accounts', []):
+        if not isinstance(account, dict):
+            continue
+        username = str(account.get('username', '')).strip()
+        if not username:
+            continue
+        discord_user_id = str(account.get('discordUserId', '')).strip()
+        index[username.lower()] = {
+            'username': username,
+            'discord_user_id': discord_user_id,
+        }
+    return index
+
+def parse_feed_post(post_path: Path):
+    try:
+        raw = post_path.read_text(encoding='utf-8')
+    except Exception as e:
+        logger.warning(f"Failed to read feed post {post_path}: {e}")
+        return None
+
+    lines = re.split(r'\r\n|\n|\r', raw)
+    username = lines[0].strip().lstrip('@') if len(lines) > 0 else ''
+    date_line = lines[1].strip() if len(lines) > 1 else ''
+    body = '\n'.join(lines[2:]) if len(lines) > 2 else ''
+    if not username:
+        return None
+    return {
+        'id': post_path.stem,
+        'username': username,
+        'date': date_line,
+        'body': body,
+        'path': post_path,
+    }
+
+def load_feed_posts():
+    posts_dir = find_feed_posts_dir()
+    posts = {}
+    try:
+        for post_path in posts_dir.glob('*.txt'):
+            parsed = parse_feed_post(post_path)
+            if parsed:
+                posts[parsed['id']] = parsed
+    except Exception as e:
+        logger.error(f"Failed to scan feed posts: {e}")
+    return posts
+
+def load_feed_replies():
+    replies_dir = find_feed_posts_dir() / 'replies'
+    reply_index = {}
+    if not replies_dir.exists():
+        return reply_index
+
+    for reply_path in replies_dir.glob('*.json'):
+        post_id = reply_path.stem
+        try:
+            data = json.loads(reply_path.read_text(encoding='utf-8'))
+        except Exception as e:
+            logger.warning(f"Failed to read replies file {reply_path}: {e}")
+            continue
+
+        replies = data.get('replies', [])
+        if not isinstance(replies, list):
+            continue
+
+        normalized = []
+        for idx, reply in enumerate(replies):
+            if not isinstance(reply, dict):
+                continue
+            username = str(reply.get('username', '')).strip().lstrip('@')
+            body = str(reply.get('body', ''))
+            date_line = str(reply.get('date', '')).strip()
+            reply_id = str(reply.get('id', '')).strip()
+            if not reply_id:
+                seed = f"{username}|{date_line}|{body}|{idx}"
+                reply_id = 'legacy_' + hashlib.sha1(seed.encode('utf-8')).hexdigest()[:16]
+            if not username or not date_line or not body.strip():
+                continue
+            normalized.append({
+                'id': reply_id,
+                'username': username,
+                'body': body,
+                'date': date_line,
+            })
+        reply_index[post_id] = normalized
+
+    return reply_index
+
+def extract_mentions(body: str, accounts_index: dict):
+    mentions = []
+    seen = set()
+    for match in MENTION_PATTERN.finditer(body or ''):
+        username_raw = match.group(1)
+        key = username_raw.lower()
+        if key in seen:
+            continue
+        account = accounts_index.get(key)
+        if not account or not account.get('discord_user_id'):
+            continue
+        seen.add(key)
+        mentions.append(account)
+    return mentions
+
+def load_notify_state():
+    if not feed_notify_state_path.exists():
+        return None
+    try:
+        with open(feed_notify_state_path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        if not isinstance(data, dict):
+            return None
+        return data
+    except Exception as e:
+        logger.warning(f"Failed to load notify state: {e}")
+        return None
+
+def load_dm_history():
+    if not dm_history_path.exists():
+        return {'threads': {}}
+    try:
+        with open(dm_history_path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        if not isinstance(data, dict):
+            return {'threads': {}}
+        threads = data.get('threads', {})
+        if not isinstance(threads, dict):
+            threads = {}
+        return {'threads': threads}
+    except Exception as e:
+        logger.warning(f"Failed to load DM history: {e}")
+        return {'threads': {}}
+
+def save_dm_history(history: dict):
+    try:
+        with open(dm_history_path, 'w', encoding='utf-8') as f:
+            json.dump(history, f, indent=2)
+    except Exception as e:
+        logger.error(f"Failed to save DM history: {e}")
+
+def build_dm_content(content: str, attachments=None) -> str:
+    parts = []
+    text = (content or '').strip()
+    if text:
+        parts.append(text)
+
+    attachment_urls = []
+    for attachment in attachments or []:
+        url = getattr(attachment, 'url', '')
+        if url:
+            attachment_urls.append(url)
+
+    if attachment_urls:
+        parts.extend(attachment_urls)
+
+    return '\n'.join(parts).strip() or '[no text]'
+
+def build_user_snapshot(user) -> dict:
+    avatar = getattr(user, 'display_avatar', None)
+    avatar_url = ''
+    if avatar is not None:
+        try:
+            avatar_url = str(avatar.url)
+        except Exception:
+            avatar_url = ''
+
+    return {
+        'discord_user_id': str(user.id),
+        'username': getattr(user, 'name', '') or '',
+        'global_name': getattr(user, 'global_name', '') or '',
+        'display_name': getattr(user, 'display_name', '') or getattr(user, 'name', '') or '',
+        'avatar_url': avatar_url,
+    }
+
+def append_dm_history_entry(user, direction: str, content: str, timestamp=None, message_id=''):
+    history = load_dm_history()
+    threads = history.setdefault('threads', {})
+
+    user_snapshot = build_user_snapshot(user)
+    discord_user_id = user_snapshot['discord_user_id']
+    thread = threads.get(discord_user_id)
+    if not isinstance(thread, dict):
+        thread = {
+            'discord_user_id': discord_user_id,
+            'messages': [],
+        }
+
+    thread.update(user_snapshot)
+
+    if timestamp is None:
+        timestamp_value = discord.utils.utcnow()
+    else:
+        timestamp_value = timestamp
+
+    if hasattr(timestamp_value, 'isoformat'):
+        timestamp_string = timestamp_value.isoformat()
+    else:
+        timestamp_string = str(timestamp_value)
+
+    messages = thread.get('messages', [])
+    if not isinstance(messages, list):
+        messages = []
+
+    messages.append({
+        'id': str(message_id or ''),
+        'direction': direction,
+        'content': content,
+        'timestamp': timestamp_string,
+    })
+
+    if len(messages) > 250:
+        messages = messages[-250:]
+
+    thread['messages'] = messages
+    thread['updated_at'] = timestamp_string
+    threads[discord_user_id] = thread
+    save_dm_history(history)
+
+async def send_logged_dm(target, message: str):
+    if isinstance(target, (discord.User, discord.Member)):
+        user = target
+    else:
+        user = await bot.fetch_user(int(str(target)))
+
+    sent_message = await user.send(message)
+    append_dm_history_entry(
+        user,
+        'outbound',
+        build_dm_content(message),
+        timestamp=getattr(sent_message, 'created_at', None),
+        message_id=getattr(sent_message, 'id', ''),
+    )
+    return user, sent_message
+
+def save_notify_state(state: dict):
+    try:
+        with open(feed_notify_state_path, 'w', encoding='utf-8') as f:
+            json.dump(state, f, indent=2)
+    except Exception as e:
+        logger.error(f"Failed to save notify state: {e}")
+
+def build_initial_notify_state(posts: dict, replies: dict, accounts_index: dict):
+    return {
+        'mentions': sorted(
+            f"{post_id}:{target['username'].lower()}"
+            for post_id, post in posts.items()
+            for target in extract_mentions(post.get('body', ''), accounts_index)
+        ),
+        'replies': sorted(
+            f"{post_id}:{reply.get('id', '')}"
+            for post_id, items in replies.items()
+            for reply in items
+            if reply.get('id')
+        ),
+    }
+
+async def send_dm_to_user(discord_user_id: str, message: str):
+    try:
+        await send_logged_dm(discord_user_id, message)
+        return True
+    except Exception as e:
+        logger.warning(f"Failed to DM user {discord_user_id}: {e}")
+        return False
+
+def format_quote_block(text: str, max_length: int = 240) -> str:
+    cleaned = ' '.join((text or '').strip().split())
+    if len(cleaned) > max_length:
+        cleaned = cleaned[:max_length - 3].rstrip() + '...'
+    return cleaned or '[no text]'
+
+@tasks.loop(seconds=20)
+async def feed_notifications_monitor():
+    try:
+        accounts_index = load_accounts_index()
+        posts = load_feed_posts()
+        replies = load_feed_replies()
+
+        state = load_notify_state()
+        if state is None:
+            state = build_initial_notify_state(posts, replies, accounts_index)
+            save_notify_state(state)
+            logger.info("Initialized feed notification state without sending backlog DMs")
+            return
+
+        mention_state = set(state.get('mentions', []))
+        reply_state = set(state.get('replies', []))
+
+        mention_state_changed = False
+        reply_state_changed = False
+
+        for post_id, post in posts.items():
+            author_key = post['username'].lower()
+            for target in extract_mentions(post.get('body', ''), accounts_index):
+                target_key = target['username'].lower()
+                notification_key = f"{post_id}:{target_key}"
+                if notification_key in mention_state:
+                    continue
+                mention_state.add(notification_key)
+                mention_state_changed = True
+                if target_key == author_key:
+                    continue
+                discord_user_id = target.get('discord_user_id', '')
+                if not discord_user_id:
+                    continue
+                await send_dm_to_user(
+                    discord_user_id,
+                    f"**@{post['username']}** mentioned you in [a /feed/ post](https://fridg3.org/feed/posts/{post_id}):\n"
+                    f"> \"{format_quote_block(post.get('body', ''))}\""
+                )
+
+        for post_id, post_replies in replies.items():
+            post = posts.get(post_id)
+            if not post:
+                continue
+            post_owner = accounts_index.get(post['username'].lower())
+            post_owner_discord_id = (post_owner or {}).get('discord_user_id', '')
+            for reply in post_replies:
+                reply_id = reply.get('id', '')
+                if not reply_id:
+                    continue
+                notification_key = f"{post_id}:{reply_id}"
+                if notification_key in reply_state:
+                    continue
+                reply_state.add(notification_key)
+                reply_state_changed = True
+                if not post_owner_discord_id:
+                    continue
+                if reply['username'].lower() == post['username'].lower():
+                    continue
+                await send_dm_to_user(
+                    post_owner_discord_id,
+                    f"**@{reply['username']}** replied to [your /feed/ post](https://fridg3.org/feed/posts/{post_id}):\n"
+                    f"> \"{format_quote_block(reply.get('body', ''))}\""
+                )
+
+        if mention_state_changed or reply_state_changed:
+            state['mentions'] = sorted(mention_state)
+            state['replies'] = sorted(reply_state)
+            save_notify_state(state)
+    except Exception as e:
+        logger.error(f"Feed notification monitor error: {e}")
+
+@feed_notifications_monitor.before_loop
+async def before_feed_notifications_monitor():
+    await bot.wait_until_ready()
 
 # Local status server for PHP to query instead of reading toast.json
 status_app = web.Application()
@@ -225,6 +610,19 @@ async def on_disconnect():
     global bot_online
     bot_online = False
     logger.info("Bot disconnected from Discord")
+
+@bot.event
+async def on_message(message: discord.Message):
+    if isinstance(message.channel, discord.DMChannel) and not message.author.bot:
+        append_dm_history_entry(
+            message.author,
+            'inbound',
+            build_dm_content(message.content, message.attachments),
+            timestamp=getattr(message, 'created_at', None),
+            message_id=getattr(message, 'id', ''),
+        )
+
+    await bot.process_commands(message)
 
 @tasks.loop(seconds=1)  # Check every second for immediate stream restart signal
 async def config_monitor():
@@ -349,15 +747,211 @@ async def slash_status(interaction: discord.Interaction):
         status_str = "⭕ Disconnected"
     await interaction.response.send_message(f"Bot Status: {status_str}", ephemeral=True)
 
+@bot.tree.command(name="sendmsg", description="DM everyone in a role")
+@app_commands.default_permissions(administrator=True)
+@app_commands.describe(role_id="Discord role ID", message="Message to DM to each member")
+async def slash_sendmsg(interaction: discord.Interaction, role_id: str, message: str):
+    if interaction.guild is None:
+        await interaction.response.send_message("this command only works in a server.", ephemeral=True)
+        return
+
+    guild_permissions = getattr(interaction.user, 'guild_permissions', None)
+    if not guild_permissions or not guild_permissions.administrator:
+        await interaction.response.send_message("you need administrator permissions to use this command.", ephemeral=True)
+        return
+
+    if not re.fullmatch(r'\d{17,20}', role_id.strip()):
+        await interaction.response.send_message("role id has to be a valid discord snowflake.", ephemeral=True)
+        return
+
+    await interaction.response.defer(ephemeral=True)
+
+    role = interaction.guild.get_role(int(role_id))
+    if role is None:
+        await interaction.followup.send("couldn't find a role with that id in this server.", ephemeral=True)
+        return
+
+    recipients = [member for member in role.members if not member.bot]
+    if not recipients:
+        await interaction.followup.send("that role has no non-bot members to message.", ephemeral=True)
+        return
+
+    sent_count = 0
+    failed_count = 0
+    for member in recipients:
+        try:
+            await send_logged_dm(member, message)
+            sent_count += 1
+        except Exception as e:
+            failed_count += 1
+            logger.warning(f"Failed to send role DM to {member} ({member.id}): {e}")
+
+    await interaction.followup.send(
+        f"done. sent `{sent_count}` dm(s) to `{role.name}`" + (f", `{failed_count}` failed." if failed_count else "."),
+        ephemeral=True
+    )
+
 async def status_handler(request):
     return web.json_response({
         'online': bot_online and not bot.is_closed(),
         'stream_name': config.get('stream', {}).get('name', 'Unknown Stream')
     })
 
+async def find_registered_role():
+    try:
+        channel_id = int(config['channel']['id'])
+    except Exception:
+        return None, None
+
+    channel = bot.get_channel(channel_id)
+    if not channel or not isinstance(channel, discord.abc.GuildChannel):
+        return None, None
+
+    guild = channel.guild
+    role = discord.utils.find(lambda r: r.name.lower() == 'registered', guild.roles)
+    return guild, role
+
+async def link_discord_handler(request):
+    if request.remote not in ('127.0.0.1', '::1'):
+        return web.json_response({'ok': False, 'error': 'forbidden'}, status=403)
+
+    try:
+        payload = await request.json()
+    except Exception:
+        return web.json_response({'ok': False, 'error': 'invalid json'}, status=400)
+
+    discord_user_id = str(payload.get('discord_user_id', '')).strip()
+    site_username = str(payload.get('site_username', '')).strip()
+    if not re.fullmatch(r'\d{17,20}', discord_user_id):
+        return web.json_response({'ok': False, 'error': 'invalid discord user id'}, status=400)
+    if not re.fullmatch(r'[A-Za-z0-9_-]{1,50}', site_username):
+        return web.json_response({'ok': False, 'error': 'invalid site username'}, status=400)
+
+    guild, role = await find_registered_role()
+    if guild is None:
+        return web.json_response({'ok': False, 'error': 'bot guild not available'}, status=503)
+    if role is None:
+        return web.json_response({'ok': False, 'error': 'registered role not found'}, status=500)
+
+    member = guild.get_member(int(discord_user_id))
+    if member is None:
+        try:
+            member = await guild.fetch_member(int(discord_user_id))
+        except Exception:
+            member = None
+
+    if member is None:
+        return web.json_response({'ok': False, 'error': 'user is not in the discord server'}, status=404)
+
+    try:
+        if role not in member.roles:
+            await member.add_roles(role, reason='fridg3.org account linked')
+        await send_logged_dm(
+            member,
+            f"Your Discord account has been linked to the account `@{site_username}` on **fridg3.org**.\n\n"
+            "If this wasn't you, don't worry. **Your Discord account is *not* compromised**. \n"
+            "Just send a message to <@609510856811741428> and your Discord will be unlinked.\n\n"
+            "You'll receive messages from me whenever any of the following happens:\n"
+            "- Someone mentions you in a /feed/ post\n"
+            "- Someone replies to one of your /feed/ posts\n"
+            "- There's an important update you'll want to be notified of\n\n"
+            "If you need to edit any account information, speak to <@609510856811741428>.\n"
+            "Until then, sit back and enjoy the silence. I'll be in contact."
+        )
+    except Exception as e:
+        logger.warning(f"Failed to complete discord linking for {discord_user_id}: {e}")
+        return web.json_response({'ok': False, 'error': 'failed to assign registered role or send confirmation dm'}, status=500)
+
+    return web.json_response({
+        'ok': True,
+        'guild_id': str(guild.id),
+        'role_id': str(role.id),
+        'username': str(member),
+    })
+
+async def send_account_invite_handler(request):
+    if request.remote not in ('127.0.0.1', '::1'):
+        return web.json_response({'ok': False, 'error': 'forbidden'}, status=403)
+
+    try:
+        payload = await request.json()
+    except Exception:
+        return web.json_response({'ok': False, 'error': 'invalid json'}, status=400)
+
+    discord_user_id = str(payload.get('discord_user_id', '')).strip()
+    site_username = str(payload.get('site_username', '')).strip()
+    site_password = str(payload.get('site_password', '')).strip()
+
+    if not re.fullmatch(r'\d{17,20}', discord_user_id):
+        return web.json_response({'ok': False, 'error': 'invalid discord user id'}, status=400)
+    if not re.fullmatch(r'[A-Za-z0-9_-]{1,50}', site_username):
+        return web.json_response({'ok': False, 'error': 'invalid site username'}, status=400)
+    if site_password == '':
+        return web.json_response({'ok': False, 'error': 'missing site password'}, status=400)
+
+    try:
+        user = await bot.fetch_user(int(discord_user_id))
+    except Exception as e:
+        logger.warning(f"Failed to fetch discord user {discord_user_id} for invite: {e}")
+        return web.json_response({'ok': False, 'error': 'could not fetch discord user'}, status=404)
+
+    try:
+        await send_logged_dm(
+            user,
+            "## fridg3.org - user account invitation\n"
+            "hey, my name is toast and i'm messaging you on behalf of **fridg3.org.**\n"
+            "you've been informally invited to having an account on the website!\n\n"
+            "### account information\n"
+            "below are your account login details. you can log in [here](https://fridg3.org/account/login/).\n"
+            "when you log in for the first time, you won't be able to do anything until you change your password.\n"
+            f"> **username:** {site_username}\n"
+            f"> **password:** ||{site_password}||\n\n"
+            "**enjoy using your account!**\n"
+            "i'll be here to send you messages whenever you get post replies, or if anything else demands your attention.\n"
+            "see you around, and stay safe!"
+        )
+    except Exception as e:
+        logger.warning(f"Failed to send account invite DM to {discord_user_id}: {e}")
+        return web.json_response({'ok': False, 'error': 'failed to send invite dm'}, status=500)
+
+    return web.json_response({'ok': True})
+
+async def send_message_handler(request):
+    if request.remote not in ('127.0.0.1', '::1'):
+        return web.json_response({'ok': False, 'error': 'forbidden'}, status=403)
+
+    try:
+        payload = await request.json()
+    except Exception:
+        return web.json_response({'ok': False, 'error': 'invalid json'}, status=400)
+
+    discord_user_id = str(payload.get('discord_user_id', '')).strip()
+    message = str(payload.get('message', '')).strip()
+
+    if not re.fullmatch(r'\d{17,20}', discord_user_id):
+        return web.json_response({'ok': False, 'error': 'invalid discord user id'}, status=400)
+    if message == '':
+        return web.json_response({'ok': False, 'error': 'message cannot be empty'}, status=400)
+
+    try:
+        user, sent_message = await send_logged_dm(discord_user_id, message)
+    except Exception as e:
+        logger.warning(f"Failed to send manual DM to {discord_user_id}: {e}")
+        return web.json_response({'ok': False, 'error': 'failed to send dm'}, status=500)
+
+    return web.json_response({
+        'ok': True,
+        'discord_user_id': str(user.id),
+        'username': str(user),
+        'message_id': str(sent_message.id),
+    })
+
 
 async def start_status_server():
     status_app.router.add_get('/status', status_handler)
+    status_app.router.add_post('/link-discord', link_discord_handler)
+    status_app.router.add_post('/send-account-invite', send_account_invite_handler)
+    status_app.router.add_post('/messages/send', send_message_handler)
     runner = web.AppRunner(status_app)
     await runner.setup()
     site = web.TCPSite(runner, '127.0.0.1', 8765)
@@ -378,6 +972,7 @@ async def main():
     # Start monitoring tasks
     config_monitor.start()
     heartbeat.start()
+    feed_notifications_monitor.start()
     
     # Register signal handler for graceful shutdown
     def signal_handler(signum, frame):
@@ -385,6 +980,7 @@ async def main():
         # Cancel tasks
         config_monitor.cancel()
         heartbeat.cancel()
+        feed_notifications_monitor.cancel()
         # Close the bot
         if bot.is_closed():
             logger.info("Bot already closed")
