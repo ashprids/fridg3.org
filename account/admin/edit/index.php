@@ -209,12 +209,6 @@ $formAllowComments = in_array('comments', $allowedPages, true);
 $formIsAdmin = !empty($account['isAdmin']);
 $formUsername = (string)($account['username'] ?? $formUsername);
 $formName = (string)($account['name'] ?? $formName);
-$errorAlertScript = '';
-if ($errorMessage !== '') {
-    $errorAlertScript = '<script>window.addEventListener("DOMContentLoaded",function(){alert('
-        . json_encode($errorMessage, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)
-        . ');});</script>';
-}
 
 $contentPath = __DIR__ . DIRECTORY_SEPARATOR . 'content.html';
 $content = (string)file_get_contents($contentPath);
@@ -222,9 +216,9 @@ $content = str_replace(
     [
         '{error_style}',
         '{error_message}',
+        '{error_alert_message}',
         '{success_style}',
         '{success_message}',
-        '{error_alert_script}',
         '{account_username}',
         '{original_username}',
         '{self_delete_disabled}',
@@ -241,9 +235,9 @@ $content = str_replace(
     [
         $errorMessage === '' ? 'display:none;' : '',
         htmlspecialchars($errorMessage, ENT_QUOTES, 'UTF-8'),
+        htmlspecialchars($errorMessage, ENT_QUOTES, 'UTF-8'),
         $successMessage === '' ? 'display:none;' : '',
         htmlspecialchars($successMessage, ENT_QUOTES, 'UTF-8'),
-        $errorAlertScript,
         htmlspecialchars($selectedUsername, ENT_QUOTES, 'UTF-8'),
         htmlspecialchars($selectedUsername, ENT_QUOTES, 'UTF-8'),
         (isset($_SESSION['user']['username']) && (string)$_SESSION['user']['username'] === $selectedUsername) ? 'disabled' : '',
