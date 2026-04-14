@@ -1,6 +1,11 @@
 <?php
 
-session_start();
+$sessionBootstrapDir = __DIR__;
+while (!file_exists($sessionBootstrapDir . "/lib/session.php") && dirname($sessionBootstrapDir) !== $sessionBootstrapDir) {
+    $sessionBootstrapDir = dirname($sessionBootstrapDir);
+}
+require_once $sessionBootstrapDir . "/lib/session.php";
+fridg3_start_session();
 
 $title = 'saves';
 $description = 'see all the stuff you\'ve saved.';
@@ -22,9 +27,20 @@ function find_template_file($filename) {
     return null;
 }
 
-$template_path = find_template_file('template.html');
+$render_helper_path = find_template_file('lib/render.php');
+if ($render_helper_path) {
+    require_once $render_helper_path;
+}
+
+$template_name = function_exists('get_preferred_template_name')
+    ? get_preferred_template_name(__DIR__)
+    : 'template.html';
+$template_path = find_template_file($template_name);
+if (!$template_path && $template_name !== 'template.html') {
+    $template_path = find_template_file('template.html');
+}
 if (!$template_path) {
-    die('template.html not found. report this issue to me@fridg3.org.');
+    die('page template not found. report this issue to me@fridg3.org.');
 }
 
 $template = file_get_contents($template_path);
@@ -56,6 +72,7 @@ $content = file_get_contents($content_path);
 
 $feedBookmarksHtml = '<div id="bookmarks-feed-list">';
 $journalBookmarksHtml = '<div id="bookmarks-journal-list">';
+$newsletterBookmarksHtml = '<div id="bookmarks-newsletter-list">';
 
 // Only attempt server-side bookmarks if logged in
 if (isset($_SESSION['user']) && !empty($_SESSION['user']['username'])) {
@@ -95,13 +112,19 @@ if (isset($_SESSION['user']) && !empty($_SESSION['user']['username'])) {
 
             foreach ($bookmarkIds as $id) {
                 $isJournal = false;
+                $isNewsletter = false;
                 $basename = basename($id);
                 if (strpos($id, 'journal:') === 0) {
                     $isJournal = true;
                     $basename = substr($id, 8); // after 'journal:'
+                } elseif (strpos($id, 'newsletter:') === 0) {
+                    $isNewsletter = true;
+                    $basename = substr($id, 11); // after 'newsletter:'
                 }
                 if ($isJournal) {
                     $postFile = $rootDir . DIRECTORY_SEPARATOR . 'data' . DIRECTORY_SEPARATOR . 'journal' . DIRECTORY_SEPARATOR . $basename . '.txt';
+                } elseif ($isNewsletter) {
+                    $postFile = $rootDir . DIRECTORY_SEPARATOR . 'data' . DIRECTORY_SEPARATOR . 'newsletter' . DIRECTORY_SEPARATOR . $basename . '.html';
                 } else {
                     $postFile = $postsDir . DIRECTORY_SEPARATOR . $basename . '.txt';
                 }
@@ -109,8 +132,8 @@ if (isset($_SESSION['user']) && !empty($_SESSION['user']['username'])) {
 
                 $raw = @file_get_contents($postFile);
                 if ($raw === false) continue;
-                $lines = preg_split("/(\r\n|\n|\r)/", $raw);
                 if ($isJournal) {
+                    $lines = preg_split("/(\r\n|\n|\r)/", $raw);
                     $dateLine = isset($lines[0]) ? trim($lines[0]) : '';
                     $titleLine = isset($lines[1]) ? trim($lines[1]) : '';
                     $descLine = isset($lines[2]) ? trim($lines[2]) : '';
@@ -127,7 +150,51 @@ if (isset($_SESSION['user']) && !empty($_SESSION['user']['username'])) {
                         . '<span id="post-description">' . $safeDesc . '</span>'
                         . '</div>'
                         . '</a><br>';
+                } elseif ($isNewsletter) {
+                    $postTitle = $basename;
+                    if (preg_match('/<h1[^>]*>(.*?)<\/h1>/is', $raw, $matches)) {
+                        $candidate = trim(strip_tags($matches[1]));
+                        if ($candidate !== '') {
+                            $postTitle = $candidate;
+                        }
+                    }
+
+                    $postDescription = 'newsletter release';
+                    if (preg_match('/<div[^>]*mso-hide:all[^>]*>(.*?)<\/div>/is', $raw, $matches)) {
+                        $candidate = trim(preg_replace('/\s+/', ' ', strip_tags($matches[1])));
+                        if ($candidate !== '') {
+                            $postDescription = html_entity_decode($candidate, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+                        }
+                    } elseif (preg_match('/<p[^>]*>(.*?)<\/p>/is', $raw, $matches)) {
+                        $candidate = trim(preg_replace('/\s+/', ' ', strip_tags($matches[1])));
+                        if ($candidate !== '') {
+                            $postDescription = html_entity_decode($candidate, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+                        }
+                    }
+
+                    $displayDate = $basename;
+                    if (preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $basename, $dateParts)) {
+                        $ts = strtotime($dateParts[0]);
+                        if ($ts !== false) {
+                            $displayDate = date('Y-m-d', $ts);
+                        }
+                    }
+
+                    $safeTitle = htmlspecialchars($postTitle, ENT_QUOTES, 'UTF-8');
+                    $safeDate = htmlspecialchars($displayDate, ENT_QUOTES, 'UTF-8');
+                    $safeDesc = htmlspecialchars($postDescription, ENT_QUOTES, 'UTF-8');
+                    $postId = 'newsletter:' . htmlspecialchars($basename, ENT_QUOTES, 'UTF-8');
+                    $postLink = '/email/newsletter/release/' . rawurlencode($basename);
+                    $newsletterBookmarksHtml .= '<a href="' . $postLink . '" class="journal-post-link" style="text-decoration:none;color:inherit;">'
+                        . '<div id="post" style="cursor: pointer;">'
+                        . '<span id="post-date">' . $safeDate . '</span>'
+                        . '<span id="post-bookmark" data-tooltip="save post" data-post-id="' . $postId . '"><i class="fa-solid fa-bookmark"></i></span>'
+                        . '<span id="post-title">' . $safeTitle . '</span>'
+                        . '<span id="post-description">' . $safeDesc . '</span>'
+                        . '</div>'
+                        . '</a><br>';
                 } else {
+                    $lines = preg_split("/(\r\n|\n|\r)/", $raw);
                     $usernameLine = isset($lines[0]) ? trim($lines[0]) : '';
                     $dateLine = isset($lines[1]) ? trim($lines[1]) : '';
                     $body = '';
@@ -164,10 +231,15 @@ if ($journalBookmarksHtml === '<div id="bookmarks-journal-list">') {
     $journalBookmarksHtml .= 'you haven\'t saved any journal posts yet';
 }
 $journalBookmarksHtml .= '</div>';
+if ($newsletterBookmarksHtml === '<div id="bookmarks-newsletter-list">') {
+    $newsletterBookmarksHtml .= 'you haven\'t saved any newsletter posts yet';
+}
+$newsletterBookmarksHtml .= '</div>';
 
 // Replace both containers
 $content = preg_replace('/<div id="bookmarks-feed-list">[\s\S]*?<\/div>/i', $feedBookmarksHtml, $content, 1);
 $content = preg_replace('/<div id="bookmarks-journal-list">[\s\S]*?<\/div>/i', $journalBookmarksHtml, $content, 1);
+$content = preg_replace('/<div id="bookmarks-newsletter-list">[\s\S]*?<\/div>/i', $newsletterBookmarksHtml, $content, 1);
 
 $html = str_replace('{content}', $content, $template);
 $html = str_replace('{title}', $title, $html);

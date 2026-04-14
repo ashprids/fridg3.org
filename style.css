@@ -119,8 +119,17 @@
     margin: 0 auto;
 }
 
+body.mobile-template #usage-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+
 .usage-card {
     text-align: center;
+}
+
+body.mobile-template .usage-card {
+    min-width: 0;
 }
 
 .usage-ascii {
@@ -137,6 +146,19 @@
     font-size: 12px;
     color: #777;
     font-family: 'MainRegular', monospace;
+}
+
+body.mobile-template .usage-ascii {
+    display: block;
+    width: max-content;
+    max-width: 100%;
+    margin: 0 auto;
+}
+
+@media (max-width: 420px) {
+    body.mobile-template #usage-grid {
+        gap: 10px;
+    }
 }
 
 .ascii-scale-container {
@@ -181,16 +203,15 @@ body {
     font-family: 'MainRegular', monospace;
     font-size: 15px;
     margin: 0;
-    display: flex;
-    height: 100vh;
+    width: 100vw;
+    height: 100dvh;
     overflow: hidden;
 }
 
 #page-wrapper {
     display: flex;
-    width: 100%;
-    height: 100vh;
-    transform-origin: top left;
+    width: 100vw;
+    height: 100dvh;
 }
 
 #sidebar {
@@ -208,7 +229,7 @@ body {
 
 #container {
     display: flex;
-    height: 100vh;
+    height: 100%;
     width: 100%;
     overflow-y: scroll;
 }
@@ -216,7 +237,7 @@ body {
 #content {
     flex: 1;
     min-width: 0;
-    height: 100vh;
+    height: 100%;
     box-sizing: border-box;
     padding: 26px;
     max-width: 620px;
@@ -710,6 +731,50 @@ button[data-tooltip] {
     background-color: rgb(255, 255, 255);
     color: var(--bg);
     cursor: default;
+}
+
+body.mobile-template #footer-buttons {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 6px;
+    align-items: center;
+}
+
+body.mobile-template #footer-buttons > a.mobile-footer-link {
+    min-width: 0;
+    display: block !important;
+    flex: 0 0 auto !important;
+    text-decoration: none;
+}
+
+body.mobile-template #footer-buttons > a.mobile-footer-link > #footer-button.mobile-footer-button {
+    width: 100%;
+    min-height: 30px;
+    padding: 6px 0;
+    border-radius: 0;
+    background-color: #000000;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    line-height: 1;
+    box-sizing: border-box;
+}
+
+body.mobile-template #footer-buttons > a.mobile-footer-link > #footer-button.mobile-footer-button i {
+    font-size: 12px;
+    line-height: 1;
+}
+
+body.mobile-template #footer-buttons > a.mobile-footer-link > #footer-button.mobile-footer-button.active {
+    background-color: var(--fg);
+    color: var(--bg);
+    border-color: var(--fg);
+}
+
+@media (max-width: 420px) {
+    body.mobile-template #footer-buttons {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
 }
 
 .checkbox-group {
@@ -1238,6 +1303,139 @@ hr {
     margin-bottom: 4px;
 }
 
+.feed-reply-count {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.feed-thread-page #post,
+.feed-thread-page .feed-reply,
+.feed-thread-page .feed-reply-textbox,
+.feed-thread-page .bbcode-toolbar,
+.feed-thread-page .bbcode-btn,
+.feed-thread-page .bbcode-dropdown,
+.feed-thread-page #bbcode-textbox,
+.feed-thread-page #bbcode-preview,
+.feed-thread-page #form-button {
+    border-radius: 0;
+}
+
+.feed-replies-shell {
+    margin-top: 18px;
+}
+
+.feed-replies-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.feed-reply {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px;
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.feed-reply-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 8px;
+}
+
+.feed-reply-username {
+    font-family: "MainBold", monospace;
+    font-size: 13px;
+}
+
+.feed-reply-date {
+    font-family: "MainItalic", monospace;
+    font-size: 12px;
+    color: var(--subtle);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.feed-reply-body {
+    font-family: "MainRegular", monospace;
+    font-size: 14px;
+    line-height: 1.4;
+}
+
+.feed-reply-textbox {
+    width: 100%;
+    min-height: 110px;
+    resize: vertical;
+    margin-bottom: 12px;
+    font-family: "MainRegular", monospace;
+    font-size: 14px;
+    color: var(--fg);
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px;
+    box-sizing: border-box;
+}
+
+.feed-reply-notice {
+    margin-bottom: 12px;
+    font-family: "MainRegular", monospace;
+    font-size: 13px;
+}
+
+.feed-reply-notice.success {
+    color: rgb(120, 200, 120);
+}
+
+.feed-reply-notice.error {
+    color: rgb(220, 120, 120);
+}
+
+.feed-reply-empty,
+.feed-reply-login {
+    font-family: "MainItalic", monospace;
+    font-size: 13px;
+    color: var(--subtle);
+    margin-bottom: 12px;
+}
+
+.feed-reply-actions,
+.feed-reply-delete-form {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.feed-reply-delete-form {
+    margin: 0;
+}
+
+.feed-reply-action-link,
+.feed-reply-action-button {
+    color: var(--subtle);
+    background: none;
+    border: none;
+    padding: 0;
+    font-size: 12px;
+    cursor: pointer;
+    text-decoration: none;
+}
+
+.feed-reply-action-link:hover,
+.feed-reply-action-button:hover {
+    color: rgb(200, 200, 200);
+}
+
+.feed-reply-edit-box {
+    margin-top: 12px;
+}
+
 #post-image {
     cursor: pointer;
     max-width: 100%;
@@ -1494,6 +1692,110 @@ hr {
     border-color: rgb(77, 118, 201);
 }
 
+#admin-account-form input[type="text"],
+#admin-account-form textarea {
+    width: 100%;
+    font-family: "MainRegular", monospace;
+    font-size: 14px;
+    padding: 8px;
+    box-sizing: border-box;
+    border: 1px solid var(--border);
+    background-color: var(--bg);
+    color: var(--fg);
+    border-radius: 3px;
+}
+
+#admin-account-form input[type="text"] {
+    height: 32px;
+}
+
+#admin-account-form textarea {
+    min-height: 240px;
+    resize: vertical;
+}
+
+#admin-account-form input[type="text"]:focus,
+#admin-account-form textarea:focus {
+    outline: none;
+    border-color: rgb(77, 118, 201);
+}
+
+.account-admin-list {
+    display: grid;
+    gap: 12px;
+}
+
+.account-admin-card {
+    display: block;
+    padding: 14px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.02);
+    text-decoration: none;
+    color: inherit;
+    transition: border-color 0.2s, transform 0.2s, background-color 0.2s;
+}
+
+.account-admin-card:hover {
+    border-color: rgb(77, 118, 201);
+    background: rgba(77, 118, 201, 0.08);
+    transform: translateY(-1px);
+}
+
+.account-admin-card strong,
+.account-admin-card span {
+    display: block;
+}
+
+.account-admin-card span {
+    margin-top: 4px;
+}
+
+.account-admin-meta {
+    display: flex !important;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 10px !important;
+}
+
+.account-admin-badge,
+.account-page-badge {
+    display: inline-block !important;
+    padding: 2px 8px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    font-size: 12px;
+    color: var(--subtle);
+}
+
+#admin-account-delete-form {
+    margin-top: 8px;
+}
+
+.danger-button {
+    display: block;
+    width: 100%;
+    padding: 8px 16px;
+    border: 1px solid #8f3434;
+    background-color: rgba(143, 52, 52, 0.12);
+    color: #ffb3b3;
+    font-family: "MainRegular", monospace;
+    font-size: 14px;
+    cursor: pointer;
+    box-sizing: border-box;
+    transition: background-color 0.2s, border-color 0.2s;
+}
+
+.danger-button:hover {
+    background-color: rgba(143, 52, 52, 0.22);
+    border-color: #b84747;
+}
+
+.danger-button:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+}
+
 #bbcode-preview h3 {
     margin-top: 24px;
     margin-bottom: 8px;
@@ -1520,6 +1822,17 @@ pre {
 }
 pre code.hljs {
     display: block;
+}
+
+.inline-mention {
+    display: inline-block;
+    padding: 1px 6px;
+    border: 1px solid var(--border);
+    background-color: rgba(255, 255, 255, 0.06);
+    font-family: "MainRegular", monospace;
+    font-size: 0.95em;
+    line-height: 1.2;
+    vertical-align: baseline;
 }
 
 #form-button,

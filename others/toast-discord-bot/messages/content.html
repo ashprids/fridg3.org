@@ -1,0 +1,446 @@
+<style>
+@font-face {
+    font-family: 'GG Sans';
+    src: url('/others/toast-discord-bot/gg-sans-regular.ttf') format('truetype');
+    font-weight: 400;
+}
+
+@font-face {
+    font-family: 'GG Sans';
+    src: url('/others/toast-discord-bot/gg-sans-bold.ttf') format('truetype');
+    font-weight: 700;
+}
+
+.toast-dm-page {
+    margin: -26px;
+    color: #dbdee1;
+    height: 100vh;
+    font-family: 'GG Sans', sans-serif;
+}
+
+.toast-dm-status {
+    margin: 0 0 14px;
+}
+
+.toast-dm-shell {
+    display: grid;
+    grid-template-columns: minmax(240px, 280px) minmax(0, 1fr);
+    height: 100%;
+    background: #313338;
+    border: 1px solid #1e1f22;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+}
+
+.toast-dm-sidebar {
+    background: #2b2d31;
+    border-right: 1px solid #1e1f22;
+    min-width: 0;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.toast-dm-sidebar-head {
+    padding: 18px 16px 14px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.toast-dm-sidebar-head strong {
+    display: block;
+    font-family: 'GG Sans', sans-serif;
+    font-weight: 700;
+    font-size: 16px;
+    color: #f2f3f5;
+}
+
+.toast-dm-sidebar-head span {
+    display: block;
+    margin-top: 6px;
+    color: #949ba4;
+    font-size: 12px;
+    line-height: 1.4;
+}
+
+.toast-dm-thread-list {
+    display: flex;
+    flex-direction: column;
+    padding: 8px;
+    gap: 2px;
+    min-height: 0;
+    flex: 1;
+    overflow-y: auto;
+}
+
+.toast-dm-thread {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 10px 12px;
+    text-decoration: none;
+    color: inherit;
+    border-radius: 6px;
+    transition: background 0.15s ease;
+}
+
+.toast-dm-thread:hover {
+    background: rgba(79, 84, 92, 0.32);
+}
+
+.toast-dm-thread.active {
+    background: rgba(79, 84, 92, 0.48);
+}
+
+.toast-dm-thread-copy {
+    min-width: 0;
+    flex: 1;
+}
+
+.toast-dm-thread-title-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.toast-dm-thread-title {
+    color: #f2f3f5;
+    font-family: 'GG Sans', sans-serif;
+    font-weight: 700;
+    font-size: 14px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.toast-dm-thread-time {
+    color: #949ba4;
+    font-size: 11px;
+    flex-shrink: 0;
+}
+
+.toast-dm-thread-meta,
+.toast-dm-thread-preview {
+    color: #949ba4;
+    font-size: 12px;
+    line-height: 1.4;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.toast-dm-thread-meta {
+    margin-top: 2px;
+}
+
+.toast-dm-thread-preview {
+    margin-top: 4px;
+}
+
+.toast-dm-main {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    background: #313338;
+    min-height: 0;
+}
+
+.toast-dm-main-head {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 16px 18px;
+    border-bottom: 1px solid #1e1f22;
+    background: #313338;
+}
+
+.toast-dm-header-copy {
+    min-width: 0;
+}
+
+.toast-dm-main-head strong {
+    display: block;
+    color: #f2f3f5;
+    font-family: 'GG Sans', sans-serif;
+    font-weight: 700;
+    font-size: 16px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.toast-dm-main-head span {
+    display: block;
+    margin-top: 4px;
+    color: #949ba4;
+    font-size: 12px;
+    line-height: 1.4;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.toast-dm-avatar,
+.toast-dm-header-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #5865f2, #9b84ee);
+    color: #fff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'GG Sans', sans-serif;
+    font-size: 16px;
+    font-weight: bold;
+    flex-shrink: 0;
+    overflow: hidden;
+}
+
+.toast-dm-header-avatar {
+    width: 48px;
+    height: 48px;
+    font-size: 18px;
+}
+
+.toast-dm-avatar img,
+.toast-dm-header-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.toast-dm-avatar-toast {
+    background: #0f1115;
+}
+
+.toast-dm-messages-wrap {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    flex: 1;
+    overflow: hidden;
+}
+
+.toast-dm-message-list {
+    flex: 1;
+    padding: 22px 20px 12px;
+    overflow-y: auto;
+    min-height: 0;
+}
+
+.toast-dm-message {
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+    padding: 10px 0;
+}
+
+.toast-dm-message-copy {
+    min-width: 0;
+    flex: 1;
+}
+
+.toast-dm-message-meta {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.toast-dm-message-author {
+    color: #f2f3f5;
+    font-family: 'GG Sans', sans-serif;
+    font-weight: 700;
+    font-size: 15px;
+}
+
+.toast-dm-message-time {
+    color: #949ba4;
+    font-size: 12px;
+}
+
+.toast-dm-message-body {
+    margin-top: 4px;
+    color: #dbdee1;
+    line-height: 1.55;
+    white-space: pre-wrap;
+    overflow-wrap: break-word;
+}
+
+.toast-dm-empty {
+    color: #949ba4;
+    padding: 10px 0;
+    line-height: 1.5;
+}
+
+.toast-dm-compose {
+    padding: 0 16px 16px;
+    background: #313338;
+    flex-shrink: 0;
+}
+
+.toast-dm-compose-body {
+    background: #383a40;
+    border-radius: 8px;
+    padding: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.toast-dm-compose-grid {
+    display: grid;
+    grid-template-columns: 190px minmax(0, 1fr);
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.toast-dm-compose-body label {
+    display: none;
+}
+
+.toast-dm-compose-body .text-input {
+    background: #1e1f22;
+    border: 1px solid #1e1f22;
+    color: #f2f3f5;
+    border-radius: 6px;
+}
+
+.toast-dm-compose-body .text-input:focus {
+    border-color: #5865f2;
+}
+
+.toast-dm-compose-body textarea {
+    height: 40px;
+    min-height: 40px;
+    max-height: 88px;
+    background: #383a40;
+    border: 0;
+    resize: none;
+    padding: 0;
+    line-height: 20px;
+    overflow-y: auto;
+}
+
+.toast-dm-compose-body textarea.text-input {
+    height: 40px;
+    min-height: 40px;
+    max-height: 88px;
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    color: #f2f3f5;
+    padding: 10px 0 0;
+    line-height: 20px;
+}
+
+.toast-dm-compose-body textarea.text-input.large {
+    height: 40px !important;
+    min-height: 40px !important;
+    max-height: 88px !important;
+    padding: 10px 0 0 !important;
+    line-height: 20px !important;
+}
+
+.toast-dm-compose-body textarea.text-input:focus {
+    border: 0;
+}
+
+.toast-dm-send-button {
+    width: 110px !important;
+    height: 32px;
+    min-width: 110px;
+    max-width: 110px;
+    margin: 0 !important;
+    border-radius: 6px;
+    background: #5865f2;
+    border-color: #5865f2;
+    color: #ffffff;
+    font-family: 'GG Sans', sans-serif;
+    font-weight: 700;
+    font-size: 13px;
+    letter-spacing: 0.01em;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    box-shadow: none;
+    cursor: pointer;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.toast-dm-send-button:hover {
+    background: #4752c4 !important;
+    border-color: #4752c4 !important;
+}
+
+.toast-dm-send-button:active {
+    background: #3c45a5 !important;
+    border-color: #3c45a5 !important;
+}
+
+@media (max-width: 820px) {
+    .toast-dm-shell {
+        grid-template-columns: 1fr;
+        height: 100vh;
+    }
+
+    .toast-dm-sidebar {
+        border-right: 0;
+        border-bottom: 1px solid #1e1f22;
+    }
+
+    .toast-dm-thread-list {
+        max-height: 220px;
+    }
+
+    .toast-dm-compose-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .toast-dm-send-button {
+        width: 100% !important;
+        max-width: none;
+    }
+}
+</style>
+
+<div class="toast-dm-page">
+    <div class="toast-dm-shell">
+        <aside class="toast-dm-sidebar">
+            <div class="toast-dm-sidebar-head">
+                <strong>direct messages</strong>
+                <span>toast's tracked dm threads</span>
+            </div>
+            <div class="toast-dm-thread-list">{thread_list}</div>
+        </aside>
+
+        <section class="toast-dm-main">
+            <div class="toast-dm-main-head">
+                {selected_thread_avatar}
+                <div class="toast-dm-header-copy">
+                    <strong>{selected_thread_label}</strong>
+                    <span>{selected_thread_meta}</span>
+                </div>
+            </div>
+
+            <div class="toast-dm-messages-wrap">
+                <div class="toast-dm-message-list">{message_list}</div>
+
+                <form class="toast-dm-compose" method="post">
+                    <div class="toast-dm-compose-body">
+                        <label for="toast-dm-user-id">discord user id or website username</label>
+                        <div class="toast-dm-compose-grid">
+                            <input class="text-input" name="discord_user_id" id="toast-dm-user-id" type="text" value="{discord_user_id}" autocomplete="off" required placeholder="discord id or @username">
+                            <button class="toast-dm-send-button" type="submit">send dm</button>
+                        </div>
+                        <label for="toast-dm-message">message</label>
+                        <textarea class="text-input large" name="message" id="toast-dm-message" spellcheck="true" required placeholder="message @{selected_thread_label}">{message}</textarea>
+                    </div>
+                </form>
+            </div>
+        </section>
+    </div>
+</div>

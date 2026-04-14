@@ -1,5 +1,10 @@
 <?php
-session_start();
+$sessionBootstrapDir = __DIR__;
+while (!file_exists($sessionBootstrapDir . "/lib/session.php") && dirname($sessionBootstrapDir) !== $sessionBootstrapDir) {
+    $sessionBootstrapDir = dirname($sessionBootstrapDir);
+}
+require_once $sessionBootstrapDir . "/lib/session.php";
+fridg3_start_session();
 
 $title = 'change password';
 $description = 'change your fridg3.org account password.';
@@ -53,6 +58,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     foreach ($accounts_data['accounts'] as &$account) {
                         if ($account['username'] === $_SESSION['user']['username']) {
                             $account['password'] = $new_hash;
+                            $account['mustResetPassword'] = false;
                             $updated = true;
                             break;
                         }
@@ -60,6 +66,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
                 
                 if ($updated && file_put_contents($accounts_path, json_encode($accounts_data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES))) {
+                    $_SESSION['user']['mustResetPassword'] = false;
                     $password_message = 'password changed successfully.';
                     $message_type = 'success';
                 } else {
@@ -87,9 +94,20 @@ function find_template_file($filename) {
     return null;
 }
 
-$template_path = find_template_file('template.html');
+$render_helper_path = find_template_file('lib/render.php');
+if ($render_helper_path) {
+    require_once $render_helper_path;
+}
+
+$template_name = function_exists('get_preferred_template_name')
+    ? get_preferred_template_name(__DIR__)
+    : 'template.html';
+$template_path = find_template_file($template_name);
+if (!$template_path && $template_name !== 'template.html') {
+    $template_path = find_template_file('template.html');
+}
 if (!$template_path) {
-    die('template.html not found. report this issue to me@fridg3.org.');
+    die('page template not found. report this issue to me@fridg3.org.');
 }
 
 $template = file_get_contents($template_path);
