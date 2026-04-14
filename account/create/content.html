@@ -7,6 +7,7 @@
 <form id="create-account-form" method="post">
 	<input id="username" name="username" type="text" placeholder="username" value="{form_username}" autocomplete="off" required><br><br>
 	<input id="name" name="name" type="text" placeholder="name" value="{form_name}" autocomplete="off" required><br><br>
+    <input id="discord-user-id" name="discordUserId" type="text" placeholder="discord user id" value="{form_discord_user_id}" inputmode="numeric" autocomplete="off"><br><br>
     <div class="checkbox-group">
         <label class="checkbox-label">
             <input type="checkbox" class="checkbox" name="isAdmin" value="1" {is_admin_checked}>
@@ -19,6 +20,10 @@
         <label class="checkbox-label">
             <input type="checkbox" class="checkbox" name="allowJournal" value="1" {allow_journal_checked}>
             <span>can post in /journal/</span>
+        </label>
+        <label class="checkbox-label">
+            <input type="checkbox" class="checkbox" name="allowComments" value="1" {allow_comments_checked}>
+            <span>can post comments</span>
         </label>
     </div>
 <br><br><br>

@@ -53,6 +53,10 @@
 				var raw = lines[i].trim();
 				if (!raw) continue;
 
+				// Line 59 may show as an error in IDEs due to the use of lookahead 
+				// in the regex, but it is valid JavaScript and should work correctly 
+				// in modern browsers
+
 				var isClosing = /^<\//.test(raw);
 				var isComment = /^<!--/.test(raw);
 				var isDoctype = /^<!doctype/i.test(raw);

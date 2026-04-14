@@ -1,13 +1,11 @@
 <?php
 // Generate sitemap.xml at the project root. Admin-only.
-ini_set('session.cookie_httponly', 1);
-ini_set('session.use_only_cookies', 1);
-ini_set('session.cookie_samesite', 'Strict');
-if (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') {
-    ini_set('session.cookie_secure', 1);
+$sessionBootstrapDir = __DIR__;
+while (!file_exists($sessionBootstrapDir . "/lib/session.php") && dirname($sessionBootstrapDir) !== $sessionBootstrapDir) {
+    $sessionBootstrapDir = dirname($sessionBootstrapDir);
 }
-
-session_start();
+require_once $sessionBootstrapDir . "/lib/session.php";
+fridg3_start_session();
 header('Content-Type: application/json');
 
 if (!isset($_SESSION['user']) || empty($_SESSION['user']['isAdmin'])) {

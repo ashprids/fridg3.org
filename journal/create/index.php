@@ -1,6 +1,11 @@
 <?php
 
-session_start();
+$sessionBootstrapDir = __DIR__;
+while (!file_exists($sessionBootstrapDir . "/lib/session.php") && dirname($sessionBootstrapDir) !== $sessionBootstrapDir) {
+    $sessionBootstrapDir = dirname($sessionBootstrapDir);
+}
+require_once $sessionBootstrapDir . "/lib/session.php";
+fridg3_start_session();
 
 // Require logged-in user with permission to create posts
 if (!isset($_SESSION['user']) || !isset($_SESSION['user']['username'])) {
@@ -223,11 +228,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $isDraft = isset($_POST['save_draft']) || $openPreview;
     $deleteDraftId = isset($_POST['delete_draft']) ? trim($_POST['delete_draft']) : '';
 
-    // Handle draft deletion: delete draft file and any referenced images, then redirect
+    // Handle draft deletion: delete draft file, then redirect
+    // Image deletion is commented out since images may be shared by multiple drafts 
+    // and posts; they can be manually removed if needed
     if ($deleteDraftId !== '') {
         $rootDir = dirname(__DIR__, 2);
         $draftsRoot = $rootDir . DIRECTORY_SEPARATOR . 'data' . DIRECTORY_SEPARATOR . 'journal' . DIRECTORY_SEPARATOR . 'drafts';
-        $imagesRoot = $rootDir . DIRECTORY_SEPARATOR . 'data' . DIRECTORY_SEPARATOR . 'images';
+        // $imagesRoot = $rootDir . DIRECTORY_SEPARATOR . 'data' . DIRECTORY_SEPARATOR . 'images';
         $safeId = preg_replace('/[^a-zA-Z0-9_\-]/', '', $deleteDraftId);
         if ($safeId !== '') {
             $target = $draftsRoot . DIRECTORY_SEPARATOR . $safeId . '.txt';
@@ -254,7 +261,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     exit;
                 }
 
-                $draftContent = implode(PHP_EOL, $lines);
+                /* $draftContent = implode(PHP_EOL, $lines);
                 if ($draftContent !== '' && is_dir($imagesRoot)) {
                     if (preg_match_all('#/data/images/([A-Za-z0-9_\-\.]+)#', $draftContent, $m)) {
                         foreach ($m[1] as $imgFile) {
@@ -264,7 +271,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             }
                         }
                     }
-                }
+                } */
 
                 @unlink($target);
             }
@@ -445,9 +452,20 @@ function find_template_file($filename) {
     return null;
 }
 
-$template_path = find_template_file('template.html');
+$render_helper_path = find_template_file('lib/render.php');
+if ($render_helper_path) {
+    require_once $render_helper_path;
+}
+
+$template_name = function_exists('get_preferred_template_name')
+    ? get_preferred_template_name(__DIR__)
+    : 'template.html';
+$template_path = find_template_file($template_name);
+if (!$template_path && $template_name !== 'template.html') {
+    $template_path = find_template_file('template.html');
+}
 if (!$template_path) {
-    die('template.html not found. report this issue to me@fridg3.org.');
+    die('page template not found. report this issue to me@fridg3.org.');
 }
 
 $template = file_get_contents($template_path);

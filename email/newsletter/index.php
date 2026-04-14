@@ -1,6 +1,11 @@
 <?php
 
-session_start();
+$sessionBootstrapDir = __DIR__;
+while (!file_exists($sessionBootstrapDir . "/lib/session.php") && dirname($sessionBootstrapDir) !== $sessionBootstrapDir) {
+    $sessionBootstrapDir = dirname($sessionBootstrapDir);
+}
+require_once $sessionBootstrapDir . "/lib/session.php";
+fridg3_start_session();
 
 $title = 'newsletters';
 $description = 'an archive of previously released newsletters, sent via email.';
@@ -43,9 +48,20 @@ function find_template_file($filename) {
     return null;
 }
 
-$template_path = find_template_file('template.html');
+$render_helper_path = find_template_file('lib/render.php');
+if ($render_helper_path) {
+    require_once $render_helper_path;
+}
+
+$template_name = function_exists('get_preferred_template_name')
+    ? get_preferred_template_name(__DIR__)
+    : 'template.html';
+$template_path = find_template_file($template_name);
+if (!$template_path && $template_name !== 'template.html') {
+    $template_path = find_template_file('template.html');
+}
 if (!$template_path) {
-    die('template.html not found. report this issue to me@fridg3.org.');
+    die('page template not found. report this issue to me@fridg3.org.');
 }
 
 $template = file_get_contents($template_path);
@@ -58,6 +74,24 @@ if (!$content_path) {
 $content = file_get_contents($content_path);
 $searchQuery = trim($_GET['q'] ?? '');
 $page = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
+
+$userBookmarks = [];
+if (isset($_SESSION['user']) && !empty($_SESSION['user']['username'])) {
+    $accountsFile = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'data' . DIRECTORY_SEPARATOR . 'accounts' . DIRECTORY_SEPARATOR . 'accounts.json';
+    $username = (string)$_SESSION['user']['username'];
+    if (is_file($accountsFile)) {
+        $json = @file_get_contents($accountsFile);
+        $accountsData = json_decode($json, true);
+        if (isset($accountsData['accounts']) && is_array($accountsData['accounts'])) {
+            foreach ($accountsData['accounts'] as $account) {
+                if (isset($account['username']) && $account['username'] === $username && isset($account['bookmarks']) && is_array($account['bookmarks'])) {
+                    $userBookmarks = array_values(array_unique(array_map('strval', $account['bookmarks'])));
+                    break;
+                }
+            }
+        }
+    }
+}
 
 if (!$isAdmin) {
     $content = preg_replace('#<a[^>]*href="/email/newsletter/create"[^>]*>.*?</a>#is', '', $content);
@@ -148,9 +182,16 @@ if (is_dir($posts_dir)) {
         $post_title = htmlspecialchars($post['title'], ENT_QUOTES, 'UTF-8');
         $post_description = htmlspecialchars($post['description'], ENT_QUOTES, 'UTF-8');
         $filename = rawurlencode($post['filename']);
+        $bookmarkId = 'newsletter:' . $post['filename'];
+        $safeBookmarkId = htmlspecialchars($bookmarkId, ENT_QUOTES, 'UTF-8');
+        $bookmarkIconClass = in_array($bookmarkId, $userBookmarks, true) ? 'fa-solid' : 'fa-regular';
+        $actionsHtml = '<span id="journal-post-actions" style="position:absolute;top:12px;right:12px;display:inline-flex;align-items:center;gap:8px;">'
+            . '<span id="post-bookmark" style="position:static;top:auto;right:auto;" data-tooltip="save post" data-post-id="' . $safeBookmarkId . '"><i class="' . $bookmarkIconClass . ' fa-bookmark"></i></span>'
+            . '</span>';
 
         $item = '<a id="post" class="journal-post-link" href="/email/newsletter/release/' . $filename . '">' 
             . '<span id="post-date">' . $post_date . '</span>'
+            . $actionsHtml
             . '<span id="post-title">' . $post_title . '</span>'
             . '<span id="post-description">' . $post_description . '</span>'
             . '</a>';

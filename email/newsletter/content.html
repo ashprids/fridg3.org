@@ -40,6 +40,11 @@
 			<label for="mailing-email-confirm">confirm email address</label>
 			<input class="text-input" id="mailing-email-confirm" maxlength="51" name="mailaccount2_r" type="email" required>
 		</div>
+		<div class="form-field" data-security-field style="display:none">
+			<label for="mailing-security-answer" id="security-question" data-tooltip="a random math equation that must be solved to submit the subscription request. this prevents automated spam.">loading security question...</label>
+			<input class="text-input" id="mailing-security-answer" name="security_answer" type="text" inputmode="numeric" autocomplete="off" style="display:none">
+			<div id="security-error" style="color:#e57373;display:none;margin-top:6px;">incorrect answer. try another question.</div>
+		</div>
 		<br>
 		<button id="form-button" type="submit">send</button>
 

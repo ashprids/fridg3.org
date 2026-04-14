@@ -1,4 +1,7 @@
 <?php
+// Post to feed
+require_once dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'lib' . DIRECTORY_SEPARATOR . 'feed.php';
+
 header('Content-Type: application/json');
 
 if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
@@ -45,27 +48,15 @@ if (count($lines) > 2) {
 // Normalize username
 $username = ltrim($usernameLine, '@');
 
-// Humanize time difference (same as /feed)
-$humanize = function($dtStr) {
-    try {
-        $dt = new DateTime($dtStr);
-        $now = new DateTime('now');
-        $diff = $now->getTimestamp() - $dt->getTimestamp();
-        if ($diff < 60) return $diff . 's ago';
-        if ($diff < 3600) return floor($diff / 60) . 'm ago';
-        if ($diff < 86400) return floor($diff / 3600) . 'h ago';
-        return $dt->format('Y-m-d');
-    } catch (Exception $e) {
-        return $dtStr;
-    }
-};
+$replyCount = count(fridg3_feed_load_replies($id));
 
 $response = [
     'id' => $id,
     'username' => $username,
     'date_raw' => $dateLine,
-    'date_human' => $humanize($dateLine),
+    'date_human' => fridg3_feed_humanize_datetime($dateLine),
     'body' => $body,
+    'reply_count' => $replyCount,
 ];
 
 echo json_encode($response);

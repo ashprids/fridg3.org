@@ -26,13 +26,25 @@ _|"""""|_|"""""|_|"""""|_|"""""|_|"""""|_|"""""|_|"""""|_|"""""|
 <br>
 <h4>account management</h4>
 <button id="form-button" type="button" data-tooltip="(admin-only) generate a new account with a random password" onclick="window.location='/account/create'">create new account</button>
+<button id="form-button" type="button" data-tooltip="(admin-only) configure all made accounts" onclick="window.location='/account/admin'">manage accounts</button>
 <br><br><hr><br>
 </span>
 <span id="user-settings">
 <h3>account</h3>    
 <button id="form-button" type="button" data-tooltip="will prompt you to log in if you aren't already" onclick="window.location='/account/change-password'">change password</button>
+<button id="form-button" type="button" data-tooltip="save your discord user ID to your account for notifications" onclick="window.location='/account/link-discord'">link discord account</button>
 <br><br><hr><br>
 </span>
+<h3>accessibility</h3>
+<div class="checkbox-group">
+    <label class="checkbox-label">
+        <input type="checkbox" class="checkbox" id="mobile-friendly-toggle">
+        <span>enable mobile-friendly view</span>
+    </label>
+    <span style="color: var(--subtle);">when enabled, all page visits will redirect to m.fridg3.org. 
+    <br><br>this layout is designed for users on a screen that is longer vertically than horizontally (i.e. mobile phones, vertical monitors).</span>
+</div>
+<br><br><hr><br>
 <h3>color scheme</h3>
 <div id="color-scheme-group">
     <label class="color-row">

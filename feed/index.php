@@ -1,5 +1,11 @@
 <?php
-session_start();
+$sessionBootstrapDir = __DIR__;
+while (!file_exists($sessionBootstrapDir . "/lib/session.php") && dirname($sessionBootstrapDir) !== $sessionBootstrapDir) {
+    $sessionBootstrapDir = dirname($sessionBootstrapDir);
+}
+require_once $sessionBootstrapDir . "/lib/session.php";
+fridg3_start_session();
+require_once dirname(__DIR__) . DIRECTORY_SEPARATOR . 'lib' . DIRECTORY_SEPARATOR . 'feed.php';
 
 $title = 'feed';
 $description = 'short snippets and updates.';
@@ -41,9 +47,20 @@ function find_template_file($filename) {
     return null;
 }
 
-$template_path = find_template_file('template.html');
+$render_helper_path = find_template_file('lib/render.php');
+if ($render_helper_path) {
+    require_once $render_helper_path;
+}
+
+$template_name = function_exists('get_preferred_template_name')
+    ? get_preferred_template_name(__DIR__)
+    : 'template.html';
+$template_path = find_template_file($template_name);
+if (!$template_path && $template_name !== 'template.html') {
+    $template_path = find_template_file('template.html');
+}
 if (!$template_path) {
-    die('template.html not found. report this issue to me@fridg3.org.');
+    die('page template not found. report this issue to me@fridg3.org.');
 }
 
 $template = file_get_contents($template_path);
@@ -125,21 +142,6 @@ if (is_dir($postsDir)) {
         return strcmp(basename($b), basename($a));
     });
 
-    // Simple humanized time difference
-    $humanize = function($dtStr) {
-        try {
-            $dt = new DateTime($dtStr);
-            $now = new DateTime('now');
-            $diff = $now->getTimestamp() - $dt->getTimestamp();
-            if ($diff < 60) return $diff . 's ago';
-            if ($diff < 3600) return floor($diff / 60) . 'm ago';
-            if ($diff < 86400) return floor($diff / 3600) . 'h ago';
-            return $dt->format('Y-m-d');
-        } catch (Exception $e) {
-            return $dtStr;
-        }
-    };
-
     foreach ($files as $file) {
         $raw = @file_get_contents($file);
         if ($raw === false) continue;
@@ -208,7 +210,7 @@ if (is_dir($postsDir)) {
         $body = $p['body'];
 
         $safeUser = htmlspecialchars($username, ENT_QUOTES, 'UTF-8');
-        $ago = $humanize($dateLine);
+        $ago = fridg3_feed_humanize_datetime($dateLine);
         $safeAgo = htmlspecialchars($ago, ENT_QUOTES, 'UTF-8');
         // Escape body so browser treats it as text; BBCode parser will transform later
         $safeBody = htmlspecialchars($body, ENT_QUOTES, 'UTF-8');
@@ -225,6 +227,8 @@ if (is_dir($postsDir)) {
         $editIcon = '';
         $postId = urlencode(basename($p['file'], '.txt'));
         $postIdRaw = basename($p['file'], '.txt');
+        $replyCount = count(fridg3_feed_load_replies($postIdRaw));
+        $replyMeta = '<span class="feed-reply-count"><i class="fa-regular fa-comment"></i> ' . $replyCount . '</span>';
 
         // Determine if this post is bookmarked for the current user
         $isBookmarked = in_array($postIdRaw, $userBookmarks, true);
@@ -233,7 +237,7 @@ if (is_dir($postsDir)) {
             // Use a span with a data-edit-href attribute instead of a nested
             // anchor so we don't produce invalid <a><a> markup inside the
             // outer feed-post link. JS will handle navigation.
-            $editIcon = '<span id="post-edit-feed" data-tooltip="edit post" style="cursor:pointer !important" data-edit-href="/feed/edit?post=' . $postId . '.txt"><i class="fa-solid fa-pencil"></i></span> • ';
+            $editIcon = '<span id="post-edit-feed" data-tooltip="edit post" style="cursor:pointer !important" data-edit-href="/feed/edit?post=' . $postId . '.txt"><i class="fa-solid fa-pencil"></i></span> ';
         }
 
         $postLink = '/feed/posts/' . $postId;
@@ -245,7 +249,7 @@ if (is_dir($postsDir)) {
             . '<div id="post" style="cursor: pointer;">'
             . '<div id="post-header">'
             . '<span id="post-username">@' . $safeUser . '</span>'
-            . '<span id="post-date-feed">' . $safeAgo . ' • ' . $editIcon . '<span id="post-bookmark-feed" data-tooltip="save post" data-post-id="' . $postId . '"><i class="' . $bookmarkIconClass . ' fa-bookmark"></i></span></span>'
+            . '<span id="post-date-feed">' . $safeAgo . ' • ' . $replyMeta . ' • ' . $editIcon . '<span id="post-bookmark-feed" data-tooltip="save post" data-post-id="' . $postId . '"><i class="' . $bookmarkIconClass . ' fa-bookmark"></i></span></span>'
             . '</div>'
             . '<span id="post-content">' . $safeBody . '</span>'
             . '</div>'

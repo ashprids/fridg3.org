@@ -16,34 +16,57 @@
 	<!-- journal bookmarks will be injected here -->
 	you haven't saved any journal posts yet
 </div>
+<br><br>
+<h1>newsletter</h1><br>
+<div id="bookmarks-newsletter-list">
+	<!-- newsletter bookmarks will be injected here -->
+	you haven't saved any newsletter posts yet
+</div>
 <script>
 // Show bookmarks for anonymous users from localStorage
 if (!window.isLoggedIn || !window.isLoggedIn()) {
 	document.addEventListener('DOMContentLoaded', function() {
 		var bookmarks = [];
+		function escapeHtml(value) {
+			return String(value || '').replace(/[&<>"]/g, function(char) {
+				return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[char];
+			});
+		}
 		try {
 			var raw = localStorage.getItem('bookmarkedPosts');
 			if (raw) bookmarks = JSON.parse(raw);
 		} catch (_) {}
 		var feedList = document.getElementById('bookmarks-feed-list');
 		var journalList = document.getElementById('bookmarks-journal-list');
-		if (!feedList || !journalList) return;
+		var newsletterList = document.getElementById('bookmarks-newsletter-list');
+		if (!feedList || !journalList || !newsletterList) return;
 		var feedHtml = '';
 		var journalHtml = '';
+		var newsletterHtml = '';
 				var pending = 0;
 				function finish() {
 						if (feedHtml) feedList.innerHTML = feedHtml;
 						if (journalHtml) journalList.innerHTML = journalHtml;
+						if (newsletterHtml) newsletterList.innerHTML = newsletterHtml;
+						if (window.attachBookmarkBehavior) {
+							document.querySelectorAll('#bookmarks-feed-list #post-bookmark-feed, #bookmarks-journal-list #post-bookmark, #bookmarks-newsletter-list #post-bookmark').forEach(function(bookmark) {
+								window.attachBookmarkBehavior(bookmark);
+							});
+						}
+						if (window.syncBookmarkIcons) {
+							window.syncBookmarkIcons();
+						}
 						// Highlight code blocks if highlight.js is available
 						if (window.hljs) {
-							document.querySelectorAll('#bookmarks-feed-list pre code, #bookmarks-feed-list code, #bookmarks-journal-list pre code, #bookmarks-journal-list code').forEach(function(block) {
+							document.querySelectorAll('#bookmarks-feed-list pre code, #bookmarks-feed-list code, #bookmarks-journal-list pre code, #bookmarks-journal-list code, #bookmarks-newsletter-list pre code, #bookmarks-newsletter-list code').forEach(function(block) {
 								window.hljs.highlightElement(block);
 							});
 						}
 				}
 				bookmarks.forEach(function(id) {
 						var isJournal = id.startsWith('journal:');
-						var base = isJournal ? id.slice(8) : id;
+						var isNewsletter = id.startsWith('newsletter:');
+						var base = isJournal ? id.slice(8) : (isNewsletter ? id.slice(11) : id);
 						if (isJournal) {
 								pending++;
 								fetch('/data/journal/' + encodeURIComponent(base) + '.txt')
@@ -61,6 +84,37 @@ if (!window.isLoggedIn || !window.isLoggedIn()) {
 									   .catch(function() {
 										   /* skip deleted post */
 									   })
+									.finally(function() { pending--; if (pending === 0) finish(); });
+						} else if (isNewsletter) {
+								pending++;
+								fetch('/data/newsletter/' + encodeURIComponent(base) + '.html')
+									.then(function(resp) { return resp.ok ? resp.text() : null; })
+									.then(function(html) {
+										if (html) {
+											var wrapper = document.createElement('div');
+											wrapper.innerHTML = html;
+											var titleEl = wrapper.querySelector('h1');
+											var title = titleEl && titleEl.textContent ? titleEl.textContent.trim() : base;
+											var desc = 'newsletter release';
+											var preheaderEl = wrapper.querySelector('div[style*="mso-hide:all"]');
+											if (preheaderEl && preheaderEl.textContent.trim()) {
+												desc = preheaderEl.textContent.replace(/\s+/g, ' ').trim();
+											} else {
+												var paragraphEl = wrapper.querySelector('p');
+												if (paragraphEl && paragraphEl.textContent.trim()) {
+													desc = paragraphEl.textContent.replace(/\s+/g, ' ').trim();
+												}
+											}
+											var safeBase = escapeHtml(base);
+											var safeTitle = escapeHtml(title);
+											var safeDesc = escapeHtml(desc);
+											var bookmarkBtn = '<span id="post-bookmark" data-tooltip="save post" data-post-id="newsletter:' + safeBase + '"><i class="fa-solid fa-bookmark"></i></span>';
+											newsletterHtml += '<a href="/email/newsletter/release/' + encodeURIComponent(base) + '" class="journal-post-link" style="text-decoration:none;color:inherit;"><div id="post" style="cursor:pointer;"><span id="post-date">' + safeBase + '</span>' + bookmarkBtn + '<span id="post-title">' + safeTitle + '</span><span id="post-description">' + safeDesc + '</span></div></a><br>';
+										}
+									})
+									.catch(function() {
+										/* skip deleted post */
+									})
 									.finally(function() { pending--; if (pending === 0) finish(); });
 						} else {
 								pending++;

@@ -1,5 +1,6 @@
 // Global work-in-progress kill-switch; derived from /data/etc/wip
 let workInProgress = false;
+let hostRedirectInProgress = false;
 
 function hasAdminCookie() {
     try {
@@ -147,88 +148,39 @@ function autoScaleAsciiFont() {
         }
     });
 
-    // Tooltip logic for #hide-sidebar
+    // Offer switching to the mobile host instead of showing the old
+    // "screen too small" bubble on cramped screens.
     let tooltip = document.getElementById('ascii-scale-tooltip');
-    const hideSidebarBtn = document.getElementById('hide-sidebar');
-    const TOOLTIP_KEY = 'asciiScaleTooltipDismissed';
+    const TOOLTIP_KEY = 'mobileSitePromptDismissed';
+    if (isMobileTemplateActive()) {
+        if (tooltip) {
+            tooltip.style.display = 'none';
+            tooltip.style.opacity = '0';
+            if (tooltip.fadeTimeout) clearTimeout(tooltip.fadeTimeout);
+        }
+        return;
+    }
     if (localStorage.getItem(TOOLTIP_KEY) === '1') {
         if (tooltip) { tooltip.style.display = 'none'; tooltip.style.opacity = '0'; }
         return;
     }
-    if (scaled && hideSidebarBtn) {
-        if (!tooltip) {
-            tooltip = document.createElement('div');
-            tooltip.id = 'ascii-scale-tooltip';
-            tooltip.className = 'ascii-scale-tooltip-bubble';
-            tooltip.innerHTML = 'screen too small? click the <i class="fa-solid fa-square-caret-left" style="font-size:10px;vertical-align:middle;color:rgba(250, 250, 250, 0.43)"></i> button to hide this sidebar';
-            hideSidebarBtn.parentElement.style.position = 'relative';
-            hideSidebarBtn.after(tooltip);
-            // Inject style for speech bubble if not already present
-            if (!document.getElementById('ascii-scale-tooltip-style')) {
-                const style = document.createElement('style');
-                style.id = 'ascii-scale-tooltip-style';
-                style.textContent = `
-                .ascii-scale-tooltip-bubble {
-                    position: absolute;
-                    left: 50%;
-                    top: 100%;
-                    transform: translateX(-50%);
-                    background: rgba(0,0,0,0.95);
-                    color: white;
-                    padding: 8px 16px;
-                    border: 1px solid #305aad;
-                    border-radius: 8px;
-                    font-size: 13px;
-                    white-space: pre-line;
-                    z-index: 100;
-                    margin-top: 12px;
-                    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-                    min-width: 220px;
-                    max-width: 320px;
-                    text-align: left;
-                    opacity: 1;
-                    transition: opacity 0.5s;
-                }
-                .ascii-scale-tooltip-bubble::after {
-                    content: '';
-                    position: absolute;
-                    top: -12px;
-                    left: 50%;
-                    transform: translateX(-50%);
-                    width: 0;
-                    height: 0;
-                    border-left: 10px solid transparent;
-                    border-right: 10px solid transparent;
-                    border-bottom: 12px solid rgba(0,0,0,0.95);
-                    filter: drop-shadow(0 -1px 0 #305aad);
-                }
-                @media (max-width: 500px) {
-                  .ascii-scale-tooltip-bubble {
-                    min-width: 120px;
-                    font-size: 12px;
-                    padding: 6px 8px;
-                  }
-                }
-                `;
-                document.head.appendChild(style);
+    if (scaled) {
+        localStorage.setItem(TOOLTIP_KEY, '1');
+        const shouldSwitch = window.confirm('screen feels cramped. switch to the mobile site?');
+        if (shouldSwitch) {
+            try {
+                const targetUrl = new URL(window.location.href);
+                targetUrl.hostname = 'm.fridg3.org';
+                setMobileViewCookie(true);
+                hostRedirectInProgress = true;
+                hideSpaLoading();
+                window.setTimeout(() => {
+                    window.location.href = targetUrl.toString();
+                }, 0);
+                return;
+            } catch (_) {
+                /* no-op */
             }
-        }
-        tooltip.style.display = 'block';
-        tooltip.style.opacity = '1';
-        // Fade out after 5 seconds
-        if (tooltip.fadeTimeout) clearTimeout(tooltip.fadeTimeout);
-        tooltip.fadeTimeout = setTimeout(() => {
-            tooltip.style.opacity = '0';
-            setTimeout(() => { tooltip.style.display = 'none'; }, 500);
-        }, 5000);
-
-        // Only bind once
-        if (!hideSidebarBtn.dataset.asciiTooltipBound) {
-            hideSidebarBtn.addEventListener('click', function() {
-                localStorage.setItem(TOOLTIP_KEY, '1');
-                if (tooltip) { tooltip.style.display = 'none'; tooltip.style.opacity = '0'; }
-            });
-            hideSidebarBtn.dataset.asciiTooltipBound = '1';
         }
     } else if (tooltip) {
         tooltip.style.display = 'none';
@@ -302,7 +254,7 @@ function initAsciiTime() {
                 hour12: false,
                 hour: '2-digit',
                 minute: '2-digit',
-                second: '2-digit',
+                ...(isMobileTemplateActive() ? {} : { second: '2-digit' }),
                 timeZone: 'Europe/London'
             });
             if (labelEl) {
@@ -319,6 +271,7 @@ function initAsciiTime() {
                 }
             });
             el.textContent = rows.join('\n');
+            fitMobileAsciiLayout();
         };
 
         const loadFonts = async () => {
@@ -481,6 +434,7 @@ function initAsciiUsage() {
             if (memEl) memEl.textContent = mem || '??%';
             if (diskEl) diskEl.textContent = disk || '??%';
             if (diskAvailEl) diskAvailEl.textContent = diskAvail || '??%';
+            fitMobileAsciiLayout();
         };
 
         const loadFonts = async () => {
@@ -605,8 +559,41 @@ function isMobileDevice() {
     );
 }
 
+function redirectMobileVisitorsToMobileHost() {
+    try {
+        const currentUrl = new URL(window.location.href);
+        const host = (currentUrl.hostname || '').toLowerCase();
+        const mobile = isMobileDevice();
+        syncMobileViewCookieWithCurrentHost();
+        const mobileViewPreference = readMobileViewCookie();
+
+        if (host === 'fridg3.org' && mobile && mobileViewPreference !== false) {
+            currentUrl.hostname = 'm.fridg3.org';
+            window.location.replace(currentUrl.toString());
+            return;
+        }
+
+        if (host === 'm.fridg3.org' && !mobile) {
+            currentUrl.hostname = 'fridg3.org';
+            window.location.replace(currentUrl.toString());
+        }
+    } catch (_) {
+        /* no-op */
+    }
+}
+
+redirectMobileVisitorsToMobileHost();
+
 const tooltips = document.querySelectorAll('[data-tooltip]');
 let activeTooltip = null;
+
+function isMobileTemplateActive() {
+    try {
+        return !!(document.body && document.body.classList && document.body.classList.contains('mobile-template'));
+    } catch (_) {
+        return false;
+    }
+}
 
 function clearTooltips() {
     document.querySelectorAll('.tooltip').forEach(el => el.remove());
@@ -632,8 +619,70 @@ function applyResponsiveScale() {
     } catch (_) { /* no-op */ }
 }
 
+function fitAsciiTextElement(el, options = {}) {
+    try {
+        if (!el) return;
+        const container = options.container || el.parentElement;
+        if (!container) return;
+
+        const maxFontSize = options.maxFontSize ?? 12;
+        const minFontSize = options.minFontSize ?? 4;
+        const availableWidth = container.clientWidth || container.offsetWidth || 0;
+        if (!availableWidth) return;
+
+        el.style.fontSize = maxFontSize + 'px';
+
+        const naturalWidth = el.scrollWidth || 0;
+        if (!naturalWidth) return;
+        if (naturalWidth <= availableWidth) return;
+
+        const scale = availableWidth / naturalWidth;
+        const newFontSize = Math.max(minFontSize, maxFontSize * scale);
+        el.style.fontSize = newFontSize + 'px';
+    } catch (_) { /* no-op */ }
+}
+
+function fitMobileAsciiLayout() {
+    try {
+        if (!isMobileTemplateActive()) return;
+
+        const contentMain = document.getElementById('content-main');
+        document.querySelectorAll('#ascii').forEach((el) => {
+            fitAsciiTextElement(el, {
+                container: el.parentElement,
+                maxFontSize: 12,
+                minFontSize: 4
+            });
+        });
+
+        const asciiTime = document.getElementById('ascii-time');
+        if (asciiTime) {
+            fitAsciiTextElement(asciiTime, {
+                container: contentMain || asciiTime.parentElement,
+                maxFontSize: 12,
+                minFontSize: 4
+            });
+        }
+
+        document.querySelectorAll('.usage-ascii').forEach((el) => {
+            fitAsciiTextElement(el, {
+                container: el.closest('.usage-card') || el.parentElement,
+                maxFontSize: 11,
+                minFontSize: 4
+            });
+        });
+    } catch (_) { /* no-op */ }
+}
+
 window.addEventListener('resize', applyResponsiveScale);
 window.addEventListener('DOMContentLoaded', applyResponsiveScale);
+window.addEventListener('resize', fitMobileAsciiLayout);
+window.addEventListener('DOMContentLoaded', function() {
+    setTimeout(fitMobileAsciiLayout, 0);
+});
+window.addEventListener('load', function() {
+    setTimeout(fitMobileAsciiLayout, 0);
+});
 
 // Simple SPA-style navigation: load internal pages into #content
 // so the sidebar and mini player stay mounted (continuous audio).
@@ -764,6 +813,8 @@ function loadPageIntoContent(url, addToHistory = true) {
             return;
         }
 
+        closeMobileMenu();
+
         // Remove any currently visible tooltips when navigating
         clearTooltips();
 
@@ -820,6 +871,8 @@ function loadPageIntoContent(url, addToHistory = true) {
                     }
                 } catch (_) { /* no-op */ }
 
+                syncAccountFooterButton();
+
                 if (addToHistory && window.history && window.history.pushState) {
                     window.history.pushState({ spa: true, url: url }, '', url);
                 }
@@ -844,6 +897,7 @@ function loadPageIntoContent(url, addToHistory = true) {
                 rerunAsciiScalingAfterContent();
                 initTooltips();
                 updateContentFooterSpacing();
+                fitMobileAsciiLayout();
                 updatePageViewFooter(url);
 
                 // Re-run syntax highlighting on newly loaded content
@@ -1012,6 +1066,8 @@ function bindSpaForm(form) {
                     }
                 } catch (_) { /* no-op */ }
 
+                syncAccountFooterButton();
+
                 if (window.history && window.history.pushState) {
                     window.history.pushState({ spa: true, url: finalUrl }, '', finalUrl);
                 }
@@ -1033,6 +1089,7 @@ function bindSpaForm(form) {
                 initOffTopicArchive();
                 rerunAsciiScalingAfterContent();
                 initTooltips();
+                fitMobileAsciiLayout();
 
                 // Re-run syntax highlighting on newly loaded content
                 if (typeof hljs !== 'undefined') {
@@ -1058,6 +1115,9 @@ function setupSpaForms() {
 
         const createPostForm = document.getElementById('create-post-form');
         if (createPostForm) bindSpaForm(createPostForm);
+
+        const feedReplyForm = document.getElementById('feed-reply-form');
+        if (feedReplyForm) bindSpaForm(feedReplyForm);
     } catch (_) { /* no-op */ }
 }
 
@@ -1070,76 +1130,116 @@ function initEmailForm() {
         const path = rawPath.replace(/\/+$/, '') || '/';
         if (!path.startsWith('/email')) return;
 
-        const form = document.querySelector('form[action^="https://formsubmit.co"]');
-        if (!form || form.dataset.securityBound === '1') return;
-        form.dataset.securityBound = '1';
-
-        const questionEl = form.querySelector('#security-question');
-        const answerInput = form.querySelector('input[name="security_answer"]');
-        const errorEl = form.querySelector('#security-error');
-        if (!questionEl || !answerInput) return;
-
-        let correctAnswer = null;
-
-        function generateQuestion() {
-            const ops = ['+', '-', '*'];
-            const op = ops[Math.floor(Math.random() * ops.length)];
-
-            let a = Math.floor(Math.random() * 10);
-            let b = Math.floor(Math.random() * 10);
-
-            // Keep subtraction answers non-negative for simplicity
-            if (op === '-' && b > a) {
-                [a, b] = [b, a];
-            }
-
-            switch (op) {
-                case '+':
-                    correctAnswer = a + b;
-                    break;
-                case '-':
-                    correctAnswer = a - b;
-                    break;
-                case '*':
-                default:
-                    correctAnswer = a * b;
-                    break;
-            }
-
-            questionEl.textContent = `what is ${a} ${op} ${b}?`;
-            if (errorEl) {
-                errorEl.style.display = 'none';
-            }
-            if (answerInput) {
-                answerInput.value = '';
-            }
-        }
-
-        // Initialize first question
-        generateQuestion();
-
-        form.addEventListener('submit', function(e) {
-            if (e.defaultPrevented) return;
-            const raw = (answerInput.value || '').trim();
-            const userVal = raw === '' ? NaN : parseInt(raw, 10);
-            if (!Number.isFinite(userVal) || userVal !== correctAnswer) {
-                e.preventDefault();
-                generateQuestion();
-                if (errorEl) {
-                    errorEl.style.display = 'block';
-                }
-                return;
-            }
-            if (errorEl) {
-                errorEl.style.display = 'none';
-            }
+        const forms = Array.from(document.querySelectorAll('form')).filter(function(form) {
+            return form.querySelector('#security-question') && form.querySelector('input[name="security_answer"]');
         });
 
-        if (answerInput && errorEl) {
-            answerInput.addEventListener('input', function() {
-                errorEl.style.display = 'none';
+        forms.forEach(function(form) {
+            if (form.dataset.securityBound === '1') return;
+            form.dataset.securityBound = '1';
+
+            const questionEl = form.querySelector('#security-question');
+            const answerInput = form.querySelector('input[name="security_answer"]');
+            const errorEl = form.querySelector('#security-error');
+            const securityField = form.querySelector('[data-security-field]');
+            const subscribeRadios = Array.from(form.querySelectorAll('input[name="subscribe_r"]'));
+            if (!questionEl || !answerInput) return;
+
+            let correctAnswer = null;
+
+            function generateQuestion() {
+                const ops = ['+', '-', '*'];
+                const op = ops[Math.floor(Math.random() * ops.length)];
+
+                let a = Math.floor(Math.random() * 10);
+                let b = Math.floor(Math.random() * 10);
+
+                // Keep subtraction answers non-negative for simplicity
+                if (op === '-' && b > a) {
+                    [a, b] = [b, a];
+                }
+
+                switch (op) {
+                    case '+':
+                        correctAnswer = a + b;
+                        break;
+                    case '-':
+                        correctAnswer = a - b;
+                        break;
+                    case '*':
+                    default:
+                        correctAnswer = a * b;
+                        break;
+                }
+
+                questionEl.textContent = `what is ${a} ${op} ${b}?`;
+                if (errorEl) {
+                    errorEl.style.display = 'none';
+                }
+                answerInput.value = '';
+            }
+
+            function isSecurityRequired() {
+                if (!subscribeRadios.length) return true;
+                return subscribeRadios.some(function(radio) {
+                    return radio.checked && radio.value === 'subscribe';
+                });
+            }
+
+            function syncSecurityVisibility() {
+                const shouldShow = isSecurityRequired();
+
+                if (securityField) {
+                    securityField.style.display = shouldShow ? '' : 'none';
+                }
+
+                answerInput.style.display = shouldShow ? '' : 'none';
+                answerInput.required = shouldShow;
+
+                if (!shouldShow) {
+                    answerInput.value = '';
+                    if (errorEl) {
+                        errorEl.style.display = 'none';
+                    }
+                }
+            }
+
+            generateQuestion();
+            syncSecurityVisibility();
+
+            form.addEventListener('submit', function(e) {
+                if (e.defaultPrevented || !isSecurityRequired()) return;
+
+                const raw = (answerInput.value || '').trim();
+                const userVal = raw === '' ? NaN : parseInt(raw, 10);
+                if (!Number.isFinite(userVal) || userVal !== correctAnswer) {
+                    e.preventDefault();
+                    generateQuestion();
+                    if (errorEl) {
+                        errorEl.style.display = 'block';
+                    }
+                    return;
+                }
+                if (errorEl) {
+                    errorEl.style.display = 'none';
+                }
             });
-        }
+
+            if (errorEl) {
+                answerInput.addEventListener('input', function() {
+                    errorEl.style.display = 'none';
+                });
+            }
+
+            subscribeRadios.forEach(function(radio) {
+                radio.addEventListener('change', function() {
+                    if (isSecurityRequired()) {
+                        generateQuestion();
+                    }
+                    syncSecurityVisibility();
+                });
+            });
+        });
     } catch (_) { /* no-op */ }
 }
 
@@ -1605,6 +1705,8 @@ const COLOR_DEFAULTS = {
     subtle: '#917DAA',
     links: '#415FAD',
 };
+const MOBILE_VIEW_COOKIE = 'mobile_friendly_view';
+const MOBILE_VIEW_DOMAIN = '.fridg3.org';
 
 // Apply saved color prefs early on page load so refreshes keep the scheme
 (() => {
@@ -1650,6 +1752,55 @@ function loadLocalColorPrefs() {
 function saveLocalColorPrefs(colors) {
     try {
         localStorage.setItem(COLOR_PREFS_KEY, JSON.stringify(colors));
+    } catch (_) { /* ignore */ }
+}
+
+function getCookie(name) {
+    try {
+        const parts = document.cookie ? document.cookie.split('; ') : [];
+        for (const part of parts) {
+            const eqIndex = part.indexOf('=');
+            const key = eqIndex >= 0 ? part.slice(0, eqIndex) : part;
+            if (key === name) {
+                return eqIndex >= 0 ? decodeURIComponent(part.slice(eqIndex + 1)) : '';
+            }
+        }
+    } catch (_) { /* ignore */ }
+    return null;
+}
+
+function shouldUseSharedFridg3CookieDomain() {
+    const host = ((window.location && window.location.hostname) ? window.location.hostname : '').toLowerCase();
+    return host === 'fridg3.org' || host === 'm.fridg3.org' || host.endsWith('.fridg3.org');
+}
+
+function setMobileViewCookie(enabled) {
+    try {
+        const maxAge = 60 * 60 * 24 * 365;
+        const value = enabled ? '1' : '0';
+        const secure = (window.location && window.location.protocol === 'https:') ? '; Secure' : '';
+        const domain = shouldUseSharedFridg3CookieDomain() ? `; Domain=${MOBILE_VIEW_DOMAIN}` : '';
+        document.cookie = `${MOBILE_VIEW_COOKIE}=${value}; Max-Age=${maxAge}; Path=/; SameSite=Lax${domain}${secure}`;
+    } catch (_) { /* ignore */ }
+}
+
+function readMobileViewCookie() {
+    const raw = getCookie(MOBILE_VIEW_COOKIE);
+    if (raw === null) return null;
+    return ['1', 'true', 'yes', 'y', 'on', 'enabled'].includes(String(raw).trim().toLowerCase());
+}
+
+function getCurrentHostName() {
+    return ((window.location && window.location.hostname) ? window.location.hostname : '').toLowerCase();
+}
+
+function syncMobileViewCookieWithCurrentHost() {
+    try {
+        const host = getCurrentHostName();
+        const cookieValue = readMobileViewCookie();
+        if (host === 'm.fridg3.org' && cookieValue === null) {
+            setMobileViewCookie(true);
+        }
     } catch (_) { /* ignore */ }
 }
 
@@ -1763,6 +1914,9 @@ function startGradientRotation(el, durationMs) {
 
 
 function initTooltips() {
+    if (isMobileTemplateActive()) {
+        clearTooltips();
+    }
     document.querySelectorAll('[data-tooltip]').forEach(element => {
         // Remove previous listeners to avoid duplicates
         element.removeEventListener('mouseenter', element._tooltipMouseEnter);
@@ -1770,7 +1924,7 @@ function initTooltips() {
         element.removeEventListener('mouseleave', element._tooltipMouseLeave);
         // Define handlers
         element._tooltipMouseEnter = function(e) {
-            if (typeof isMobileDevice === 'function' && isMobileDevice()) return;
+            if (isMobileTemplateActive()) return;
             let rawText = this.getAttribute('data-tooltip') || '';
             rawText = rawText.replace(/\\n/g, '<br>');
             const tooltip = document.createElement('div');
@@ -1824,6 +1978,7 @@ function initSettingsPage() {
         const adminSection = document.getElementById('admin-settings');
         const colorGroup = document.getElementById('color-scheme-group');
         const colorResetBtn = document.getElementById('color-reset');
+        const mobileViewToggle = document.getElementById('mobile-friendly-toggle');
         const saveBtn = document.getElementById('settings-save');
         const sitemapBtn = document.querySelector('[data-action="generate-sitemap"]');
         if (!glowGroup || !saveBtn) return;
@@ -1833,6 +1988,7 @@ function initSettingsPage() {
         const glowRadios = glowGroup.querySelectorAll('input[type="radio"][name="glow-intensity"]');
         const maintenanceRadios = maintenanceGroup ? maintenanceGroup.querySelectorAll('input[type="radio"][name="maintenance-mode"]') : [];
         const colorInputs = colorGroup ? colorGroup.querySelectorAll('input.color-input[data-color-key]') : [];
+        const host = getCurrentHostName();
         if (!glowRadios.length) return;
 
         let isAdmin = false;
@@ -1843,6 +1999,11 @@ function initSettingsPage() {
             maintenanceRadios.forEach(r => {
                 r.checked = (r.value === state);
             });
+        };
+
+        const setMobileViewToggle = (enabled) => {
+            if (!mobileViewToggle) return;
+            mobileViewToggle.checked = enabled === true;
         };
 
         const loadMaintenanceState = async () => {
@@ -1964,23 +2125,33 @@ function initSettingsPage() {
         const initialColors = Object.assign({}, COLOR_DEFAULTS, loadLocalColorPrefs() || {});
         setColorInputs(initialColors);
         applyColorVars(initialColors);
+        syncMobileViewCookieWithCurrentHost();
+        setMobileViewToggle(readMobileViewCookie());
 
         if (isLoggedIn && window.fetch) {
             fetch('/api/settings', {
                 method: 'GET',
                 headers: { 'X-Requested-With': 'XMLHttpRequest' },
             }).then(r => r.ok ? r.json() : null).then(data => {
-                if (!data || !data.ok || !data.settings || !data.settings.colors) return;
-                const serverColors = {};
-                COLOR_FIELDS.forEach(k => {
-                    const n = normalizeColor(data.settings.colors[k] ?? '');
-                    if (n) serverColors[k] = n;
-                });
-                if (Object.keys(serverColors).length) {
-                    const merged = Object.assign({}, COLOR_DEFAULTS, serverColors);
-                    setColorInputs(merged);
-                    applyColorVars(merged);
-                    saveLocalColorPrefs(merged);
+                if (!data || !data.ok || !data.settings) return;
+
+                if (data.settings.colors) {
+                    const serverColors = {};
+                    COLOR_FIELDS.forEach(k => {
+                        const n = normalizeColor(data.settings.colors[k] ?? '');
+                        if (n) serverColors[k] = n;
+                    });
+                    if (Object.keys(serverColors).length) {
+                        const merged = Object.assign({}, COLOR_DEFAULTS, serverColors);
+                        setColorInputs(merged);
+                        applyColorVars(merged);
+                        saveLocalColorPrefs(merged);
+                    }
+                }
+
+                if (typeof data.settings.mobileFriendlyView === 'boolean' && readMobileViewCookie() === null && host !== 'm.fridg3.org') {
+                    setMobileViewToggle(data.settings.mobileFriendlyView);
+                    setMobileViewCookie(data.settings.mobileFriendlyView);
                 }
             }).catch(() => {});
         }
@@ -2012,10 +2183,13 @@ function initSettingsPage() {
             const chosenColors = getColorValuesFromInputs();
             const mergedColors = Object.assign({}, COLOR_DEFAULTS, chosenColors);
             persistColors(mergedColors, { skipServer: isLoggedIn });
+            const mobileViewEnabled = !!(mobileViewToggle && mobileViewToggle.checked);
+            setMobileViewCookie(mobileViewEnabled);
 
             if (isLoggedIn && window.fetch) {
                 const params = new URLSearchParams();
                 params.append('glowIntensity', selected);
+                params.append('mobileFriendlyView', mobileViewEnabled ? 'on' : 'off');
 
                 if (Object.keys(mergedColors).length) {
                     // flatten colors into separate fields (merged so defaults persist server-side)
@@ -2075,17 +2249,44 @@ window.addEventListener('DOMContentLoaded', initSettingsPage);
 const hideSidebarBtn = document.getElementById('hide-sidebar');
 const showSidebarBtn = document.getElementById('show-sidebar');
 const sidebar = document.getElementById('sidebar');
+const mobileCollapsedHeader = document.getElementById('mobile-collapsed-header');
 const SIDEBAR_KEY = 'sidebarVisible';
+
+function updateMobileCollapsedHeader(visible) {
+    if (!isMobileTemplateActive()) return;
+    if (mobileCollapsedHeader) {
+        mobileCollapsedHeader.style.display = visible ? 'flex' : 'none';
+    }
+}
+
+function closeMobileMenu() {
+    if (!isMobileTemplateActive()) return;
+    if (sidebar) sidebar.style.display = 'none';
+    if (showSidebarBtn) showSidebarBtn.style.display = 'inline-block';
+    updateMobileCollapsedHeader(true);
+    try {
+        localStorage.setItem(SIDEBAR_KEY, 'false');
+    } catch (_) { /* no-op */ }
+}
 
 // Load sidebar state, apply glow/gradient, and BBCode formatting
 function initSidebarAndBBCode() {
     const isSidebarVisible = localStorage.getItem(SIDEBAR_KEY);
+    const defaultSidebarVisible = isMobileTemplateActive() ? 'false' : 'true';
     if (isSidebarVisible === null) {
-        // Default to visible if not set
-        localStorage.setItem(SIDEBAR_KEY, 'true');
+        // Mobile template starts closed by default; desktop starts open.
+        localStorage.setItem(SIDEBAR_KEY, defaultSidebarVisible);
+        if (defaultSidebarVisible === 'false' && sidebar && showSidebarBtn) {
+            sidebar.style.display = 'none';
+            showSidebarBtn.style.display = 'inline-block';
+            updateMobileCollapsedHeader(true);
+        }
     } else if (isSidebarVisible === 'false') {
-        sidebar.style.display = 'none';
-        showSidebarBtn.style.display = 'inline-block';
+        if (sidebar) sidebar.style.display = 'none';
+        if (showSidebarBtn) showSidebarBtn.style.display = 'inline-block';
+        updateMobileCollapsedHeader(true);
+    } else {
+        updateMobileCollapsedHeader(false);
     }
 
     // Apply global glow effect based on saved intensity
@@ -2598,7 +2799,7 @@ function initMiniPlayer() {
 
         // Album grid integration: clicking entries controls the mini player.
         const bindAlbumLinks = () => {
-            const albumLinks = document.querySelectorAll('.album-link:not([data-no-viewer])');
+            const albumLinks = document.querySelectorAll('.album-link');
             if (!albumLinks.length || !tracklistEl) return;
 
             // Rebuild track library from current album definitions
@@ -2820,6 +3021,28 @@ function initMiniPlayer() {
 }
 
 window.addEventListener('DOMContentLoaded', initMiniPlayer);
+
+function syncAccountFooterButton() {
+    try {
+        const footerButtons = document.getElementById('footer-buttons');
+        if (!footerButtons) return;
+
+        const accountLink = footerButtons.querySelector('a[href="/account"], a[href="/account/login"], a[href="/account/logout"]');
+        if (!accountLink) return;
+
+        const accountButton = accountLink.querySelector('#footer-button');
+        if (!accountButton) return;
+
+        const isLoggedInNow = !!document.getElementById('user-greeting');
+        accountLink.setAttribute('href', isLoggedInNow ? '/account/logout' : '/account');
+        accountButton.setAttribute('data-tooltip', isLoggedInNow ? 'log out' : 'access your fridg3.org account');
+        accountButton.innerHTML = isLoggedInNow
+            ? '<i class="fa-solid fa-right-from-bracket"></i>'
+            : '<i class="fa-solid fa-user"></i>';
+    } catch (_) { /* no-op */ }
+}
+
+window.addEventListener('DOMContentLoaded', syncAccountFooterButton);
 
 // Footer active state based on current path
 function initFooterActiveState() {
@@ -3164,6 +3387,7 @@ if (hideSidebarBtn) {
     hideSidebarBtn.addEventListener('click', function() {
         sidebar.style.display = 'none';
         showSidebarBtn.style.display = 'inline-block';
+        updateMobileCollapsedHeader(true);
         localStorage.setItem(SIDEBAR_KEY, 'false');
     });
 }
@@ -3172,6 +3396,7 @@ if (showSidebarBtn) {
     showSidebarBtn.addEventListener('click', function() {
         sidebar.style.display = 'flex';
         showSidebarBtn.style.display = 'none';
+        updateMobileCollapsedHeader(false);
         localStorage.setItem(SIDEBAR_KEY, 'true');
     });
 }
@@ -3225,6 +3450,7 @@ function syncBookmarkIcons() {
         }
     });
 }
+window.syncBookmarkIcons = syncBookmarkIcons;
 
 function attachBookmarkBehavior(bookmark) {
     const icon = bookmark.querySelector('i');
@@ -3354,6 +3580,7 @@ function attachBookmarkBehavior(bookmark) {
         }
     });
 }
+window.attachBookmarkBehavior = attachBookmarkBehavior;
 
 function initScrollAndBookmarkIcons() {
     // Restore scroll position if set
@@ -3397,6 +3624,14 @@ document.addEventListener('click', function(e) {
 
     let targetImg = null;
     const clickedImg = e.target && e.target.closest ? e.target.closest('img') : null;
+
+    if (clickedImg && clickedImg.closest('.album-link')) {
+        return;
+    }
+
+    if (clickedImg && clickedImg.closest('.no-image-viewer')) {
+        return;
+    }
 
     // If toast stream is playing, clicking cover art should navigate to the toast page
     if (clickedImg && clickedImg.id === 'mini-player-art') {
@@ -4193,6 +4428,9 @@ function parseBBCode(text) {
     html = html.replace(/\[h5\](.*?)\[\/h5\]/gi, '<h5>$1</h5>');
     html = html.replace(/\[spoiler\](.*?)\[\/spoiler\]/gi, '<span class="spoiler">$1</span>');
     html = html.replace(/\[color:(#[0-9A-F]{6})\](.*?)\[\/color\]/gi, '<span style="color: $1;">$2</span>');
+    html = html.replace(/(^|[\s([{"'>])@([a-zA-Z0-9_-]{1,50})(?=$|[\s)\]}",.!?:;<])/g, function(match, prefix, username) {
+        return `${prefix}<span class="inline-mention">@${username}</span>`;
+    });
     // Lists: [list]line1\nline2[/list] -> <ul><li>line1</li><li>line2</li></ul>
     html = html.replace(/\[list\]([\s\S]*?)\[\/list\]/gi, function(match, inner) {
         const lines = inner.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);

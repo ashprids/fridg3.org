@@ -1,3 +1,4 @@
+<div class="feed-thread-page">
 <h1>feed</h1>
 <h2>post by {username}</h2>
 
@@ -5,8 +6,13 @@
     <div id="post">
         <div id="post-header">
             <span id="post-username">@{username}</span>
-            <span id="post-date-feed">{date} • <span id="post-bookmark-feed" data-tooltip="save post"><i class="fa-regular fa-bookmark"></i></span></span>
+            <span id="post-date-feed">{post_meta}</span>
         </div>
         <span id="post-content">{content}</span>
     </div>
+</div>
+<br>
+{replies_section}
+<br><hr><br>
+{reply_box}
 </div>
