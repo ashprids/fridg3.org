@@ -106,6 +106,7 @@ admin-only account creation flow that writes to `data/accounts/accounts.json`.
 - can grant `comments` permission
 - newly created accounts are flagged with `mustResetPassword`
 - if a Discord id is provided, it asks the local toast bot to DM the invite credentials
+- if that DM fails, the account is still created and the UI now shows the bot's concrete failure reason instead of a generic HTTP 500
 
 ### `/account/change-password` and `/account/password`
 

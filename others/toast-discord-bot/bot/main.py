@@ -468,6 +468,44 @@ async def send_logged_dm(target, message: str):
     )
     return user, sent_message
 
+def build_dm_error_response(error: Exception, action: str):
+    if isinstance(error, discord.Forbidden):
+        return web.json_response(
+            {
+                'ok': False,
+                'error': 'discord rejected the DM. the user likely has direct messages disabled or has blocked the bot',
+            },
+            status=403,
+        )
+    if isinstance(error, discord.NotFound):
+        return web.json_response(
+            {
+                'ok': False,
+                'error': f'could not find the discord user while trying to {action}',
+            },
+            status=404,
+        )
+    if isinstance(error, discord.HTTPException):
+        logger.warning(f"Discord HTTP error while trying to {action}: status={error.status} code={error.code} text={error.text}")
+        return web.json_response(
+            {
+                'ok': False,
+                'error': f'discord API error while trying to {action}',
+                'discord_status': error.status,
+                'discord_code': error.code,
+            },
+            status=502,
+        )
+
+    logger.warning(f"Unexpected error while trying to {action}: {error}")
+    return web.json_response(
+        {
+            'ok': False,
+            'error': f'unexpected error while trying to {action}',
+        },
+        status=500,
+    )
+
 def save_notify_state(state: dict):
     try:
         with open(feed_notify_state_path, 'w', encoding='utf-8') as f:
@@ -912,7 +950,7 @@ async def send_account_invite_handler(request):
         )
     except Exception as e:
         logger.warning(f"Failed to send account invite DM to {discord_user_id}: {e}")
-        return web.json_response({'ok': False, 'error': 'failed to send invite dm'}, status=500)
+        return build_dm_error_response(e, 'send the account invite DM')
 
     return web.json_response({'ok': True})
 
@@ -937,7 +975,7 @@ async def send_message_handler(request):
         user, sent_message = await send_logged_dm(discord_user_id, message)
     except Exception as e:
         logger.warning(f"Failed to send manual DM to {discord_user_id}: {e}")
-        return web.json_response({'ok': False, 'error': 'failed to send dm'}, status=500)
+        return build_dm_error_response(e, 'send the DM')
 
     return web.json_response({
         'ok': True,
