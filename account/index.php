@@ -43,6 +43,9 @@ if (!$template_path) {
 }
 
 $template = file_get_contents($template_path);
+if (function_exists('apply_preferred_theme_stylesheet')) {
+    $template = apply_preferred_theme_stylesheet($template, __DIR__);
+}
 
 // If logged in, redirect to homepage
 if (isset($_SESSION['user'])) {

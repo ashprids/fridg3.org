@@ -55,6 +55,8 @@ translation: if you change shared ids, buttons, or route transitions, test more 
 - mobile-template-specific overrides
 - mini player, ASCII blocks, cards, grids, and assorted route UI
 
+themes are declared by `/themes/*.json` and assets live in `/themes/lib`. desktop theme selection can use themed HTML and CSS; mobile view keeps the mobile template and appends theme CSS after mobile-specific inline styles.
+
 fonts and icons come from:
 
 - local font files in `resources/`
@@ -66,6 +68,7 @@ fonts and icons come from:
 local/browser state used by the site includes:
 
 - `mobile_friendly_view` cookie
+- `theme_pref` cookie
 - `is_admin` cookie
 - localStorage bookmarks for anonymous users
 - localStorage dismissal state for some prompts
@@ -73,6 +76,7 @@ local/browser state used by the site includes:
 server-backed user state is exposed through:
 
 - `/api/settings`
+- `/api/themes`
 - `/api/bookmark`
 - session-based auth
 

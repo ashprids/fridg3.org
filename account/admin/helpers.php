@@ -187,6 +187,9 @@ function account_admin_render_page(string $title, string $description, string $c
     }
 
     $template = (string)file_get_contents($templatePath);
+    if (function_exists('apply_preferred_theme_stylesheet')) {
+        $template = apply_preferred_theme_stylesheet($template, __DIR__);
+    }
     $html = str_replace('{content}', $content, $template);
     $html = str_replace('{title}', $title, $html);
     $html = str_replace('{description}', $description, $html);

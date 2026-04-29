@@ -1696,6 +1696,8 @@ const GLOW_INTENSITY_KEY = 'glowIntensity';
 const GLOW_RADIUS_DEFAULT = '8px';
 const GLOW_CLASS = 'glow-enabled';
 const GLOW_STYLE_ID = 'glow-style-tag';
+const THEME_PREF_KEY = 'themePref';
+const THEME_COOKIE = 'theme_pref';
 const COLOR_PREFS_KEY = 'colorPrefs';
 const COLOR_FIELDS = ['bg', 'fg', 'border', 'subtle', 'links'];
 const COLOR_DEFAULTS = {
@@ -1708,11 +1710,17 @@ const COLOR_DEFAULTS = {
 const MOBILE_VIEW_COOKIE = 'mobile_friendly_view';
 const MOBILE_VIEW_DOMAIN = '.fridg3.org';
 
-// Apply saved color prefs early on page load so refreshes keep the scheme
+// Apply saved color prefs early on page load only when the custom theme is active.
 (() => {
+    if (loadLocalThemePref() !== 'custom') {
+        clearColorVars();
+        return;
+    }
     const localColors = loadLocalColorPrefs();
-    const merged = Object.assign({}, COLOR_DEFAULTS, localColors || {});
-    applyColorVars(merged);
+    if (localColors) {
+        const merged = Object.assign({}, COLOR_DEFAULTS, localColors);
+        applyColorVars(merged);
+    }
 })();
 
 function applyColorVars(colors) {
@@ -1723,6 +1731,38 @@ function applyColorVars(colors) {
             root.style.setProperty(`--${key}`, colors[key]);
         }
     });
+}
+
+function clearColorVars() {
+    const root = document.documentElement;
+    COLOR_FIELDS.forEach(key => {
+        root.style.removeProperty(`--${key}`);
+    });
+}
+
+function normalizeTheme(theme) {
+    if (typeof theme !== 'string') return 'default';
+    const normalized = theme.trim().toLowerCase();
+    if (normalized === '' || normalized === 'default') return 'default';
+    if (normalized === 'custom') return 'custom';
+    if (/^[a-z0-9_-]+$/.test(normalized)) return normalized;
+    return 'default';
+}
+
+function loadLocalThemePref() {
+    try {
+        const stored = normalizeTheme(localStorage.getItem(THEME_PREF_KEY));
+        if (stored !== 'default') return stored;
+    } catch (_) {
+        /* ignore */
+    }
+    return normalizeTheme(getCookie(THEME_COOKIE));
+}
+
+function saveLocalThemePref(theme) {
+    try {
+        localStorage.setItem(THEME_PREF_KEY, normalizeTheme(theme));
+    } catch (_) { /* ignore */ }
 }
 
 function normalizeColor(hex) {
@@ -1781,6 +1821,16 @@ function setMobileViewCookie(enabled) {
         const secure = (window.location && window.location.protocol === 'https:') ? '; Secure' : '';
         const domain = shouldUseSharedFridg3CookieDomain() ? `; Domain=${MOBILE_VIEW_DOMAIN}` : '';
         document.cookie = `${MOBILE_VIEW_COOKIE}=${value}; Max-Age=${maxAge}; Path=/; SameSite=Lax${domain}${secure}`;
+    } catch (_) { /* ignore */ }
+}
+
+function setThemeCookie(theme) {
+    try {
+        const maxAge = 60 * 60 * 24 * 365;
+        const value = encodeURIComponent(normalizeTheme(theme));
+        const secure = (window.location && window.location.protocol === 'https:') ? '; Secure' : '';
+        const domain = shouldUseSharedFridg3CookieDomain() ? `; Domain=${MOBILE_VIEW_DOMAIN}` : '';
+        document.cookie = `${THEME_COOKIE}=${value}; Max-Age=${maxAge}; Path=/; SameSite=Lax${domain}${secure}`;
     } catch (_) { /* ignore */ }
 }
 
@@ -1976,6 +2026,8 @@ function initSettingsPage() {
         const glowGroup = document.getElementById('glow-intensity-group');
         const maintenanceGroup = document.getElementById('maintenance-mode-group');
         const adminSection = document.getElementById('admin-settings');
+        const themeSelect = document.getElementById('theme-select');
+        const colorSection = document.getElementById('color-scheme-section');
         const colorGroup = document.getElementById('color-scheme-group');
         const colorResetBtn = document.getElementById('color-reset');
         const mobileViewToggle = document.getElementById('mobile-friendly-toggle');
@@ -1993,6 +2045,7 @@ function initSettingsPage() {
 
         let isAdmin = false;
         const isLoggedIn = !!document.getElementById('user-greeting');
+        let currentTheme = loadLocalThemePref();
 
         const selectMaintenance = (state) => {
             if (!maintenanceRadios.length) return;
@@ -2046,6 +2099,68 @@ function initSettingsPage() {
             });
         };
 
+        const populateThemeOptions = (themes) => {
+            if (!themeSelect) return;
+            const selectedTheme = getThemeSelection();
+            themeSelect.innerHTML = '';
+
+            const defaultOption = document.createElement('option');
+            defaultOption.value = 'default';
+            defaultOption.textContent = 'default';
+            themeSelect.appendChild(defaultOption);
+
+            const customOption = document.createElement('option');
+            customOption.value = 'custom';
+            customOption.textContent = 'custom...';
+            themeSelect.appendChild(customOption);
+
+            (Array.isArray(themes) ? themes : []).forEach(theme => {
+                const id = normalizeTheme(theme && theme.id);
+                const name = theme && typeof theme.name === 'string' ? theme.name.trim() : '';
+                if (id === 'default' || id === 'custom' || !name) return;
+                const option = document.createElement('option');
+                option.value = id;
+                option.textContent = name;
+                themeSelect.appendChild(option);
+            });
+
+            setThemeSelection(selectedTheme);
+        };
+
+        const setThemeSelection = (theme) => {
+            if (!themeSelect) return;
+            const normalizedTheme = normalizeTheme(theme);
+            themeSelect.value = normalizedTheme;
+            if (themeSelect.value === '' && normalizedTheme !== 'default' && normalizedTheme !== 'custom') {
+                const pendingOption = document.createElement('option');
+                pendingOption.value = normalizedTheme;
+                pendingOption.textContent = normalizedTheme;
+                themeSelect.appendChild(pendingOption);
+                themeSelect.value = normalizedTheme;
+            }
+            if (themeSelect.value === '') {
+                themeSelect.value = 'default';
+            }
+        };
+
+        const getThemeSelection = () => {
+            return normalizeTheme(themeSelect ? themeSelect.value : 'default');
+        };
+
+        const applyThemeSelection = (theme) => {
+            const normalizedTheme = normalizeTheme(theme);
+            if (colorSection) {
+                colorSection.style.display = normalizedTheme === 'custom' ? '' : 'none';
+            }
+            if (normalizedTheme === 'custom') {
+                const colors = Object.assign({}, COLOR_DEFAULTS, loadLocalColorPrefs() || getColorValuesFromInputs());
+                setColorInputs(colors);
+                applyColorVars(colors);
+            } else {
+                clearColorVars();
+            }
+        };
+
         const postColorsToServer = (colors) => {
             if (!isLoggedIn || !window.fetch) return Promise.resolve();
             const params = new URLSearchParams();
@@ -2063,6 +2178,10 @@ function initSettingsPage() {
         };
 
         const persistColors = (colors, opts = {}) => {
+            if (getThemeSelection() !== 'custom') {
+                clearColorVars();
+                return Promise.resolve();
+            }
             const merged = Object.assign({}, COLOR_DEFAULTS, colors || {});
             saveLocalColorPrefs(merged);
             applyColorVars(merged);
@@ -2121,12 +2240,32 @@ function initSettingsPage() {
             glowRadios[0].checked = true;
         }
 
-        // Load color prefs: local first, then server if logged in
+        // Load theme/color prefs: local first, then server if logged in
+        const initialTheme = currentTheme;
+        setThemeSelection(initialTheme);
         const initialColors = Object.assign({}, COLOR_DEFAULTS, loadLocalColorPrefs() || {});
         setColorInputs(initialColors);
-        applyColorVars(initialColors);
+        applyThemeSelection(initialTheme);
         syncMobileViewCookieWithCurrentHost();
         setMobileViewToggle(readMobileViewCookie());
+
+        if (window.fetch) {
+            fetch('/api/themes', {
+                method: 'GET',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            }).then(r => r.ok ? r.json() : null).then(data => {
+                if (!data || !data.ok) return;
+                populateThemeOptions(data.themes || []);
+                if (!isLoggedIn && data.selected) {
+                    currentTheme = normalizeTheme(data.selected);
+                    setThemeSelection(currentTheme);
+                    saveLocalThemePref(currentTheme);
+                    applyThemeSelection(currentTheme);
+                } else {
+                    setThemeSelection(currentTheme);
+                }
+            }).catch(() => {});
+        }
 
         if (isLoggedIn && window.fetch) {
             fetch('/api/settings', {
@@ -2134,6 +2273,11 @@ function initSettingsPage() {
                 headers: { 'X-Requested-With': 'XMLHttpRequest' },
             }).then(r => r.ok ? r.json() : null).then(data => {
                 if (!data || !data.ok || !data.settings) return;
+
+                currentTheme = normalizeTheme(data.settings.theme);
+                setThemeSelection(currentTheme);
+                saveLocalThemePref(currentTheme);
+                setThemeCookie(currentTheme);
 
                 if (data.settings.colors) {
                     const serverColors = {};
@@ -2144,10 +2288,11 @@ function initSettingsPage() {
                     if (Object.keys(serverColors).length) {
                         const merged = Object.assign({}, COLOR_DEFAULTS, serverColors);
                         setColorInputs(merged);
-                        applyColorVars(merged);
                         saveLocalColorPrefs(merged);
                     }
                 }
+
+                applyThemeSelection(currentTheme);
 
                 if (typeof data.settings.mobileFriendlyView === 'boolean' && readMobileViewCookie() === null && host !== 'm.fridg3.org') {
                     setMobileViewToggle(data.settings.mobileFriendlyView);
@@ -2159,10 +2304,20 @@ function initSettingsPage() {
         // Persist colors immediately when changed
         colorInputs.forEach(inp => {
             inp.addEventListener('input', () => {
+                if (getThemeSelection() !== 'custom') return;
                 const chosen = getColorValuesFromInputs();
                 persistColors(chosen);
             });
         });
+
+        if (themeSelect) {
+            themeSelect.addEventListener('change', () => {
+                currentTheme = getThemeSelection();
+                saveLocalThemePref(currentTheme);
+                setThemeCookie(currentTheme);
+                applyThemeSelection(currentTheme);
+            });
+        }
 
         saveBtn.addEventListener('click', function() {
             let selected = null;
@@ -2179,19 +2334,28 @@ function initSettingsPage() {
             // Apply immediately
             applyGlowIntensity(selected);
 
-            // Colors: collect, persist locally, apply immediately
+            const selectedTheme = getThemeSelection();
+            saveLocalThemePref(selectedTheme);
+            setThemeCookie(selectedTheme);
+
+            // Colors: only custom themes override style.css variables
             const chosenColors = getColorValuesFromInputs();
             const mergedColors = Object.assign({}, COLOR_DEFAULTS, chosenColors);
-            persistColors(mergedColors, { skipServer: isLoggedIn });
+            if (selectedTheme === 'custom') {
+                persistColors(mergedColors, { skipServer: isLoggedIn });
+            } else {
+                clearColorVars();
+            }
             const mobileViewEnabled = !!(mobileViewToggle && mobileViewToggle.checked);
             setMobileViewCookie(mobileViewEnabled);
 
             if (isLoggedIn && window.fetch) {
                 const params = new URLSearchParams();
                 params.append('glowIntensity', selected);
+                params.append('theme', selectedTheme);
                 params.append('mobileFriendlyView', mobileViewEnabled ? 'on' : 'off');
 
-                if (Object.keys(mergedColors).length) {
+                if (selectedTheme === 'custom' && Object.keys(mergedColors).length) {
                     // flatten colors into separate fields (merged so defaults persist server-side)
                     Object.entries(mergedColors).forEach(([k, v]) => {
                         params.append('color' + k.charAt(0).toUpperCase() + k.slice(1), v);
