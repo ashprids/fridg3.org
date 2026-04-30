@@ -60,6 +60,7 @@ pre code.hljs,
 
 #header {
     padding: 10px 14px;
+    margin-bottom: 8px;
     border-bottom: 1px solid rgba(111, 130, 123, 0.42);
 }
 
