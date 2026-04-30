@@ -664,3 +664,122 @@ body.mobile-template .checkbox:checked {
 body.mobile-template .radio:checked {
     background: radial-gradient(circle, var(--links) 30%, #07100d 34%) !important;
 }
+
+body.mobile-template #sidebar {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    height: auto !important;
+    min-height: 0 !important;
+    box-sizing: border-box !important;
+}
+
+body.mobile-template .mobile-nav-grid,
+body.mobile-template #footer-buttons {
+    width: auto !important;
+    box-sizing: border-box !important;
+}
+
+body.mobile-template .mobile-nav-grid a.mobile-nav-link > #tab.mobile-nav-button,
+body.mobile-template #footer-buttons > a.mobile-footer-link > #footer-button.mobile-footer-button {
+    min-height: 34px !important;
+    box-sizing: border-box !important;
+}
+
+#mini-player,
+#mini-player-tracks,
+body.mobile-template #mini-player,
+body.mobile-template #mini-player-tracks {
+    background:
+        linear-gradient(180deg, rgba(22, 35, 29, 0.96), rgba(7, 9, 7, 0.96)) !important;
+    color: var(--fg) !important;
+    border: 1px solid rgba(63, 111, 99, 0.78) !important;
+}
+
+#mini-player-main,
+#mini-player-meta,
+#mini-player-title,
+#mini-player-row,
+#mini-player-controls,
+#mini-player-volume-wrapper {
+    color: var(--fg);
+}
+
+#mini-player-art-wrapper,
+#mini-player-art {
+    background: #07100d !important;
+    border-color: rgba(63, 111, 99, 0.78) !important;
+}
+
+#mini-player-download,
+#mini-player-play,
+#mini-player-controls span {
+    color: var(--links) !important;
+}
+
+#mini-player-download:hover,
+#mini-player-play:hover,
+#mini-player-controls span:hover {
+    color: #03100b !important;
+    background: var(--links) !important;
+}
+
+#mini-player-title-inner,
+.mini-track {
+    color: var(--links) !important;
+}
+
+.mini-track {
+    background: transparent !important;
+    border-color: transparent !important;
+}
+
+.mini-track:hover,
+.mini-track.active {
+    background: linear-gradient(180deg, var(--links), #557359) !important;
+    color: #03100b !important;
+    border-color: var(--links) !important;
+}
+
+#mini-player-seek,
+#mini-player-volume {
+    accent-color: var(--links) !important;
+    background: #07100d !important;
+    border-color: rgba(63, 111, 99, 0.78) !important;
+}
+
+#mini-player-seek::-webkit-slider-thumb,
+#mini-player-volume::-webkit-slider-thumb {
+    background: var(--links) !important;
+    border-color: var(--occult-brass) !important;
+}
+
+#mini-player-seek::-moz-range-track,
+#mini-player-volume::-moz-range-track {
+    background: #07100d !important;
+    border-color: rgba(63, 111, 99, 0.78) !important;
+}
+
+#mini-player-seek::-moz-range-thumb,
+#mini-player-volume::-moz-range-thumb {
+    background: var(--links) !important;
+    border-color: var(--occult-brass) !important;
+}
+
+#tab:hover,
+#tab.active,
+#tab:hover::before,
+#tab.active::before,
+#tab:hover::after,
+#tab.active::after,
+#footer-button:hover,
+#footer-button.active,
+body.mobile-template #show-sidebar:hover,
+body.mobile-template .mobile-nav-grid a.mobile-nav-link > #tab.mobile-nav-button:hover,
+body.mobile-template .mobile-nav-grid a.mobile-nav-link > #tab.mobile-nav-button.active,
+body.mobile-template .mobile-nav-grid a.mobile-nav-link > #tab.mobile-nav-button.active:hover,
+body.mobile-template #footer-buttons > a.mobile-footer-link > #footer-button.mobile-footer-button:hover,
+body.mobile-template #footer-buttons > a.mobile-footer-link > #footer-button.mobile-footer-button.active,
+body.mobile-template #footer-buttons > a.mobile-footer-link > #footer-button.mobile-footer-button.active:hover {
+    color: #03100b !important;
+}

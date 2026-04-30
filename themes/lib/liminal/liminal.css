@@ -309,8 +309,9 @@ body.mobile-template .usage-card {
 }
 
 body.mobile-template #show-sidebar,
-body.mobile-template .mobile-nav-button,
-body.mobile-template .mobile-footer-button {
+body.mobile-template .mobile-collapsed-header #show-sidebar,
+body.mobile-template .mobile-nav-grid a.mobile-nav-link > #tab.mobile-nav-button,
+body.mobile-template #footer-buttons > a.mobile-footer-link > #footer-button.mobile-footer-button {
     background: #e8ece5 !important;
     color: var(--fg) !important;
     border-color: var(--border) !important;
@@ -318,10 +319,13 @@ body.mobile-template .mobile-footer-button {
 }
 
 body.mobile-template #show-sidebar:hover,
-body.mobile-template .mobile-nav-button:hover,
-body.mobile-template .mobile-footer-button:hover,
+body.mobile-template .mobile-collapsed-header #show-sidebar:hover,
+body.mobile-template .mobile-nav-grid a.mobile-nav-link > #tab.mobile-nav-button:hover,
+body.mobile-template #footer-buttons > a.mobile-footer-link > #footer-button.mobile-footer-button:hover,
 body.mobile-template .mobile-nav-grid a.mobile-nav-link > #tab.mobile-nav-button.active,
-body.mobile-template #footer-buttons > a.mobile-footer-link > #footer-button.mobile-footer-button.active {
+body.mobile-template .mobile-nav-grid a.mobile-nav-link > #tab.mobile-nav-button.active:hover,
+body.mobile-template #footer-buttons > a.mobile-footer-link > #footer-button.mobile-footer-button.active,
+body.mobile-template #footer-buttons > a.mobile-footer-link > #footer-button.mobile-footer-button.active:hover {
     background: var(--links) !important;
     color: #f6f8f3 !important;
 }
@@ -342,8 +346,136 @@ body.mobile-template textarea,
 body.mobile-template .dropdown,
 body.mobile-template .text-input,
 body.mobile-template .bbcode-dropdown,
-body.mobile-template .bbcode-btn {
+body.mobile-template .bbcode-btn,
+body.mobile-template #bbcode-textbox,
+body.mobile-template #bbcode-preview,
+body.mobile-template .checkbox,
+body.mobile-template .radio,
+body.mobile-template .color-input {
     background: #f8faf5 !important;
     color: var(--fg) !important;
     border-color: var(--border) !important;
+}
+
+body.mobile-template .checkbox:checked {
+    background-color: var(--links) !important;
+}
+
+body.mobile-template .radio:checked {
+    background: radial-gradient(circle, var(--links) 30%, #f8faf5 34%) !important;
+}
+
+body.mobile-template #sidebar {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    height: auto !important;
+    min-height: 0 !important;
+    box-sizing: border-box !important;
+}
+
+body.mobile-template .mobile-nav-grid,
+body.mobile-template #footer-buttons {
+    width: auto !important;
+    box-sizing: border-box !important;
+}
+
+body.mobile-template .mobile-nav-grid a.mobile-nav-link > #tab.mobile-nav-button,
+body.mobile-template #footer-buttons > a.mobile-footer-link > #footer-button.mobile-footer-button {
+    min-height: 34px !important;
+    box-sizing: border-box !important;
+}
+
+#mini-player,
+#mini-player-tracks,
+body.mobile-template #mini-player,
+body.mobile-template #mini-player-tracks {
+    background: rgba(246, 248, 243, 0.94) !important;
+    color: var(--fg) !important;
+    border-color: var(--border) !important;
+}
+
+#mini-player-main,
+#mini-player-meta,
+#mini-player-title,
+#mini-player-row,
+#mini-player-controls,
+#mini-player-volume-wrapper {
+    color: var(--fg);
+}
+
+#mini-player-art-wrapper,
+#mini-player-art {
+    background: #e8ece5 !important;
+    border-color: var(--border) !important;
+}
+
+#mini-player-download,
+#mini-player-play,
+#mini-player-controls span {
+    color: var(--links) !important;
+}
+
+#mini-player-download:hover,
+#mini-player-play:hover,
+#mini-player-controls span:hover {
+    color: #f6f8f3 !important;
+    background: var(--links) !important;
+}
+
+#mini-player-title-inner,
+.mini-track {
+    color: var(--links) !important;
+}
+
+.mini-track {
+    background: transparent !important;
+    border-color: transparent !important;
+}
+
+.mini-track:hover,
+.mini-track.active {
+    background: var(--links) !important;
+    color: #f6f8f3 !important;
+    border-color: var(--links) !important;
+}
+
+#mini-player-seek,
+#mini-player-volume {
+    accent-color: var(--links) !important;
+    background: #f8faf5 !important;
+    border-color: var(--border) !important;
+}
+
+#mini-player-seek::-webkit-slider-thumb,
+#mini-player-volume::-webkit-slider-thumb {
+    background: var(--links) !important;
+    border-color: var(--border) !important;
+}
+
+#mini-player-seek::-moz-range-track,
+#mini-player-volume::-moz-range-track {
+    background: #f8faf5 !important;
+    border-color: var(--border) !important;
+}
+
+#mini-player-seek::-moz-range-thumb,
+#mini-player-volume::-moz-range-thumb {
+    background: var(--links) !important;
+    border-color: var(--border) !important;
+}
+
+#tab:hover,
+#tab.active,
+#footer-button:hover,
+#footer-button.active,
+body.mobile-template #show-sidebar:hover,
+body.mobile-template .mobile-collapsed-header #show-sidebar:hover,
+body.mobile-template .mobile-nav-grid a.mobile-nav-link > #tab.mobile-nav-button:hover,
+body.mobile-template .mobile-nav-grid a.mobile-nav-link > #tab.mobile-nav-button.active,
+body.mobile-template .mobile-nav-grid a.mobile-nav-link > #tab.mobile-nav-button.active:hover,
+body.mobile-template #footer-buttons > a.mobile-footer-link > #footer-button.mobile-footer-button:hover,
+body.mobile-template #footer-buttons > a.mobile-footer-link > #footer-button.mobile-footer-button.active,
+body.mobile-template #footer-buttons > a.mobile-footer-link > #footer-button.mobile-footer-button.active:hover {
+    color: #f6f8f3 !important;
 }

@@ -360,16 +360,18 @@ body.mobile-template .usage-card {
 }
 
 body.mobile-template #show-sidebar,
-body.mobile-template .mobile-nav-button,
-body.mobile-template .mobile-footer-button {
+body.mobile-template .mobile-collapsed-header #show-sidebar,
+body.mobile-template .mobile-nav-grid a.mobile-nav-link > #tab.mobile-nav-button,
+body.mobile-template #footer-buttons > a.mobile-footer-link > #footer-button.mobile-footer-button {
     background: transparent !important;
     color: var(--fg) !important;
     border-color: var(--border) !important;
 }
 
 body.mobile-template #show-sidebar:hover,
-body.mobile-template .mobile-nav-button:hover,
-body.mobile-template .mobile-footer-button:hover,
+body.mobile-template .mobile-collapsed-header #show-sidebar:hover,
+body.mobile-template .mobile-nav-grid a.mobile-nav-link > #tab.mobile-nav-button:hover,
+body.mobile-template #footer-buttons > a.mobile-footer-link > #footer-button.mobile-footer-button:hover,
 body.mobile-template .mobile-nav-grid a.mobile-nav-link > #tab.mobile-nav-button.active,
 body.mobile-template .mobile-nav-grid a.mobile-nav-link > #tab.mobile-nav-button.active:hover,
 body.mobile-template #footer-buttons > a.mobile-footer-link > #footer-button.mobile-footer-button.active,
@@ -408,8 +410,139 @@ body.mobile-template textarea,
 body.mobile-template .dropdown,
 body.mobile-template .text-input,
 body.mobile-template .bbcode-dropdown,
-body.mobile-template .bbcode-btn {
+body.mobile-template .bbcode-btn,
+body.mobile-template #bbcode-textbox,
+body.mobile-template #bbcode-preview,
+body.mobile-template .checkbox,
+body.mobile-template .radio,
+body.mobile-template .color-input {
     background: #080502 !important;
     color: var(--fg) !important;
     border-color: var(--border) !important;
+}
+
+body.mobile-template .checkbox:checked {
+    background-color: var(--fg) !important;
+}
+
+body.mobile-template .radio:checked {
+    background: radial-gradient(circle, var(--fg) 30%, #080502 34%) !important;
+}
+
+body.mobile-template #sidebar {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    height: auto !important;
+    min-height: 0 !important;
+    box-sizing: border-box !important;
+}
+
+body.mobile-template .mobile-nav-grid,
+body.mobile-template #footer-buttons {
+    width: auto !important;
+    box-sizing: border-box !important;
+}
+
+body.mobile-template .mobile-nav-grid a.mobile-nav-link > #tab.mobile-nav-button,
+body.mobile-template #footer-buttons > a.mobile-footer-link > #footer-button.mobile-footer-button {
+    min-height: 34px !important;
+    box-sizing: border-box !important;
+}
+
+#mini-player,
+#mini-player-tracks,
+body.mobile-template #mini-player,
+body.mobile-template #mini-player-tracks {
+    background: rgba(6, 3, 1, 0.92) !important;
+    color: var(--fg) !important;
+    border-color: var(--border) !important;
+}
+
+#mini-player-main,
+#mini-player-meta,
+#mini-player-title,
+#mini-player-row,
+#mini-player-controls,
+#mini-player-volume-wrapper {
+    color: var(--fg);
+}
+
+#mini-player-art-wrapper,
+#mini-player-art {
+    background: #080502 !important;
+    border-color: var(--border) !important;
+}
+
+#mini-player-download,
+#mini-player-play,
+#mini-player-controls span {
+    color: var(--fg) !important;
+}
+
+#mini-player-download:hover,
+#mini-player-play:hover,
+#mini-player-controls span:hover {
+    color: #100701 !important;
+    background: var(--fg) !important;
+    text-shadow: none !important;
+}
+
+#mini-player-title-inner,
+.mini-track {
+    color: var(--fg) !important;
+}
+
+.mini-track {
+    background: transparent !important;
+    border-color: transparent !important;
+}
+
+.mini-track:hover,
+.mini-track.active {
+    background: var(--fg) !important;
+    color: #100701 !important;
+    border-color: var(--links) !important;
+    text-shadow: none !important;
+}
+
+#mini-player-seek,
+#mini-player-volume {
+    accent-color: var(--fg) !important;
+    background: #080502 !important;
+    border-color: var(--border) !important;
+}
+
+#mini-player-seek::-webkit-slider-thumb,
+#mini-player-volume::-webkit-slider-thumb {
+    background: var(--fg) !important;
+    border-color: var(--links) !important;
+}
+
+#mini-player-seek::-moz-range-track,
+#mini-player-volume::-moz-range-track {
+    background: #080502 !important;
+    border-color: var(--border) !important;
+}
+
+#mini-player-seek::-moz-range-thumb,
+#mini-player-volume::-moz-range-thumb {
+    background: var(--fg) !important;
+    border-color: var(--links) !important;
+}
+
+#tab:hover,
+#tab.active,
+#footer-button:hover,
+#footer-button.active,
+body.mobile-template #show-sidebar:hover,
+body.mobile-template .mobile-collapsed-header #show-sidebar:hover,
+body.mobile-template .mobile-nav-grid a.mobile-nav-link > #tab.mobile-nav-button:hover,
+body.mobile-template .mobile-nav-grid a.mobile-nav-link > #tab.mobile-nav-button.active,
+body.mobile-template .mobile-nav-grid a.mobile-nav-link > #tab.mobile-nav-button.active:hover,
+body.mobile-template #footer-buttons > a.mobile-footer-link > #footer-button.mobile-footer-button:hover,
+body.mobile-template #footer-buttons > a.mobile-footer-link > #footer-button.mobile-footer-button.active,
+body.mobile-template #footer-buttons > a.mobile-footer-link > #footer-button.mobile-footer-button.active:hover {
+    color: #100701 !important;
+    text-shadow: none !important;
 }

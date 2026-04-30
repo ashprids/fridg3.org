@@ -521,8 +521,9 @@ body.mobile-template #sidebar {
 }
 
 body.mobile-template #show-sidebar,
-body.mobile-template .mobile-nav-button,
-body.mobile-template .mobile-footer-button {
+body.mobile-template .mobile-collapsed-header #show-sidebar,
+body.mobile-template .mobile-nav-grid a.mobile-nav-link > #tab.mobile-nav-button,
+body.mobile-template #footer-buttons > a.mobile-footer-link > #footer-button.mobile-footer-button {
     background: #ffe85c !important;
     color: var(--fg) !important;
     border: 3px solid var(--border) !important;
@@ -530,8 +531,9 @@ body.mobile-template .mobile-footer-button {
 }
 
 body.mobile-template #show-sidebar:hover,
-body.mobile-template .mobile-nav-button:hover,
-body.mobile-template .mobile-footer-button:hover {
+body.mobile-template .mobile-collapsed-header #show-sidebar:hover,
+body.mobile-template .mobile-nav-grid a.mobile-nav-link > #tab.mobile-nav-button:hover,
+body.mobile-template #footer-buttons > a.mobile-footer-link > #footer-button.mobile-footer-button:hover {
     background: #9aff6f !important;
     color: var(--fg) !important;
     border-color: var(--border) !important;
@@ -558,8 +560,142 @@ body.mobile-template textarea,
 body.mobile-template .dropdown,
 body.mobile-template .text-input,
 body.mobile-template .bbcode-dropdown,
-body.mobile-template .bbcode-btn {
+body.mobile-template .bbcode-btn,
+body.mobile-template #bbcode-textbox,
+body.mobile-template #bbcode-preview,
+body.mobile-template .checkbox,
+body.mobile-template .radio,
+body.mobile-template .color-input {
     background: #ffffff !important;
     color: var(--fg) !important;
+    border-color: var(--border) !important;
+}
+
+body.mobile-template .checkbox:checked {
+    background-color: #ff2fa8 !important;
+}
+
+body.mobile-template .radio:checked {
+    background: radial-gradient(circle, #ff2fa8 30%, #ffffff 34%) !important;
+}
+
+body.mobile-template #sidebar {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    height: auto !important;
+    min-height: 0 !important;
+    box-sizing: border-box !important;
+}
+
+body.mobile-template .mobile-nav-grid,
+body.mobile-template #footer-buttons {
+    width: auto !important;
+    box-sizing: border-box !important;
+}
+
+body.mobile-template .mobile-nav-grid a.mobile-nav-link > #tab.mobile-nav-button,
+body.mobile-template #footer-buttons > a.mobile-footer-link > #footer-button.mobile-footer-button {
+    min-height: 34px !important;
+    box-sizing: border-box !important;
+}
+
+#mini-player,
+#mini-player-tracks,
+body.mobile-template #mini-player,
+body.mobile-template #mini-player-tracks {
+    background: rgba(255, 240, 251, 0.96) !important;
+    color: var(--fg) !important;
+    border: 3px solid var(--border) !important;
+    box-shadow: 5px 5px 0 rgba(36, 20, 51, 0.22) !important;
+}
+
+#mini-player-main,
+#mini-player-meta,
+#mini-player-title,
+#mini-player-row,
+#mini-player-controls,
+#mini-player-volume-wrapper {
+    color: var(--fg);
+}
+
+#mini-player-art-wrapper,
+#mini-player-art {
+    background: #ffffff !important;
+    border-color: var(--border) !important;
+}
+
+#mini-player-download,
+#mini-player-play,
+#mini-player-controls span {
+    color: #ff2fa8 !important;
+}
+
+#mini-player-download:hover,
+#mini-player-play:hover,
+#mini-player-controls span:hover {
+    color: #ffffff !important;
+    background: #ff2fa8 !important;
+}
+
+#mini-player-title-inner,
+.mini-track {
+    color: #ff2fa8 !important;
+}
+
+.mini-track {
+    background: transparent !important;
+    border-color: transparent !important;
+}
+
+.mini-track:hover,
+.mini-track.active {
+    background: #ff2fa8 !important;
+    color: #ffffff !important;
+    border-color: var(--border) !important;
+}
+
+#mini-player-seek,
+#mini-player-volume {
+    accent-color: #ff2fa8 !important;
+    background: #ffffff !important;
+    border-color: var(--border) !important;
+}
+
+#mini-player-seek::-webkit-slider-thumb,
+#mini-player-volume::-webkit-slider-thumb {
+    background: #ff2fa8 !important;
+    border-color: var(--border) !important;
+}
+
+#mini-player-seek::-moz-range-track,
+#mini-player-volume::-moz-range-track {
+    background: #ffffff !important;
+    border-color: var(--border) !important;
+}
+
+#mini-player-seek::-moz-range-thumb,
+#mini-player-volume::-moz-range-thumb {
+    background: #ff2fa8 !important;
+    border-color: var(--border) !important;
+}
+
+#tab:hover,
+#tab.active,
+#footer-button:hover,
+#footer-button.active,
+body.mobile-template .mobile-nav-grid a.mobile-nav-link > #tab.mobile-nav-button,
+body.mobile-template #footer-buttons > a.mobile-footer-link > #footer-button.mobile-footer-button,
+body.mobile-template .mobile-nav-grid a.mobile-nav-link > #tab.mobile-nav-button:hover,
+body.mobile-template #footer-buttons > a.mobile-footer-link > #footer-button.mobile-footer-button:hover {
+    color: var(--fg) !important;
+}
+
+body.mobile-template .mobile-nav-grid a.mobile-nav-link > #tab.mobile-nav-button.active,
+body.mobile-template .mobile-nav-grid a.mobile-nav-link > #tab.mobile-nav-button.active:hover,
+body.mobile-template #footer-buttons > a.mobile-footer-link > #footer-button.mobile-footer-button.active,
+body.mobile-template #footer-buttons > a.mobile-footer-link > #footer-button.mobile-footer-button.active:hover {
+    background: #ff2fa8 !important;
+    color: #ffffff !important;
     border-color: var(--border) !important;
 }

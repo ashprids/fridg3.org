@@ -566,8 +566,9 @@ body.mobile-template .usage-card {
 }
 
 body.mobile-template #show-sidebar,
-body.mobile-template .mobile-nav-button,
-body.mobile-template .mobile-footer-button {
+body.mobile-template .mobile-collapsed-header #show-sidebar,
+body.mobile-template .mobile-nav-grid a.mobile-nav-link > #tab.mobile-nav-button,
+body.mobile-template #footer-buttons > a.mobile-footer-link > #footer-button.mobile-footer-button {
     background:
         linear-gradient(180deg, #3a1727, #160b18) !important;
     color: var(--fg) !important;
@@ -576,8 +577,9 @@ body.mobile-template .mobile-footer-button {
 }
 
 body.mobile-template #show-sidebar:hover,
-body.mobile-template .mobile-nav-button:hover,
-body.mobile-template .mobile-footer-button:hover,
+body.mobile-template .mobile-collapsed-header #show-sidebar:hover,
+body.mobile-template .mobile-nav-grid a.mobile-nav-link > #tab.mobile-nav-button:hover,
+body.mobile-template #footer-buttons > a.mobile-footer-link > #footer-button.mobile-footer-button:hover,
 body.mobile-template .mobile-nav-grid a.mobile-nav-link > #tab.mobile-nav-button.active,
 body.mobile-template .mobile-nav-grid a.mobile-nav-link > #tab.mobile-nav-button.active:hover,
 body.mobile-template #footer-buttons > a.mobile-footer-link > #footer-button.mobile-footer-button.active,
@@ -612,8 +614,143 @@ body.mobile-template textarea,
 body.mobile-template .dropdown,
 body.mobile-template .text-input,
 body.mobile-template .bbcode-dropdown,
-body.mobile-template .bbcode-btn {
+body.mobile-template .bbcode-btn,
+body.mobile-template #bbcode-textbox,
+body.mobile-template #bbcode-preview,
+body.mobile-template .checkbox,
+body.mobile-template .radio,
+body.mobile-template .color-input {
     background: #0b0710 !important;
     color: var(--fg) !important;
     border-color: rgba(170, 142, 170, 0.42) !important;
+}
+
+body.mobile-template .checkbox:checked {
+    background-color: var(--links) !important;
+}
+
+body.mobile-template .radio:checked {
+    background: radial-gradient(circle, var(--links) 30%, #0b0710 34%) !important;
+}
+
+body.mobile-template #sidebar {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    height: auto !important;
+    min-height: 0 !important;
+    box-sizing: border-box !important;
+}
+
+body.mobile-template .mobile-nav-grid,
+body.mobile-template #footer-buttons {
+    width: auto !important;
+    box-sizing: border-box !important;
+}
+
+body.mobile-template .mobile-nav-grid a.mobile-nav-link > #tab.mobile-nav-button,
+body.mobile-template #footer-buttons > a.mobile-footer-link > #footer-button.mobile-footer-button {
+    min-height: 34px !important;
+    box-sizing: border-box !important;
+}
+
+#mini-player,
+#mini-player-tracks,
+body.mobile-template #mini-player,
+body.mobile-template #mini-player-tracks {
+    background: rgba(13, 7, 18, 0.94) !important;
+    color: var(--fg) !important;
+    border-color: var(--border) !important;
+    box-shadow:
+        inset 0 0 0 1px rgba(239, 231, 242, 0.04),
+        4px 4px 0 rgba(0, 0, 0, 0.42) !important;
+}
+
+#mini-player-main,
+#mini-player-meta,
+#mini-player-title,
+#mini-player-row,
+#mini-player-controls,
+#mini-player-volume-wrapper {
+    color: var(--fg);
+}
+
+#mini-player-art-wrapper,
+#mini-player-art {
+    background: #0b0710 !important;
+    border-color: var(--border) !important;
+}
+
+#mini-player-download,
+#mini-player-play,
+#mini-player-controls span {
+    color: var(--links) !important;
+}
+
+#mini-player-download:hover,
+#mini-player-play:hover,
+#mini-player-controls span:hover {
+    color: #fff7fb !important;
+    background: var(--links) !important;
+}
+
+#mini-player-title-inner,
+.mini-track {
+    color: #f2a7ba !important;
+}
+
+.mini-track {
+    background: transparent !important;
+    border-color: transparent !important;
+}
+
+.mini-track:hover,
+.mini-track.active {
+    background: var(--links) !important;
+    color: #fff7fb !important;
+    border-color: #f2a7ba !important;
+}
+
+#mini-player-seek,
+#mini-player-volume {
+    accent-color: var(--links) !important;
+    background: #0b0710 !important;
+    border-color: rgba(170, 142, 170, 0.42) !important;
+}
+
+#mini-player-seek::-webkit-slider-thumb,
+#mini-player-volume::-webkit-slider-thumb {
+    background: var(--links) !important;
+    border-color: #f2a7ba !important;
+}
+
+#mini-player-seek::-moz-range-track,
+#mini-player-volume::-moz-range-track {
+    background: #0b0710 !important;
+    border-color: rgba(170, 142, 170, 0.42) !important;
+}
+
+#mini-player-seek::-moz-range-thumb,
+#mini-player-volume::-moz-range-thumb {
+    background: var(--links) !important;
+    border-color: #f2a7ba !important;
+}
+
+#tab:hover,
+#tab.active,
+#tab:hover::before,
+#tab.active::before,
+#footer-button:hover,
+#footer-button.active,
+body.mobile-template #show-sidebar,
+body.mobile-template .mobile-collapsed-header #show-sidebar,
+body.mobile-template .mobile-nav-grid a.mobile-nav-link > #tab.mobile-nav-button,
+body.mobile-template .mobile-nav-grid a.mobile-nav-link > #tab.mobile-nav-button:hover,
+body.mobile-template .mobile-nav-grid a.mobile-nav-link > #tab.mobile-nav-button.active,
+body.mobile-template .mobile-nav-grid a.mobile-nav-link > #tab.mobile-nav-button.active:hover,
+body.mobile-template #footer-buttons > a.mobile-footer-link > #footer-button.mobile-footer-button,
+body.mobile-template #footer-buttons > a.mobile-footer-link > #footer-button.mobile-footer-button:hover,
+body.mobile-template #footer-buttons > a.mobile-footer-link > #footer-button.mobile-footer-button.active,
+body.mobile-template #footer-buttons > a.mobile-footer-link > #footer-button.mobile-footer-button.active:hover {
+    color: #fff7fb !important;
 }

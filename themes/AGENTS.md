@@ -121,15 +121,27 @@ important mobile selectors that often need theme overrides:
 - `body.mobile-template .mobile-nav-grid a.mobile-nav-link > #tab.mobile-nav-button`
 - `body.mobile-template .mobile-nav-grid a.mobile-nav-link > #tab.mobile-nav-button:hover`
 - `body.mobile-template .mobile-nav-grid a.mobile-nav-link > #tab.mobile-nav-button.active`
+- `body.mobile-template .mobile-nav-grid a.mobile-nav-link > #tab.mobile-nav-button.active:hover`
 - `body.mobile-template #footer-buttons`
 - `body.mobile-template #footer-buttons > a.mobile-footer-link > #footer-button.mobile-footer-button`
 - `body.mobile-template #footer-buttons > a.mobile-footer-link > #footer-button.mobile-footer-button:hover`
 - `body.mobile-template #footer-buttons > a.mobile-footer-link > #footer-button.mobile-footer-button.active`
+- `body.mobile-template #footer-buttons > a.mobile-footer-link > #footer-button.mobile-footer-button.active:hover`
 - `body.mobile-template #content`
 - `body.mobile-template #content-layout`
 - `body.mobile-template #content-main`
 - `body.mobile-template #mini-player`
 - `body.mobile-template #mini-player-tracks`
+- `body.mobile-template #mini-player-art-wrapper`
+- `body.mobile-template #mini-player-art`
+- `body.mobile-template #mini-player-download`
+- `body.mobile-template #mini-player-play`
+- `body.mobile-template #mini-player-controls span`
+- `body.mobile-template #mini-player-seek`
+- `body.mobile-template #mini-player-volume`
+- `body.mobile-template .mini-track`
+- `body.mobile-template .mini-track:hover`
+- `body.mobile-template .mini-track.active`
 - `body.mobile-template #sidebar-footer`
 - `body.mobile-template input`
 - `body.mobile-template textarea`
@@ -144,10 +156,10 @@ minimum mobile checklist for every theme:
 
 - theme the page background
 - theme the collapsed header and menu button
-- theme the expanded menu panel
-- theme mobile nav buttons, including hover and active states
-- theme footer buttons, including hover and active states
-- theme mini-player and track list
+- theme the expanded menu panel, and force `body.mobile-template #sidebar` back to `width: 100% !important; min-width: 0 !important; max-width: none !important;` so desktop sidebar widths do not make the opened mobile menu skinny
+- theme mobile nav buttons, including hover, active, and active-hover states; every state must explicitly set readable text/icon colors
+- theme footer buttons, including hover, active, and active-hover states; every state must explicitly set readable text/icon colors
+- theme the mini-player, track list, album art, download overlay, play/mute controls, title text, sliders, track rows, hover states, and active track states
 - theme `#content-layout` and `#content-main`; especially remove the mobile template's default black `#content-main` background when making a light theme
 - theme inputs, dropdowns, textareas, BBCode controls, radios, checkboxes, and color inputs if the theme is light or uses non-default colors
 - keep spacing tight enough for small screens without horizontal scrolling
@@ -189,7 +201,18 @@ common components:
 - `#footer-buttons`
 - `#footer-button`
 - `#mini-player`
+- `#mini-player-tracks`
+- `#mini-player-art-wrapper`
+- `#mini-player-art`
+- `#mini-player-download`
+- `#mini-player-play`
+- `#mini-player-controls span`
+- `#mini-player-seek`
+- `#mini-player-volume`
+- `.mini-track`, `.mini-track:hover`, `.mini-track.active`
 - form inputs, buttons, `.dropdown`, `.radio`, `.checkbox`
+
+when styling menus, do not only set the background on hover/active states. set the foreground color too. this includes `#tab:hover`, `#tab.active`, `#footer-button:hover`, `#footer-button.active`, mobile nav buttons, mobile footer buttons, and pseudo-elements like `#tab::before` if the theme uses them. invisible active menu text is a tiny little css jump scare and it is your job to prevent it.
 
 ## Content Spacing
 
