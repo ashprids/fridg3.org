@@ -1,0 +1,622 @@
+:root {
+    --bg: #f4ead3;
+    --fg: #2e2118;
+    --border: #5d3b29;
+    --subtle: #7b6550;
+    --links: #8d342f;
+}
+
+body {
+    background:
+        radial-gradient(circle at 14% 16%, rgba(141, 52, 47, 0.18) 0 52px, transparent 53px),
+        radial-gradient(circle at 84% 14%, rgba(92, 115, 61, 0.18) 0 68px, transparent 69px),
+        linear-gradient(90deg, rgba(93, 59, 41, 0.05) 1px, transparent 1px),
+        linear-gradient(0deg, rgba(93, 59, 41, 0.04) 1px, transparent 1px),
+        linear-gradient(180deg, #f8efd9 0%, #ead8b9 52%, #d6c29d 100%);
+    background-size: auto, auto, 34px 34px, 34px 34px, auto;
+    color: var(--fg);
+}
+
+.cottage-wall {
+    position: fixed;
+    inset: 0;
+    z-index: -3;
+    pointer-events: none;
+    background:
+        linear-gradient(90deg, transparent 0 48%, rgba(255, 255, 255, 0.26) 48% 49%, transparent 49% 100%),
+        radial-gradient(ellipse at 50% 0%, rgba(255, 248, 224, 0.42), transparent 52%);
+    opacity: 0.6;
+}
+
+.rose-bramble {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    width: 120px;
+    z-index: -2;
+    pointer-events: none;
+    opacity: 0.78;
+    background:
+        radial-gradient(circle at 40px 70px, #b84d58 0 9px, transparent 10px),
+        radial-gradient(circle at 72px 145px, #8d342f 0 7px, transparent 8px),
+        radial-gradient(circle at 34px 230px, #d4868f 0 8px, transparent 9px),
+        linear-gradient(106deg, transparent 0 44%, rgba(55, 89, 48, 0.66) 44% 46%, transparent 46% 100%),
+        linear-gradient(74deg, transparent 0 54%, rgba(55, 89, 48, 0.48) 54% 56%, transparent 56% 100%);
+    background-size: 120px 280px;
+}
+
+.rose-bramble-left {
+    left: 0;
+}
+
+.rose-bramble-right {
+    right: 0;
+    transform: scaleX(-1);
+}
+
+#page-wrapper,
+#container {
+    background: transparent;
+}
+
+#sidebar {
+    width: 282px;
+    padding-top: 8px;
+    background:
+        linear-gradient(180deg, rgba(245, 231, 199, 0.92), rgba(216, 194, 156, 0.9)),
+        var(--bg);
+    border-right: 3px solid var(--border);
+    box-shadow:
+        inset -10px 0 0 rgba(93, 59, 41, 0.08),
+        10px 0 22px rgba(70, 43, 28, 0.14);
+}
+
+#header {
+    position: relative;
+    margin: 10px 12px 12px 12px;
+    padding: 14px 12px 16px 12px;
+    background:
+        linear-gradient(180deg, rgba(255, 248, 224, 0.92), rgba(238, 219, 184, 0.92));
+    border: 2px solid var(--border);
+    border-radius: 8px 8px 4px 4px;
+    box-shadow:
+        inset 0 0 0 3px rgba(141, 52, 47, 0.08),
+        4px 4px 0 rgba(93, 59, 41, 0.18);
+}
+
+#header::before {
+    content: "";
+    position: absolute;
+    left: 10px;
+    right: 10px;
+    bottom: 5px;
+    height: 2px;
+    background:
+        linear-gradient(90deg, transparent 0 8%, #6f8f4e 8% 16%, transparent 16% 22%, #8d342f 22% 30%, transparent 30% 36%, #6f8f4e 36% 44%, transparent 44% 100%);
+    opacity: 0.85;
+}
+
+#title,
+.mobile-collapsed-title {
+    color: #6f261f;
+    font-family: "MainBold", monospace;
+    font-size: 22px;
+    text-shadow: 1px 1px 0 #f8efd9;
+}
+
+#subtitle,
+#footer-text,
+#user-greeting,
+#content-footer,
+#post-date,
+#post-date-feed,
+#post-description,
+#post-username,
+.usage-label {
+    color: var(--subtle);
+}
+
+#hide-sidebar,
+#show-sidebar {
+    color: var(--subtle);
+}
+
+#hide-sidebar:hover,
+#show-sidebar:hover {
+    color: var(--links);
+}
+
+#sidebar > a {
+    display: block;
+    margin: 0 12px 7px 12px;
+}
+
+#tab {
+    position: relative;
+    min-height: 33px;
+    padding: 7px 12px 7px 24px;
+    display: flex;
+    align-items: center;
+    background:
+        linear-gradient(180deg, rgba(255, 248, 224, 0.82), rgba(229, 207, 169, 0.82));
+    color: var(--fg);
+    border: 1px solid var(--border);
+    border-radius: 999px 12px 12px 999px;
+    box-shadow:
+        3px 3px 0 rgba(93, 59, 41, 0.16),
+        inset 0 0 0 2px rgba(111, 143, 78, 0.1);
+}
+
+#tab::before {
+    content: "";
+    position: absolute;
+    left: 9px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #8d342f;
+    box-shadow:
+        5px -3px 0 -2px #d4868f,
+        8px 3px 0 -3px #6f8f4e;
+}
+
+#tab:hover,
+#tab.active {
+    transform: translate(2px, 1px);
+    background:
+        linear-gradient(180deg, #6f8f4e, #476639);
+    color: #fff8e0;
+    border-color: #2f4b2c;
+    box-shadow: 1px 1px 0 rgba(93, 59, 41, 0.2);
+}
+
+#content {
+    padding: 34px;
+}
+
+#content-layout {
+    position: relative;
+    isolation: isolate;
+    max-width: 900px;
+    min-height: calc(100% - 2px);
+    padding: 24px;
+    background:
+        linear-gradient(180deg, rgba(255, 248, 224, 0.94), rgba(242, 225, 194, 0.94));
+    border: 2px solid var(--border);
+    border-radius: 12px 12px 5px 5px;
+    box-shadow:
+        0 0 0 8px rgba(111, 143, 78, 0.12),
+        12px 14px 0 rgba(93, 59, 41, 0.14);
+}
+
+#content-layout::before {
+    content: "";
+    position: absolute;
+    inset: -15px;
+    z-index: -1;
+    pointer-events: none;
+    border: 1px solid rgba(93, 59, 41, 0.28);
+    border-radius: 16px 16px 7px 7px;
+    background:
+        radial-gradient(circle at 18px 18px, rgba(141, 52, 47, 0.22) 0 5px, transparent 6px),
+        linear-gradient(116deg, transparent 0 49%, rgba(55, 89, 48, 0.24) 49% 50%, transparent 50% 100%);
+}
+
+#content-main > *:first-child {
+    margin-top: 0;
+}
+
+a {
+    color: var(--links);
+}
+
+a:hover {
+    color: #476639;
+}
+
+#post,
+.account-admin-card,
+.usage-card,
+pre code.hljs,
+.form-card,
+.grid-item {
+    background: rgba(255, 248, 224, 0.82);
+    color: var(--fg);
+    border: 1px solid rgba(93, 59, 41, 0.75);
+    border-radius: 8px 8px 3px 3px;
+    box-shadow:
+        4px 5px 0 rgba(93, 59, 41, 0.12),
+        inset 0 0 0 2px rgba(111, 143, 78, 0.06);
+}
+
+#post {
+    padding: 15px 16px;
+}
+
+#post:hover,
+.account-admin-card:hover,
+.usage-card:hover {
+    background: rgba(255, 252, 235, 0.94);
+}
+
+#post-content,
+#post-title,
+.form-card,
+.form-card p,
+.form-field label,
+.checkbox-label span,
+.radio-label span,
+.color-row,
+.color-row span,
+.feed-reply-body,
+.feed-reply-meta,
+.guestbook-post-actions,
+#content-main,
+#content-main h1,
+#content-main h2,
+#content-main h3,
+#content-main h4,
+#content-main p,
+#content-main li {
+    color: var(--fg);
+}
+
+#post-description,
+#post-date,
+#post-date-feed,
+#post-username,
+#post-bookmark,
+#post-bookmark-feed,
+#post-edit-feed,
+.form-card p,
+.form-field label,
+.color-row span,
+.feed-reply-meta {
+    color: var(--subtle);
+}
+
+#search {
+    gap: 9px;
+}
+
+#search-box,
+input,
+textarea,
+.dropdown,
+.text-input,
+.bbcode-dropdown,
+.bbcode-btn,
+#bbcode-textbox,
+#bbcode-preview,
+#create-account-form input[type="text"],
+#admin-account-form input[type="text"],
+#admin-account-form textarea {
+    background: #fff8e0;
+    color: var(--fg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+}
+
+.dropdown option,
+.bbcode-dropdown option {
+    background: #fff8e0;
+    color: var(--fg);
+}
+
+#search-box:hover,
+#search-box:focus,
+input:hover,
+input:focus,
+textarea:hover,
+textarea:focus,
+.dropdown:hover,
+.dropdown:focus,
+.text-input:hover,
+.text-input:focus,
+.bbcode-dropdown:hover,
+.bbcode-dropdown:focus,
+.bbcode-btn:hover,
+.bbcode-btn:focus,
+#bbcode-textbox:focus {
+    background: #fffdf0;
+    color: var(--fg);
+    border-color: var(--links);
+    box-shadow: 0 0 0 3px rgba(141, 52, 47, 0.12);
+    outline: none;
+}
+
+.bbcode-editor,
+.bbcode-toolbar,
+#bbcode-preview {
+    background: rgba(255, 248, 224, 0.72);
+    color: var(--fg);
+    border-color: var(--border);
+}
+
+.checkbox,
+.radio {
+    background: #fff8e0;
+    border: 1px solid var(--border);
+}
+
+.checkbox:checked {
+    background-color: #6f8f4e;
+}
+
+.radio:checked {
+    background: radial-gradient(circle, #8d342f 30%, #fff8e0 34%);
+}
+
+.color-input {
+    background: #fff8e0;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+}
+
+.color-input:hover,
+.color-input:focus {
+    border-color: var(--links);
+    box-shadow: 0 0 0 3px rgba(141, 52, 47, 0.12);
+}
+
+#search-button,
+#form-button,
+#lastfm-link-button,
+#settings-save,
+#color-reset,
+.danger-button,
+button,
+#footer-button {
+    background:
+        linear-gradient(180deg, #6f8f4e, #476639);
+    color: #fff8e0;
+    border: 1px solid #2f4b2c;
+    border-radius: 8px;
+    box-shadow: 3px 3px 0 rgba(93, 59, 41, 0.18);
+}
+
+#search-button:hover,
+#form-button:hover,
+#settings-save:hover,
+#color-reset:hover,
+button:hover,
+#footer-button:hover {
+    background:
+        linear-gradient(180deg, #a94f58, #7b2e31);
+    color: #fff8e0;
+}
+
+#search-button:active,
+#form-button:active,
+#settings-save:active,
+#color-reset:active,
+button:active,
+#footer-button:active,
+.bbcode-btn:active {
+    transform: translate(1px, 1px);
+    box-shadow: 1px 1px 0 rgba(93, 59, 41, 0.16);
+}
+
+#settings-save {
+    background: #6f8f4e !important;
+    color: #fff8e0 !important;
+}
+
+.danger-button,
+.grid-delete-button,
+#post-edit-feed,
+#admin-account-delete-form button {
+    background: #8d342f;
+    color: #fff8e0;
+}
+
+.form-button-disabled,
+.form-button-disabled:hover,
+.form-button-disabled:active,
+.bbcode-btn.disabled:hover,
+.bbcode-dropdown.disabled:hover {
+    background: #d8c7a8;
+    color: var(--subtle);
+    box-shadow: none;
+    transform: none;
+    cursor: not-allowed;
+}
+
+#mini-player,
+#mini-player-tracks,
+#sidebar-footer {
+    margin: 10px 12px;
+    width: calc(100% - 24px);
+    box-sizing: border-box;
+    background: rgba(255, 248, 224, 0.82);
+    border: 1px solid var(--border);
+    border-radius: 8px 8px 3px 3px;
+    box-shadow: 3px 3px 0 rgba(93, 59, 41, 0.14);
+}
+
+#mini-player {
+    padding: 8px;
+    gap: 5px;
+    overflow-x: hidden;
+}
+
+#mini-player-main {
+    gap: 7px;
+}
+
+#mini-player-art-wrapper {
+    width: 30px;
+    height: 30px;
+    margin-top: 0;
+}
+
+#mini-player-art {
+    border-color: var(--border);
+    border-radius: 4px;
+}
+
+#mini-player-meta {
+    min-width: 0;
+}
+
+#mini-player-title-inner,
+.mini-track {
+    color: var(--links);
+}
+
+#mini-player-title-inner {
+    display: block;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+#mini-player-play,
+#mini-player-controls span {
+    color: var(--fg);
+}
+
+#mini-player-controls span:hover,
+#mini-player-play:hover {
+    color: var(--links);
+}
+
+#mini-player-seek,
+#mini-player-volume {
+    background: #fff8e0;
+    border: 1px solid var(--border);
+    accent-color: #8d342f;
+}
+
+#sidebar-footer {
+    padding: 14px 8px 10px 8px;
+}
+
+#footer-text {
+    display: block;
+    margin-bottom: 10px;
+    text-align: center;
+}
+
+#footer-buttons {
+    gap: 4px;
+}
+
+#footer-button {
+    display: flex;
+    min-height: 24px;
+    align-items: center;
+    justify-content: center;
+    padding: 4px 6px;
+}
+
+#footer-button.active,
+body.mobile-template #footer-buttons > a.mobile-footer-link > #footer-button.mobile-footer-button.active {
+    background: var(--links) !important;
+    color: #fff8e0 !important;
+    border-color: var(--border) !important;
+}
+
+.tooltip {
+    background: #fff8e0;
+    color: var(--fg);
+    border: 1px solid var(--border);
+    border-radius: 8px 8px 3px 3px;
+    box-shadow:
+        4px 4px 0 rgba(93, 59, 41, 0.18),
+        inset 0 0 0 2px rgba(111, 143, 78, 0.08);
+}
+
+#ascii,
+#ascii-time,
+#ascii-time-label,
+.usage-ascii {
+    color: #6f4a35;
+    text-shadow: 1px 1px 0 rgba(255, 248, 224, 0.72);
+}
+
+#error {
+    color: #8d342f;
+}
+
+#spa-loading {
+    background: #fff8e0;
+    color: var(--fg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    box-shadow: 4px 4px 0 rgba(93, 59, 41, 0.16);
+}
+
+body.mobile-template {
+    background:
+        radial-gradient(circle at 14% 16%, rgba(141, 52, 47, 0.18) 0 52px, transparent 53px),
+        radial-gradient(circle at 84% 14%, rgba(92, 115, 61, 0.18) 0 68px, transparent 69px),
+        linear-gradient(180deg, #f8efd9 0%, #ead8b9 52%, #d6c29d 100%) !important;
+    color: var(--fg) !important;
+}
+
+body.mobile-template .mobile-collapsed-header,
+body.mobile-template #sidebar,
+body.mobile-template #mini-player,
+body.mobile-template #mini-player-tracks,
+body.mobile-template #sidebar-footer,
+body.mobile-template #content-layout,
+body.mobile-template #post,
+body.mobile-template .usage-card {
+    background: rgba(255, 248, 224, 0.9) !important;
+    border-color: var(--border) !important;
+    border-radius: 8px !important;
+    box-shadow: 4px 4px 0 rgba(93, 59, 41, 0.14) !important;
+    color: var(--fg) !important;
+}
+
+body.mobile-template #show-sidebar,
+body.mobile-template .mobile-nav-button,
+body.mobile-template .mobile-footer-button {
+    background: #6f8f4e !important;
+    color: #fff8e0 !important;
+    border-color: #2f4b2c !important;
+    border-radius: 8px !important;
+}
+
+body.mobile-template #show-sidebar:hover,
+body.mobile-template .mobile-nav-button:hover,
+body.mobile-template .mobile-footer-button:hover,
+body.mobile-template .mobile-nav-grid a.mobile-nav-link > #tab.mobile-nav-button.active,
+body.mobile-template .mobile-nav-grid a.mobile-nav-link > #tab.mobile-nav-button.active:hover {
+    background: var(--links) !important;
+    color: #fff8e0 !important;
+    border-color: var(--border) !important;
+}
+
+body.mobile-template input,
+body.mobile-template textarea,
+body.mobile-template .dropdown,
+body.mobile-template .text-input,
+body.mobile-template .bbcode-dropdown,
+body.mobile-template .bbcode-btn {
+    background: #fff8e0 !important;
+    color: var(--fg) !important;
+    border-color: var(--border) !important;
+}
+
+body.mobile-template #content {
+    padding: 12px !important;
+}
+
+body.mobile-template #content-layout {
+    padding: 14px !important;
+    background: rgba(255, 248, 224, 0.9) !important;
+    border-color: var(--border) !important;
+}
+
+body.mobile-template #content-layout::before {
+    display: none;
+}
+
+body.mobile-template #content-main {
+    padding: 0 !important;
+    background: transparent !important;
+    color: var(--fg) !important;
+}

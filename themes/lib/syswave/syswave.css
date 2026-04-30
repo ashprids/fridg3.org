@@ -347,6 +347,14 @@ body.mobile-template #footer-buttons > a.mobile-footer-link > #footer-button.mob
     color: #061018 !important;
 }
 
+body.mobile-template #show-sidebar:hover,
+body.mobile-template .mobile-nav-grid a.mobile-nav-link > #tab.mobile-nav-button:hover,
+body.mobile-template #footer-buttons > a.mobile-footer-link > #footer-button.mobile-footer-button:hover {
+    background:
+        linear-gradient(135deg, rgba(224, 30, 110, 0.84), rgba(104, 9, 62, 0.9)) !important;
+    color: var(--fg) !important;
+}
+
 body.mobile-template #content {
     padding: 14px !important;
 }
@@ -362,6 +370,17 @@ body.mobile-template #content-layout {
 body.mobile-template #content-main {
     padding: 0 !important;
     background: transparent !important;
+}
+
+body.mobile-template input,
+body.mobile-template textarea,
+body.mobile-template .dropdown,
+body.mobile-template .text-input,
+body.mobile-template .bbcode-dropdown,
+body.mobile-template .bbcode-btn {
+    background: rgba(3, 11, 18, 0.9) !important;
+    color: var(--fg) !important;
+    border-color: rgba(23, 184, 212, 0.72) !important;
 }
 
 @media (max-width: 420px) {

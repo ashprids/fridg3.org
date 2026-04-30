@@ -96,7 +96,7 @@ translation: go wild aesthetically, but do not strand users on a pretty page wit
 
 ## Mobile Behavior
 
-mobile view uses `/template_mobile.html`, not the theme HTML file.
+mobile view uses `/template_mobile.html`, not the theme HTML file. this is easy to forget and then the theme looks half-baked on `m.fridg3.org`, so treat mobile CSS as required theme work, not a nice extra.
 
 when mobile-friendly view is active:
 
@@ -104,24 +104,53 @@ when mobile-friendly view is active:
 - the theme HTML is ignored
 - write mobile overrides under `body.mobile-template`
 
-this means every theme CSS should include mobile-specific polish if the theme changes core layout, backgrounds, nav buttons, content spacing, cards, or forms.
+this means every theme CSS must include mobile-specific polish if the theme changes core layout, backgrounds, nav buttons, content spacing, cards, forms, the mini-player, or footer controls. almost every real theme changes at least one of these, so most themes should have a substantial `body.mobile-template` section.
+
+important: `/template_mobile.html` contains inline styles with strong defaults. these include black backgrounds for nav buttons, player/footer blocks, and `#content-main`. if you do not override these with `body.mobile-template ... !important`, light themes will get random black panels and dark themes may get default-looking controls.
 
 important mobile selectors that often need theme overrides:
 
 - `body.mobile-template`
 - `body.mobile-template #sidebar`
 - `body.mobile-template .mobile-collapsed-header`
+- `body.mobile-template .mobile-collapsed-brand`
+- `body.mobile-template .mobile-collapsed-subtitle`
+- `body.mobile-template .mobile-collapsed-title`
 - `body.mobile-template #show-sidebar`
 - `body.mobile-template .mobile-nav-grid`
-- `body.mobile-template .mobile-nav-button`
+- `body.mobile-template .mobile-nav-grid a.mobile-nav-link > #tab.mobile-nav-button`
+- `body.mobile-template .mobile-nav-grid a.mobile-nav-link > #tab.mobile-nav-button:hover`
+- `body.mobile-template .mobile-nav-grid a.mobile-nav-link > #tab.mobile-nav-button.active`
 - `body.mobile-template #footer-buttons`
-- `body.mobile-template .mobile-footer-button`
+- `body.mobile-template #footer-buttons > a.mobile-footer-link > #footer-button.mobile-footer-button`
+- `body.mobile-template #footer-buttons > a.mobile-footer-link > #footer-button.mobile-footer-button:hover`
+- `body.mobile-template #footer-buttons > a.mobile-footer-link > #footer-button.mobile-footer-button.active`
 - `body.mobile-template #content`
 - `body.mobile-template #content-layout`
 - `body.mobile-template #content-main`
 - `body.mobile-template #mini-player`
+- `body.mobile-template #mini-player-tracks`
+- `body.mobile-template #sidebar-footer`
+- `body.mobile-template input`
+- `body.mobile-template textarea`
+- `body.mobile-template .dropdown`
+- `body.mobile-template .text-input`
+- `body.mobile-template .bbcode-dropdown`
+- `body.mobile-template .bbcode-btn`
 
 mobile CSS may need `!important` because `template_mobile.html` has inline mobile-specific styles. use it where necessary, not everywhere like a maniac.
+
+minimum mobile checklist for every theme:
+
+- theme the page background
+- theme the collapsed header and menu button
+- theme the expanded menu panel
+- theme mobile nav buttons, including hover and active states
+- theme footer buttons, including hover and active states
+- theme mini-player and track list
+- theme `#content-layout` and `#content-main`; especially remove the mobile template's default black `#content-main` background when making a light theme
+- theme inputs, dropdowns, textareas, BBCode controls, radios, checkboxes, and color inputs if the theme is light or uses non-default colors
+- keep spacing tight enough for small screens without horizontal scrolling
 
 ## CSS Strategy
 
