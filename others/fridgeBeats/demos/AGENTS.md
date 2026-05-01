@@ -2,7 +2,7 @@
 
 This folder stores demo projects for fridgeBeats. Demo files must end in `.frdgbeats`; `index.php` lists those files for the in-app demo menu.
 
-Demo projects should show off fridgeBeats as a tiny DAW: playlist arrangement, piano roll notes, velocity, note length, instruments, colors, wave unison/detune, SoundFont presets, and mixer effects.
+Demo projects should show off fridgeBeats as a tiny DAW: playlist arrangement, piano roll notes, velocity, note length, instruments, colors, wave unison/detune, SoundFont presets, mixer effects, and automation when it makes the demo clearer or more expressive.
 
 ## File Format
 
@@ -115,6 +115,7 @@ Each channel should look like this:
   "soundfontBankNumber": 0,
   "activePattern": 0,
   "effects": [],
+  "automation": [],
   "patterns": [],
   "pattern": []
 }
@@ -254,6 +255,40 @@ Current built-in effect ids:
 
 Keep effect chains tasteful. A demo should sound intentional, not like every knob got dragged to maximum for the crime of being visible.
 
+## Automation In Demo Projects
+
+Channels can include an `automation` array. Automation lanes are per-channel but their values are per-pattern, so automation only applies when that specific pattern is selected in piano roll or placed in the playlist. Use them to show movement that would be annoying to fake with duplicated patterns, such as filter sweeps, delay throws, volume fades, or pan motion.
+
+Lane shape:
+
+```json
+{
+  "id": "automation-lead-cutoff",
+  "targetType": "synth",
+  "effectId": "",
+  "paramId": "cutoff",
+  "enabled": true,
+  "collapsed": false,
+  "mode": "smooth",
+  "valuesByPattern": {
+    "0": [800, null, null, null, 2400, null, null, null, 6200, null, null, null, 3200, null, null, null]
+  }
+}
+```
+
+Target rules:
+
+- `targetType: "channel"` supports `paramId: "volume"` or `"pan"` and leaves `effectId` empty.
+- `targetType: "synth"` targets numeric params declared by the selected synth's `params`; leave `effectId` empty.
+- `targetType: "effect"` targets numeric params declared by an effect in the channel's `effects`; set `effectId` to that effect object's `id`.
+- `valuesByPattern` is an object keyed by zero-based pattern index as a string. Each value array must be the same length as `steps`.
+- Use `null` for blank cells. Omit pattern keys that have no automation.
+- `mode: "step"` jumps between explicit points. `mode: "smooth"` interpolates blank cells between numeric points.
+- Automation only targets numeric params (`range`/`number`). `select` params are intentionally not automated.
+- Do not use one lane-level `values` array for new demos; that is only a legacy migration shape.
+
+Keep automation musical and readable. A few intentional points teach the feature better than every cell being filled with chaos confetti.
+
 ## Arrangement Strategy
 
 Use `clips` to map patterns into playlist bar rows.
@@ -290,6 +325,7 @@ Before saving a demo:
 - Make at least one pattern use velocities below `1`.
 - Include at least one disabled `0` playlist cell via `-1` if it helps show arrangement control.
 - Include mixer effects only where they demonstrate a sound.
+- Include automation only where it demonstrates useful movement; set obvious lane ids so diffs stay readable.
 - Set `selectedId` to the most interesting instrument to inspect first.
 - Set `activePattern` on channels to a pattern worth opening.
 

@@ -293,6 +293,97 @@
         ctx.setTransform(1, 0, 0, 1, 0, 0);
     }
 
+    const nebulaDefaults = {
+        oscA: 'analog',
+        warpA: 0.18,
+        levelA: 0.82,
+        oscB: 'spectral',
+        warpB: 0.42,
+        levelB: 0.48,
+        semiB: 0,
+        fineB: 7,
+        sub: 0.24,
+        noise: 0.04,
+        unison: 5,
+        detune: 0.18,
+        blend: 0.62,
+        cutoff: 7200,
+        resonance: 3.2,
+        drive: 0.14,
+        attack: 0.006,
+        decay: 0.28,
+        sustain: 0.7,
+        release: 0.16
+    };
+    const preset = (name, settings) => ({ name, settings: { ...nebulaDefaults, ...settings } });
+    const presets = [
+        preset('[BA] Growl Bass', { oscA: 'monster', warpA: 0.74, levelA: 0.82, oscB: 'vowel', warpB: 0.68, levelB: 0.46, semiB: -12, fineB: 0, sub: 0.58, noise: 0.08, unison: 2, detune: 0.08, blend: 0.38, cutoff: 2300, resonance: 9.5, drive: 0.54, attack: 0.003, decay: 0.16, sustain: 0.72, release: 0.09 }),
+        preset('[BA] Future Bass Stack', { oscA: 'analog', warpA: 0.22, levelA: 0.78, oscB: 'vowel', warpB: 0.38, levelB: 0.42, semiB: 7, fineB: -4, sub: 0.18, noise: 0.02, unison: 12, detune: 0.3, blend: 0.72, cutoff: 5400, resonance: 4.8, drive: 0.12, attack: 0.04, decay: 0.42, sustain: 0.64, release: 0.62 }),
+        preset('[BA] Sub Utility', { oscA: 'analog', warpA: 0, levelA: 0.32, oscB: 'digital', warpB: 0, levelB: 0, semiB: 0, fineB: 0, sub: 0.86, noise: 0, unison: 1, detune: 0, blend: 0.5, cutoff: 2600, resonance: 1.2, drive: 0.08, attack: 0.004, decay: 0.22, sustain: 0.92, release: 0.12 }),
+        preset('[BA] Rubber Bite', { oscA: 'analog', warpA: 0.38, levelA: 0.76, oscB: 'monster', warpB: 0.44, levelB: 0.28, semiB: -12, fineB: 3, sub: 0.48, noise: 0.02, unison: 3, detune: 0.1, blend: 0.44, cutoff: 3100, resonance: 7.2, drive: 0.32, attack: 0.004, decay: 0.24, sustain: 0.68, release: 0.13 }),
+        preset('[BA] Vowel Lowend', { oscA: 'vowel', warpA: 0.6, levelA: 0.74, oscB: 'analog', warpB: 0.12, levelB: 0.34, semiB: -12, fineB: -7, sub: 0.52, noise: 0.03, unison: 2, detune: 0.07, blend: 0.4, cutoff: 1900, resonance: 10.5, drive: 0.42, attack: 0.003, decay: 0.18, sustain: 0.76, release: 0.1 }),
+        preset('[BA] Digital Donk', { oscA: 'digital', warpA: 0.48, levelA: 0.8, oscB: 'spectral', warpB: 0.22, levelB: 0.3, semiB: -5, fineB: 0, sub: 0.42, noise: 0.01, unison: 1, detune: 0, blend: 0.35, cutoff: 4200, resonance: 6.8, drive: 0.24, attack: 0.002, decay: 0.12, sustain: 0.38, release: 0.08 }),
+        preset('[BA] Reese Fog', { oscA: 'analog', warpA: 0.2, levelA: 0.7, oscB: 'spectral', warpB: 0.32, levelB: 0.52, semiB: 0, fineB: 11, sub: 0.35, noise: 0.03, unison: 8, detune: 0.24, blend: 0.52, cutoff: 3600, resonance: 3.8, drive: 0.18, attack: 0.01, decay: 0.34, sustain: 0.82, release: 0.28 }),
+        preset('[BA] Acid Spine', { oscA: 'digital', warpA: 0.58, levelA: 0.78, oscB: 'monster', warpB: 0.36, levelB: 0.26, semiB: 0, fineB: 0, sub: 0.26, noise: 0.02, unison: 2, detune: 0.04, blend: 0.36, cutoff: 2800, resonance: 13.5, drive: 0.38, attack: 0.002, decay: 0.2, sustain: 0.45, release: 0.09 }),
+        preset('[BA] Warm Club', { oscA: 'analog', warpA: 0.14, levelA: 0.84, oscB: 'analog', warpB: 0.08, levelB: 0.3, semiB: -12, fineB: 0, sub: 0.56, noise: 0, unison: 4, detune: 0.09, blend: 0.46, cutoff: 4800, resonance: 3.2, drive: 0.16, attack: 0.006, decay: 0.28, sustain: 0.72, release: 0.16 }),
+        preset('[BA] Metallic Bass', { oscA: 'spectral', warpA: 0.66, levelA: 0.72, oscB: 'digital', warpB: 0.62, levelB: 0.44, semiB: -7, fineB: 15, sub: 0.34, noise: 0.04, unison: 3, detune: 0.11, blend: 0.48, cutoff: 2500, resonance: 8.4, drive: 0.46, attack: 0.003, decay: 0.14, sustain: 0.58, release: 0.12 }),
+
+        preset('[FX] Ion Sweep', { oscA: 'spectral', warpA: 0.78, levelA: 0.68, oscB: 'vowel', warpB: 0.74, levelB: 0.4, semiB: 12, fineB: 9, sub: 0, noise: 0.16, unison: 10, detune: 0.42, blend: 0.78, cutoff: 11800, resonance: 12, drive: 0.18, attack: 0.32, decay: 1.2, sustain: 0.42, release: 1.5 }),
+        preset('[FX] Broken Comet', { oscA: 'monster', warpA: 0.88, levelA: 0.72, oscB: 'digital', warpB: 0.84, levelB: 0.5, semiB: 19, fineB: -18, sub: 0.02, noise: 0.12, unison: 7, detune: 0.38, blend: 0.66, cutoff: 9800, resonance: 6.5, drive: 0.34, attack: 0.04, decay: 0.62, sustain: 0.2, release: 1.1 }),
+        preset('[FX] Vowel Siren', { oscA: 'vowel', warpA: 0.92, levelA: 0.8, oscB: 'vowel', warpB: 0.28, levelB: 0.42, semiB: 7, fineB: 22, sub: 0, noise: 0.05, unison: 5, detune: 0.26, blend: 0.7, cutoff: 7600, resonance: 15, drive: 0.22, attack: 0.22, decay: 0.8, sustain: 0.36, release: 1.4 }),
+        preset('[FX] Data Spray', { oscA: 'digital', warpA: 0.96, levelA: 0.7, oscB: 'spectral', warpB: 0.9, levelB: 0.38, semiB: 24, fineB: -11, sub: 0, noise: 0.18, unison: 4, detune: 0.34, blend: 0.62, cutoff: 13200, resonance: 5.4, drive: 0.28, attack: 0.002, decay: 0.18, sustain: 0.12, release: 0.44 }),
+        preset('[FX] Ghost Radio', { oscA: 'vowel', warpA: 0.48, levelA: 0.52, oscB: 'spectral', warpB: 0.72, levelB: 0.46, semiB: 5, fineB: 35, sub: 0, noise: 0.28, unison: 6, detune: 0.3, blend: 0.82, cutoff: 4800, resonance: 11.5, drive: 0.12, attack: 0.16, decay: 0.9, sustain: 0.3, release: 1.8 }),
+        preset('[FX] Star Tick', { oscA: 'digital', warpA: 0.44, levelA: 0.72, oscB: 'analog', warpB: 0.2, levelB: 0.2, semiB: 12, fineB: 0, sub: 0, noise: 0.04, unison: 2, detune: 0.06, blend: 0.42, cutoff: 15000, resonance: 4.2, drive: 0.1, attack: 0.001, decay: 0.06, sustain: 0.04, release: 0.18 }),
+        preset('[FX] Plasma Door', { oscA: 'monster', warpA: 0.62, levelA: 0.66, oscB: 'spectral', warpB: 0.64, levelB: 0.48, semiB: -12, fineB: 0, sub: 0.08, noise: 0.22, unison: 9, detune: 0.28, blend: 0.74, cutoff: 6200, resonance: 9, drive: 0.4, attack: 0.08, decay: 0.7, sustain: 0.25, release: 1.2 }),
+        preset('[FX] Bit Lantern', { oscA: 'digital', warpA: 0.72, levelA: 0.58, oscB: 'digital', warpB: 0.26, levelB: 0.36, semiB: 17, fineB: -25, sub: 0, noise: 0.06, unison: 3, detune: 0.16, blend: 0.58, cutoff: 8600, resonance: 7.5, drive: 0.2, attack: 0.018, decay: 0.32, sustain: 0.08, release: 0.72 }),
+        preset('[FX] Lunar Knock', { oscA: 'analog', warpA: 0.34, levelA: 0.68, oscB: 'monster', warpB: 0.56, levelB: 0.36, semiB: -24, fineB: 0, sub: 0.18, noise: 0.2, unison: 1, detune: 0, blend: 0.5, cutoff: 2100, resonance: 16, drive: 0.5, attack: 0.002, decay: 0.38, sustain: 0, release: 0.3 }),
+        preset('[FX] Aurora Rise', { oscA: 'spectral', warpA: 0.5, levelA: 0.62, oscB: 'vowel', warpB: 0.52, levelB: 0.42, semiB: 12, fineB: 7, sub: 0.02, noise: 0.11, unison: 12, detune: 0.36, blend: 0.84, cutoff: 7000, resonance: 5.8, drive: 0.08, attack: 0.6, decay: 1.8, sustain: 0.58, release: 2.6 }),
+
+        preset('[LD] Hyper Lead', { oscA: 'digital', warpA: 0.34, levelA: 0.86, oscB: 'spectral', warpB: 0.58, levelB: 0.52, semiB: 0, fineB: 9, sub: 0.08, noise: 0.03, unison: 9, detune: 0.22, blend: 0.68, cutoff: 9800, resonance: 2.4, drive: 0.18, attack: 0.004, decay: 0.18, sustain: 0.8, release: 0.18 }),
+        preset('[LD] Prism Lead', { oscA: 'spectral', warpA: 0.28, levelA: 0.78, oscB: 'digital', warpB: 0.38, levelB: 0.44, semiB: 12, fineB: -4, sub: 0.04, noise: 0.01, unison: 7, detune: 0.18, blend: 0.64, cutoff: 11200, resonance: 3.2, drive: 0.12, attack: 0.006, decay: 0.24, sustain: 0.74, release: 0.26 }),
+        preset('[LD] Vocal Blade', { oscA: 'vowel', warpA: 0.46, levelA: 0.82, oscB: 'analog', warpB: 0.18, levelB: 0.38, semiB: 7, fineB: 6, sub: 0.02, noise: 0.02, unison: 6, detune: 0.16, blend: 0.58, cutoff: 8600, resonance: 5.2, drive: 0.16, attack: 0.004, decay: 0.22, sustain: 0.7, release: 0.24 }),
+        preset('[LD] Monster Solo', { oscA: 'monster', warpA: 0.52, levelA: 0.72, oscB: 'spectral', warpB: 0.3, levelB: 0.36, semiB: 0, fineB: 12, sub: 0.06, noise: 0.04, unison: 5, detune: 0.14, blend: 0.5, cutoff: 7200, resonance: 6.4, drive: 0.3, attack: 0.003, decay: 0.18, sustain: 0.68, release: 0.22 }),
+        preset('[LD] Glass Runner', { oscA: 'digital', warpA: 0.2, levelA: 0.74, oscB: 'spectral', warpB: 0.2, levelB: 0.48, semiB: 12, fineB: 0, sub: 0, noise: 0.02, unison: 4, detune: 0.1, blend: 0.68, cutoff: 12600, resonance: 4.2, drive: 0.06, attack: 0.002, decay: 0.16, sustain: 0.78, release: 0.3 }),
+        preset('[LD] Acid Lead', { oscA: 'analog', warpA: 0.32, levelA: 0.8, oscB: 'digital', warpB: 0.42, levelB: 0.32, semiB: 0, fineB: 5, sub: 0.04, noise: 0.01, unison: 3, detune: 0.08, blend: 0.44, cutoff: 5600, resonance: 14, drive: 0.24, attack: 0.002, decay: 0.2, sustain: 0.54, release: 0.14 }),
+        preset('[LD] Arena Saw', { oscA: 'analog', warpA: 0.18, levelA: 0.74, oscB: 'spectral', warpB: 0.36, levelB: 0.44, semiB: 0, fineB: -7, sub: 0.03, noise: 0.02, unison: 14, detune: 0.3, blend: 0.72, cutoff: 10400, resonance: 2.6, drive: 0.12, attack: 0.006, decay: 0.28, sustain: 0.76, release: 0.32 }),
+        preset('[LD] Thin Laser', { oscA: 'digital', warpA: 0.64, levelA: 0.64, oscB: 'digital', warpB: 0.18, levelB: 0.18, semiB: 19, fineB: 0, sub: 0, noise: 0.01, unison: 2, detune: 0.04, blend: 0.4, cutoff: 15000, resonance: 3.8, drive: 0.08, attack: 0.001, decay: 0.12, sustain: 0.6, release: 0.16 }),
+        preset('[LD] Soft Anthem', { oscA: 'spectral', warpA: 0.24, levelA: 0.72, oscB: 'analog', warpB: 0.16, levelB: 0.4, semiB: 7, fineB: -5, sub: 0.05, noise: 0.01, unison: 9, detune: 0.2, blend: 0.64, cutoff: 9000, resonance: 3.4, drive: 0.08, attack: 0.02, decay: 0.34, sustain: 0.72, release: 0.48 }),
+        preset('[LD] Digital Horn', { oscA: 'vowel', warpA: 0.36, levelA: 0.76, oscB: 'digital', warpB: 0.46, levelB: 0.4, semiB: 0, fineB: 10, sub: 0.02, noise: 0.02, unison: 5, detune: 0.12, blend: 0.6, cutoff: 7800, resonance: 5.8, drive: 0.2, attack: 0.01, decay: 0.24, sustain: 0.68, release: 0.28 }),
+
+        preset('[PD] Wide Pad', { oscA: 'spectral', warpA: 0.32, levelA: 0.7, oscB: 'vowel', warpB: 0.3, levelB: 0.38, semiB: 0, fineB: 5, sub: 0.06, noise: 0.05, unison: 10, detune: 0.2, blend: 0.75, cutoff: 4200, resonance: 3.5, drive: 0.04, attack: 0.38, decay: 1.4, sustain: 0.76, release: 1.8 }),
+        preset('[PD] Cosmic Choir', { oscA: 'vowel', warpA: 0.28, levelA: 0.62, oscB: 'spectral', warpB: 0.38, levelB: 0.46, semiB: 0, fineB: -8, sub: 0.03, noise: 0.06, unison: 12, detune: 0.24, blend: 0.8, cutoff: 5200, resonance: 4.4, drive: 0.06, attack: 0.52, decay: 1.7, sustain: 0.72, release: 2.4 }),
+        preset('[PD] Analog Dawn', { oscA: 'analog', warpA: 0.12, levelA: 0.72, oscB: 'analog', warpB: 0.2, levelB: 0.42, semiB: 0, fineB: 6, sub: 0.08, noise: 0.03, unison: 8, detune: 0.18, blend: 0.66, cutoff: 3600, resonance: 2.6, drive: 0.04, attack: 0.44, decay: 1.2, sustain: 0.82, release: 2.1 }),
+        preset('[PD] Frozen Glass', { oscA: 'spectral', warpA: 0.18, levelA: 0.58, oscB: 'digital', warpB: 0.24, levelB: 0.34, semiB: 12, fineB: 0, sub: 0, noise: 0.02, unison: 9, detune: 0.16, blend: 0.78, cutoff: 7600, resonance: 5.5, drive: 0.02, attack: 0.62, decay: 1.8, sustain: 0.62, release: 2.8 }),
+        preset('[PD] Dark Matter', { oscA: 'monster', warpA: 0.38, levelA: 0.58, oscB: 'vowel', warpB: 0.44, levelB: 0.34, semiB: -12, fineB: 4, sub: 0.12, noise: 0.08, unison: 7, detune: 0.2, blend: 0.72, cutoff: 2400, resonance: 6.2, drive: 0.18, attack: 0.58, decay: 1.4, sustain: 0.78, release: 2.2 }),
+        preset('[PD] Soft Orbit', { oscA: 'analog', warpA: 0.2, levelA: 0.56, oscB: 'spectral', warpB: 0.26, levelB: 0.38, semiB: 7, fineB: -3, sub: 0.04, noise: 0.04, unison: 11, detune: 0.22, blend: 0.82, cutoff: 6100, resonance: 3.2, drive: 0.03, attack: 0.48, decay: 1.5, sustain: 0.74, release: 2.0 }),
+        preset('[PD] Warm Strings', { oscA: 'analog', warpA: 0.08, levelA: 0.64, oscB: 'vowel', warpB: 0.22, levelB: 0.3, semiB: 0, fineB: 8, sub: 0.05, noise: 0.04, unison: 10, detune: 0.18, blend: 0.7, cutoff: 4600, resonance: 2.8, drive: 0.05, attack: 0.32, decay: 1.0, sustain: 0.8, release: 1.9 }),
+        preset('[PD] Mist Engine', { oscA: 'spectral', warpA: 0.44, levelA: 0.54, oscB: 'monster', warpB: 0.24, levelB: 0.24, semiB: -5, fineB: 11, sub: 0.04, noise: 0.12, unison: 8, detune: 0.26, blend: 0.76, cutoff: 3900, resonance: 4.8, drive: 0.1, attack: 0.7, decay: 1.9, sustain: 0.7, release: 2.5 }),
+        preset('[PD] Violet Air', { oscA: 'vowel', warpA: 0.18, levelA: 0.48, oscB: 'spectral', warpB: 0.18, levelB: 0.48, semiB: 12, fineB: -12, sub: 0, noise: 0.03, unison: 14, detune: 0.2, blend: 0.86, cutoff: 6900, resonance: 3.6, drive: 0.02, attack: 0.56, decay: 1.6, sustain: 0.68, release: 2.7 }),
+        preset('[PD] Ocean Floor', { oscA: 'analog', warpA: 0.16, levelA: 0.5, oscB: 'monster', warpB: 0.18, levelB: 0.28, semiB: -12, fineB: 0, sub: 0.2, noise: 0.07, unison: 6, detune: 0.18, blend: 0.7, cutoff: 2100, resonance: 3.8, drive: 0.12, attack: 0.64, decay: 1.7, sustain: 0.84, release: 2.6 }),
+
+        preset('[PL] Clean Pluck', { oscA: 'analog', warpA: 0.08, levelA: 0.9, oscB: 'digital', warpB: 0.2, levelB: 0.18, semiB: 12, fineB: 0, sub: 0.1, noise: 0.02, unison: 3, detune: 0.08, blend: 0.45, cutoff: 6800, resonance: 5.6, drive: 0.06, attack: 0.002, decay: 0.18, sustain: 0.18, release: 0.14 }),
+        preset('[PL] Prism Pick', { oscA: 'spectral', warpA: 0.22, levelA: 0.76, oscB: 'digital', warpB: 0.14, levelB: 0.28, semiB: 12, fineB: 4, sub: 0.02, noise: 0.01, unison: 4, detune: 0.08, blend: 0.55, cutoff: 9800, resonance: 5.2, drive: 0.04, attack: 0.002, decay: 0.2, sustain: 0.12, release: 0.18 }),
+        preset('[PL] Vowel Pluck', { oscA: 'vowel', warpA: 0.32, levelA: 0.78, oscB: 'analog', warpB: 0.1, levelB: 0.24, semiB: 7, fineB: 0, sub: 0.04, noise: 0.01, unison: 2, detune: 0.05, blend: 0.48, cutoff: 6200, resonance: 8.2, drive: 0.08, attack: 0.002, decay: 0.16, sustain: 0.1, release: 0.12 }),
+        preset('[PL] Glass Mallet', { oscA: 'digital', warpA: 0.16, levelA: 0.66, oscB: 'spectral', warpB: 0.2, levelB: 0.34, semiB: 19, fineB: -3, sub: 0, noise: 0.01, unison: 3, detune: 0.06, blend: 0.6, cutoff: 12400, resonance: 4.6, drive: 0.02, attack: 0.001, decay: 0.24, sustain: 0.08, release: 0.26 }),
+        preset('[PL] Rubber Pluck', { oscA: 'analog', warpA: 0.24, levelA: 0.78, oscB: 'monster', warpB: 0.24, levelB: 0.2, semiB: -12, fineB: 0, sub: 0.18, noise: 0.01, unison: 2, detune: 0.04, blend: 0.36, cutoff: 4200, resonance: 9.4, drive: 0.16, attack: 0.002, decay: 0.14, sustain: 0.18, release: 0.12 }),
+        preset('[PL] Digital Harp', { oscA: 'digital', warpA: 0.12, levelA: 0.68, oscB: 'analog', warpB: 0.08, levelB: 0.24, semiB: 12, fineB: 7, sub: 0.02, noise: 0, unison: 5, detune: 0.1, blend: 0.58, cutoff: 11200, resonance: 3.4, drive: 0.03, attack: 0.004, decay: 0.26, sustain: 0.14, release: 0.34 }),
+        preset('[PL] Monster Snap', { oscA: 'monster', warpA: 0.42, levelA: 0.76, oscB: 'digital', warpB: 0.36, levelB: 0.22, semiB: 0, fineB: 0, sub: 0.08, noise: 0.03, unison: 2, detune: 0.06, blend: 0.4, cutoff: 5200, resonance: 10, drive: 0.26, attack: 0.001, decay: 0.11, sustain: 0.08, release: 0.09 }),
+        preset('[PL] Soft Marimba', { oscA: 'analog', warpA: 0.1, levelA: 0.72, oscB: 'spectral', warpB: 0.1, levelB: 0.26, semiB: 12, fineB: -6, sub: 0.04, noise: 0.01, unison: 1, detune: 0, blend: 0.52, cutoff: 7600, resonance: 4.8, drive: 0.04, attack: 0.003, decay: 0.22, sustain: 0.06, release: 0.22 }),
+        preset('[PL] Neon Pick', { oscA: 'spectral', warpA: 0.38, levelA: 0.72, oscB: 'vowel', warpB: 0.18, levelB: 0.22, semiB: 7, fineB: 5, sub: 0.02, noise: 0.02, unison: 4, detune: 0.12, blend: 0.58, cutoff: 9200, resonance: 7.5, drive: 0.06, attack: 0.002, decay: 0.18, sustain: 0.12, release: 0.18 }),
+        preset('[PL] Dusty Bell', { oscA: 'vowel', warpA: 0.12, levelA: 0.58, oscB: 'spectral', warpB: 0.16, levelB: 0.3, semiB: 12, fineB: 14, sub: 0, noise: 0.04, unison: 3, detune: 0.08, blend: 0.68, cutoff: 8400, resonance: 5.8, drive: 0.02, attack: 0.006, decay: 0.3, sustain: 0.1, release: 0.42 }),
+
+        preset('[SY] Mellow Keys', { oscA: 'analog', warpA: 0.12, levelA: 0.72, oscB: 'spectral', warpB: 0.2, levelB: 0.28, semiB: 12, fineB: 0, sub: 0.04, noise: 0.01, unison: 3, detune: 0.06, blend: 0.56, cutoff: 7400, resonance: 3.4, drive: 0.06, attack: 0.018, decay: 0.34, sustain: 0.58, release: 0.42 }),
+        preset('[SY] Digital Keys', { oscA: 'digital', warpA: 0.18, levelA: 0.7, oscB: 'analog', warpB: 0.08, levelB: 0.3, semiB: 12, fineB: 2, sub: 0.02, noise: 0, unison: 2, detune: 0.04, blend: 0.5, cutoff: 9600, resonance: 2.8, drive: 0.04, attack: 0.006, decay: 0.28, sustain: 0.52, release: 0.36 }),
+        preset('[SY] Warm Poly', { oscA: 'analog', warpA: 0.18, levelA: 0.74, oscB: 'analog', warpB: 0.14, levelB: 0.34, semiB: 0, fineB: 8, sub: 0.06, noise: 0.01, unison: 5, detune: 0.12, blend: 0.62, cutoff: 6200, resonance: 2.5, drive: 0.08, attack: 0.024, decay: 0.42, sustain: 0.7, release: 0.58 }),
+        preset('[SY] Spectral Organ', { oscA: 'spectral', warpA: 0.12, levelA: 0.68, oscB: 'vowel', warpB: 0.08, levelB: 0.3, semiB: 0, fineB: -5, sub: 0.02, noise: 0, unison: 4, detune: 0.04, blend: 0.7, cutoff: 8800, resonance: 2.2, drive: 0.03, attack: 0.04, decay: 0.3, sustain: 0.82, release: 0.5 }),
+        preset('[SY] Bright Comp', { oscA: 'digital', warpA: 0.26, levelA: 0.76, oscB: 'spectral', warpB: 0.28, levelB: 0.36, semiB: 0, fineB: 0, sub: 0.03, noise: 0.01, unison: 4, detune: 0.1, blend: 0.58, cutoff: 12000, resonance: 3.6, drive: 0.1, attack: 0.004, decay: 0.22, sustain: 0.62, release: 0.22 }),
+        preset('[SY] Soft Bells', { oscA: 'spectral', warpA: 0.2, levelA: 0.58, oscB: 'digital', warpB: 0.14, levelB: 0.3, semiB: 12, fineB: 9, sub: 0, noise: 0.01, unison: 2, detune: 0.03, blend: 0.72, cutoff: 10500, resonance: 4, drive: 0.02, attack: 0.012, decay: 0.6, sustain: 0.24, release: 0.9 }),
+        preset('[SY] Hybrid Piano', { oscA: 'analog', warpA: 0.08, levelA: 0.76, oscB: 'digital', warpB: 0.08, levelB: 0.22, semiB: 12, fineB: -2, sub: 0.04, noise: 0.01, unison: 1, detune: 0, blend: 0.5, cutoff: 8200, resonance: 2.8, drive: 0.04, attack: 0.003, decay: 0.48, sustain: 0.34, release: 0.5 }),
+        preset('[SY] Velvet Poly', { oscA: 'vowel', warpA: 0.16, levelA: 0.58, oscB: 'analog', warpB: 0.14, levelB: 0.38, semiB: 0, fineB: 4, sub: 0.05, noise: 0.01, unison: 6, detune: 0.12, blend: 0.68, cutoff: 5400, resonance: 3.1, drive: 0.04, attack: 0.06, decay: 0.5, sustain: 0.66, release: 0.78 }),
+        preset('[SY] Shimmer Keys', { oscA: 'spectral', warpA: 0.28, levelA: 0.62, oscB: 'spectral', warpB: 0.18, levelB: 0.36, semiB: 12, fineB: 12, sub: 0, noise: 0.02, unison: 5, detune: 0.14, blend: 0.76, cutoff: 13200, resonance: 3.3, drive: 0.03, attack: 0.018, decay: 0.5, sustain: 0.5, release: 0.74 }),
+        preset('[SY] Classic Stack', { oscA: 'analog', warpA: 0.2, levelA: 0.78, oscB: 'spectral', warpB: 0.22, levelB: 0.42, semiB: 0, fineB: -8, sub: 0.08, noise: 0.01, unison: 7, detune: 0.16, blend: 0.64, cutoff: 7800, resonance: 2.9, drive: 0.09, attack: 0.016, decay: 0.4, sustain: 0.7, release: 0.62 })
+    ];
+
     window.fridgeBeatsSynths.register({
         id: 'nebula-table',
         name: 'Nebula Table',
@@ -318,14 +409,7 @@
             { id: 'sustain', label: 'sustain', type: 'range', min: 0, max: 1, step: 0.01, default: 0.7 },
             { id: 'release', label: 'release', type: 'range', min: 0.02, max: 3, step: 0.01, default: 0.16, unit: 's' }
         ],
-        presets: [
-            { name: 'Hyper Lead', settings: { oscA: 'digital', warpA: 0.34, levelA: 0.86, oscB: 'spectral', warpB: 0.58, levelB: 0.52, semiB: 0, fineB: 9, sub: 0.08, noise: 0.03, unison: 9, detune: 0.22, blend: 0.68, cutoff: 9800, resonance: 2.4, drive: 0.18, attack: 0.004, decay: 0.18, sustain: 0.8, release: 0.18 } },
-            { name: 'Future Bass Stack', settings: { oscA: 'analog', warpA: 0.22, levelA: 0.78, oscB: 'vowel', warpB: 0.38, levelB: 0.42, semiB: 7, fineB: -4, sub: 0.18, noise: 0.02, unison: 12, detune: 0.3, blend: 0.72, cutoff: 5400, resonance: 4.8, drive: 0.12, attack: 0.04, decay: 0.42, sustain: 0.64, release: 0.62 } },
-            { name: 'Growl Bass', settings: { oscA: 'monster', warpA: 0.74, levelA: 0.82, oscB: 'vowel', warpB: 0.68, levelB: 0.46, semiB: -12, fineB: 0, sub: 0.58, noise: 0.08, unison: 2, detune: 0.08, blend: 0.38, cutoff: 2300, resonance: 9.5, drive: 0.54, attack: 0.003, decay: 0.16, sustain: 0.72, release: 0.09 } },
-            { name: 'Clean Pluck', settings: { oscA: 'analog', warpA: 0.08, levelA: 0.9, oscB: 'digital', warpB: 0.2, levelB: 0.18, semiB: 12, fineB: 0, sub: 0.1, noise: 0.02, unison: 3, detune: 0.08, blend: 0.45, cutoff: 6800, resonance: 5.6, drive: 0.06, attack: 0.002, decay: 0.18, sustain: 0.18, release: 0.14 } },
-            { name: 'Wide Pad', settings: { oscA: 'spectral', warpA: 0.32, levelA: 0.7, oscB: 'vowel', warpB: 0.3, levelB: 0.38, semiB: 0, fineB: 5, sub: 0.06, noise: 0.05, unison: 10, detune: 0.2, blend: 0.75, cutoff: 4200, resonance: 3.5, drive: 0.04, attack: 0.38, decay: 1.4, sustain: 0.76, release: 1.8 } },
-            { name: 'Sub Utility', settings: { oscA: 'analog', warpA: 0, levelA: 0.32, oscB: 'digital', warpB: 0, levelB: 0, semiB: 0, fineB: 0, sub: 0.86, noise: 0, unison: 1, detune: 0, blend: 0.5, cutoff: 2600, resonance: 1.2, drive: 0.08, attack: 0.004, decay: 0.22, sustain: 0.92, release: 0.12 } }
-        ],
+        presets,
         css: `
 .fb-nebula-panel {
     height: 100%;

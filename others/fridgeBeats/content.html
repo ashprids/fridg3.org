@@ -54,6 +54,7 @@
                     <button class="fb-tab is-active" id="fb-roll-tab" type="button">piano roll</button>
                     <button class="fb-tab" id="fb-playlist-tab" type="button">playlist</button>
                     <button class="fb-tab" id="fb-mixer-tab" type="button">mixer</button>
+                    <button class="fb-tab" id="fb-automation-tab" type="button">automate</button>
                     <button class="fb-tab" id="fb-waveform-tab" type="button" disabled>waveform</button>
                     <button class="fb-tab" id="fb-synth-tab" type="button" disabled>synth</button>
                 </div>
@@ -172,6 +173,21 @@
                     </div>
                 </div>
                 <div class="fb-mixer" id="fb-mixer"></div>
+            </div>
+
+            <div class="fb-editor-body fb-hidden" id="fb-automation-view">
+                <div class="fb-roll-meta">
+                    <div class="fb-selected-label" id="fb-automation-label">automation</div>
+                    <div class="fb-field-row">
+                        <label class="fb-field">
+                            <span>pattern</span>
+                            <select class="fb-select" id="fb-automation-pattern" aria-label="automation pattern"></select>
+                        </label>
+                        <select class="fb-select" id="fb-automation-target" aria-label="automation target"></select>
+                        <button class="fb-button" id="fb-add-automation" type="button" data-tooltip="add automation lane"><i class="fa-solid fa-plus"></i></button>
+                    </div>
+                </div>
+                <div class="fb-automation" id="fb-automation"></div>
             </div>
 
             <div class="fb-editor-body fb-hidden" id="fb-waveform-view">

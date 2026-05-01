@@ -66,7 +66,16 @@ Supported param types:
 
 Every param should include `id`, `label`, `type`, and `default`. Numeric params should include `min`, `max`, and `step`.
 
-Params are the saved state contract. Even if the GUI uses knobs, pads, fake patch cables, or tiny cursed screens, declare every saved control in `params` so import/export and presets do not become soup.
+Params are the saved state contract. Even if the GUI uses knobs, pads, fake patch cables, or tiny cursed screens, declare every saved control in `params` so import/export, presets, and automation do not become soup.
+
+The automate tab exposes numeric synth params (`range` and `number`) as per-channel automation targets. Automation values are stored per pattern, so a synth sweep on pattern 1 must not affect pattern 2 unless pattern 2 has its own values. `select` params are saved and preset-capable, but they are not automated.
+
+Automation authoring rules for synth params:
+
+- Keep param `id` values stable. Renaming an id breaks saved projects, presets, demos, and automation lanes targeting that param.
+- Numeric params must have sensible `min`, `max`, `step`, and `default` values because automation uses them for clamping, drawing, and readouts.
+- Do not hide important sound-shaping values outside `params`; automation cannot target private state.
+- If a param should not be automated, it probably should be a `select` mode or internal derived value rather than a numeric public param.
 
 ## Presets
 
@@ -75,9 +84,18 @@ Presets appear in the synth tab header beside the synth picker. Selecting one me
 Rules:
 
 - Only include keys declared in `params`.
-- Use clear sound names such as `Wide Lead`, `Soft Pad`, `Rubber Bass`, or `Glass Bell`.
-- Include at least five useful presets for bundled/production synths.
+- Preset names must start with a type tag followed by the name, for example `[SY] Mellow Keys`.
+- Supported type tags are:
+  - `[BA]` bass
+  - `[FX]` effects
+  - `[LD]` leads
+  - `[PD]` pads
+  - `[PL]` plucks
+  - `[SQ]` sequences, only when the synth actually has sequencing/arpeggio-style behavior
+  - `[SY]` synth/general-purpose patches
+- Bundled/production synths should have 10 unique presets for each applicable type. If a type does not fit the synth, skip it, but use as many applicable types as possible.
 - Presets should cover real starting points, not microscopic knob nudges nobody will hear.
+- Preset `settings` should be complete enough to avoid old channel settings bleeding into the new patch after selection.
 
 ## Voice API
 
@@ -127,6 +145,7 @@ Custom GUIs should:
 - Use unique class names prefixed with the synth id, such as `.fb-glass-fm-*`.
 - Use real `input`, `select`, or `button` elements for accessibility.
 - Call `api.setParam(...)` on input/change so settings save.
+- Call `api.setParam(...)` for every automatable control; direct mutation of `api.settings` bypasses save/import/export redraw behavior and makes automation look haunted.
 - Fill the 4:3 stage. Set the returned root to `height: 100%` and use CSS grid/flex so the interface feels intentionally framed.
 - Avoid relying on global layout beyond font and CSS variables.
 
@@ -145,5 +164,6 @@ Then load `/others/fridgeBeats/`, make a channel source `synth`, pick your synth
 - the synth appears in the channel rack selector
 - the synth tab enables only for synth channels
 - GUI controls save and reload in `.frdgbeats`
+- numeric params appear in the automate tab and respond to drawn automation lanes
 - piano roll, playlist, and keyboard preview all play notes
 - no browser console errors appear

@@ -127,6 +127,34 @@
         });
     }
 
+    const waveDefaults = { wave: 'sawtooth', unison: 1, detune: 0.08, attack: 0.006, release: 0.11 };
+    const preset = (name, settings) => ({ name, settings: { ...waveDefaults, ...settings } });
+    const presets = [
+        preset('[BA] Clean Sub', { wave: 'sine', unison: 1, detune: 0, attack: 0.004, release: 0.08 }),
+        preset('[BA] Square Weight', { wave: 'square', unison: 2, detune: 0.04, attack: 0.003, release: 0.09 }),
+        preset('[BA] Saw Push', { wave: 'sawtooth', unison: 3, detune: 0.07, attack: 0.004, release: 0.1 }),
+
+        preset('[FX] Laser Ping', { wave: 'sine', unison: 1, detune: 0, attack: 0.002, release: 0.04 }),
+        preset('[FX] Alarm Blip', { wave: 'square', unison: 1, detune: 0, attack: 0.002, release: 0.08 }),
+        preset('[FX] Voltage Zap', { wave: 'sawtooth', unison: 2, detune: 0.28, attack: 0.002, release: 0.06 }),
+
+        preset('[LD] Wide Lead', { wave: 'sawtooth', unison: 6, detune: 0.24, attack: 0.004, release: 0.18 }),
+        preset('[LD] Pure Lead', { wave: 'sine', unison: 1, detune: 0, attack: 0.006, release: 0.22 }),
+        preset('[LD] Square Hero', { wave: 'square', unison: 3, detune: 0.08, attack: 0.004, release: 0.16 }),
+
+        preset('[PD] Soft Pad', { wave: 'triangle', unison: 8, detune: 0.18, attack: 0.22, release: 0.82 }),
+        preset('[PD] Sine Cloud', { wave: 'sine', unison: 6, detune: 0.1, attack: 0.34, release: 1.1 }),
+        preset('[PD] Saw Blanket', { wave: 'sawtooth', unison: 9, detune: 0.16, attack: 0.28, release: 1.3 }),
+
+        preset('[PL] Clean Pluck', { wave: 'triangle', unison: 1, detune: 0, attack: 0.002, release: 0.12 }),
+        preset('[PL] Square Pluck', { wave: 'square', unison: 2, detune: 0.04, attack: 0.002, release: 0.09 }),
+        preset('[PL] Saw Snap', { wave: 'sawtooth', unison: 3, detune: 0.08, attack: 0.002, release: 0.11 }),
+
+        preset('[SY] Default Saw', { wave: 'sawtooth', unison: 1, detune: 0.08, attack: 0.006, release: 0.11 }),
+        preset('[SY] Mellow Keys', { wave: 'triangle', unison: 3, detune: 0.04, attack: 0.012, release: 0.32 }),
+        preset('[SY] Pure Sine', { wave: 'sine', unison: 1, detune: 0, attack: 0.012, release: 0.26 })
+    ];
+
     window.fridgeBeatsSynths.register({
         id: 'wave-oscillator',
         name: 'Wave Oscillator',
@@ -137,13 +165,7 @@
             { id: 'attack', label: 'attack', type: 'range', min: 0.002, max: 0.6, step: 0.001, default: 0.006, unit: 's' },
             { id: 'release', label: 'release', type: 'range', min: 0.02, max: 1.6, step: 0.01, default: 0.11, unit: 's' }
         ],
-        presets: [
-            { name: 'Default Saw', settings: { wave: 'sawtooth', unison: 1, detune: 0.08, attack: 0.006, release: 0.11 } },
-            { name: 'Wide Lead', settings: { wave: 'sawtooth', unison: 6, detune: 0.24, attack: 0.004, release: 0.18 } },
-            { name: 'Square Bass', settings: { wave: 'square', unison: 2, detune: 0.06, attack: 0.003, release: 0.08 } },
-            { name: 'Soft Pad', settings: { wave: 'triangle', unison: 8, detune: 0.18, attack: 0.22, release: 0.82 } },
-            { name: 'Pure Sine', settings: { wave: 'sine', unison: 1, detune: 0, attack: 0.012, release: 0.26 } }
-        ],
+        presets,
         css: `
 .fb-wave-osc-panel {
     height: 100%;

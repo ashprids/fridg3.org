@@ -66,7 +66,16 @@ Every param should include:
 
 For numeric params include `min`, `max`, and `step`.
 
-Params are still important for custom GUIs: they define defaults, saved setting keys, clamping, and summaries while the effect is minimized.
+Params are still important for custom GUIs: they define defaults, saved setting keys, clamping, summaries while the effect is minimized, and automation targets.
+
+The automate tab exposes numeric effect params (`range` and `number`) for every enabled or bypassed effect on a channel. Automation values are stored per pattern, so an effect throw on pattern 1 must not affect pattern 2 unless pattern 2 has its own values. `select` params stay saved/preset-capable, but they are not automation targets.
+
+Automation authoring rules for effects:
+
+- Keep effect `id`, effect instance `id`, and param `id` behavior stable. Automation lanes targeting effects store the effect instance `id` plus `paramId`.
+- Numeric params must include sensible `min`, `max`, `step`, and `default` values because automation uses those for clamping and grid drawing.
+- If changing a param should affect the live Web Audio chain, make sure `api.setParam(...)` is used in the GUI so fridgeBeats can rebuild the channel output.
+- Avoid hiding meaningful numeric state outside `params`; private state cannot be automated or preserved cleanly.
 
 ## Presets
 
@@ -112,6 +121,7 @@ Custom GUIs should:
 - Use unique class names prefixed with the effect id, such as `.fb-delay-*`.
 - Keep controls keyboard-accessible by using real `input`, `select`, or `button` elements.
 - Call `api.setParam(...)` on input/change so settings save and playback updates.
+- Use `api.setParam(...)` for automatable controls; direct mutation of `api.settings` can desync the mixer GUI, saved project JSON, and automation playback.
 - Still declare every saved control in `params`, even if the UI uses knobs, pads, or buttons instead of default sliders.
 - Do not leave raw browser sliders visible in custom GUIs. If a range input is used for interaction/accessibility, visually integrate or hide it so the custom control surface is what the user actually sees and grabs.
 - Avoid relying on global app layout styles beyond font and CSS variables.
@@ -176,6 +186,7 @@ Then load `/others/fridgeBeats/`, open the mixer tab, add the effect to a channe
 
 - the effect appears in the picker
 - params render correctly
+- numeric params appear in the automate tab and respond to drawn automation lanes
 - bypass/remove/reorder works
 - playback remains audible
 - no browser console errors appear

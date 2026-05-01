@@ -9,6 +9,7 @@
     const DEFAULT_BAR_COUNT = 4;
     const MAX_BARS = 128;
     const MAX_PATTERNS = 128;
+    const MAX_AUTOMATION_LANES = 48;
     const DEFAULT_NOTE_LENGTH_SNAP = 0.5;
     const NOTE_LENGTH_SNAP_OPTIONS = [1, 0.5, 0.25];
     const DISABLED_CLIP = -1;
@@ -89,6 +90,7 @@
     let rubberBandJobId = 1;
     let rubberBandUnavailable = false;
     let suppressRollClick = false;
+    let suppressAutomationClick = false;
     let velocityEditor = null;
     const heldKeys = new Set();
     const activeKeyboardVoices = new Map();
@@ -110,6 +112,7 @@
     const effectDefinitions = new Map();
     const synthDefinitions = new Map();
     const channelOutputs = new Map();
+    const retiredChannelOutputs = new Set();
     let effectCatalogPromise = null;
     let synthCatalogPromise = null;
 
@@ -150,15 +153,22 @@
         rollTab: document.getElementById('fb-roll-tab'),
         playlistTab: document.getElementById('fb-playlist-tab'),
         mixerTab: document.getElementById('fb-mixer-tab'),
+        automationTab: document.getElementById('fb-automation-tab'),
         waveformTab: document.getElementById('fb-waveform-tab'),
         synthTab: document.getElementById('fb-synth-tab'),
         rollView: document.getElementById('fb-roll-view'),
         playlistView: document.getElementById('fb-playlist-view'),
         mixerView: document.getElementById('fb-mixer-view'),
+        automationView: document.getElementById('fb-automation-view'),
         waveformView: document.getElementById('fb-waveform-view'),
         synthView: document.getElementById('fb-synth-view'),
         mixer: document.getElementById('fb-mixer'),
         mixerLabel: document.getElementById('fb-mixer-label'),
+        automationLabel: document.getElementById('fb-automation-label'),
+        automationPattern: document.getElementById('fb-automation-pattern'),
+        automationTarget: document.getElementById('fb-automation-target'),
+        addAutomation: document.getElementById('fb-add-automation'),
+        automation: document.getElementById('fb-automation'),
         waveformLabel: document.getElementById('fb-waveform-label'),
         synthLabel: document.getElementById('fb-synth-label'),
         synthEditor: document.getElementById('fb-synth-editor'),
@@ -234,6 +244,13 @@
                 if (Array.isArray(channel.patterns)) {
                     channel.patterns = channel.patterns.map(pattern => resizePattern(pattern, projectSteps));
                 }
+                if (Array.isArray(channel.automation)) {
+                    channel.automation.forEach(lane => {
+                        Object.keys(automationPatternValues(lane)).forEach(patternIndex => {
+                            lane.valuesByPattern[patternIndex] = resizeAutomationValues(lane.valuesByPattern[patternIndex], projectSteps);
+                        });
+                    });
+                }
                 channel.pattern = Array.isArray(channel.patterns)
                     ? channel.patterns[Math.max(0, Math.min(MAX_PATTERNS - 1, Number(channel.activePattern) || 0))]
                     : resizePattern(channel.pattern, projectSteps);
@@ -301,6 +318,21 @@
         els.pattern.value = String(Math.max(0, Math.min(MAX_PATTERNS - 1, selected)));
     }
 
+    function renderAutomationPatternOptions(channel = selectedChannel()) {
+        if (!els.automationPattern) return;
+        const selected = normalizeAutomationPatternIndex(channel.activePattern || 0);
+        els.automationPattern.innerHTML = '';
+        const options = document.createDocumentFragment();
+        for (let index = 0; index < MAX_PATTERNS; index += 1) {
+            const option = document.createElement('option');
+            option.value = String(index);
+            option.textContent = String(index + 1);
+            options.append(option);
+        }
+        els.automationPattern.append(options);
+        els.automationPattern.value = String(selected);
+    }
+
     function clearFloatingTooltips() {
         document.querySelectorAll('.tooltip').forEach(tooltip => tooltip.remove());
     }
@@ -364,6 +396,7 @@
             activePattern: 0,
             collapsed: true,
             effects: [],
+            automation: [],
             patterns,
             pattern
         };
@@ -467,6 +500,225 @@
 
     function selectedChannel() {
         return state.channels.find(channel => channel.id === selectedId) || state.channels[0];
+    }
+
+    function resizeAutomationValues(values, length = stepCount()) {
+        const resized = Array.isArray(values) ? values.slice(0, length) : [];
+        while (resized.length < length) resized.push(null);
+        return resized.map(value => value === '' || value === undefined ? null : value);
+    }
+
+    function normalizeAutomationPatternIndex(value) {
+        const number = Number(value);
+        return Number.isInteger(number) && number >= 0 && number < MAX_PATTERNS ? number : 0;
+    }
+
+    function automationPatternValues(lane) {
+        if (!lane.valuesByPattern || typeof lane.valuesByPattern !== 'object' || Array.isArray(lane.valuesByPattern)) {
+            lane.valuesByPattern = {};
+        }
+        if (Array.isArray(lane.values)) {
+            const legacyPattern = normalizeAutomationPatternIndex(lane.patternIndex);
+            if (!Array.isArray(lane.valuesByPattern[legacyPattern])) {
+                lane.valuesByPattern[legacyPattern] = lane.values;
+            }
+            delete lane.values;
+        }
+        Object.keys(lane.valuesByPattern).forEach(key => {
+            const normalizedKey = String(normalizeAutomationPatternIndex(key));
+            const values = resizeAutomationValues(lane.valuesByPattern[key]);
+            if (normalizedKey !== key) delete lane.valuesByPattern[key];
+            lane.valuesByPattern[normalizedKey] = values;
+        });
+        return lane.valuesByPattern;
+    }
+
+    function automationValuesForPattern(lane, patternIndex, create = false) {
+        const valuesByPattern = automationPatternValues(lane);
+        const key = String(normalizeAutomationPatternIndex(patternIndex));
+        if (!Array.isArray(valuesByPattern[key])) {
+            if (!create) return resizeAutomationValues([]);
+            valuesByPattern[key] = resizeAutomationValues([]);
+        }
+        valuesByPattern[key] = resizeAutomationValues(valuesByPattern[key]);
+        return valuesByPattern[key];
+    }
+
+    function setAutomationValuesForPattern(lane, patternIndex, values) {
+        const valuesByPattern = automationPatternValues(lane);
+        valuesByPattern[String(normalizeAutomationPatternIndex(patternIndex))] = resizeAutomationValues(values);
+    }
+
+    function ensureChannelAutomation(channel) {
+        if (!Array.isArray(channel.automation)) channel.automation = [];
+        channel.automation = channel.automation.slice(0, MAX_AUTOMATION_LANES).map(lane => {
+            const normalized = lane && typeof lane === 'object' ? lane : {};
+            normalized.id = normalized.id || ('automation-' + Date.now() + '-' + Math.random().toString(16).slice(2));
+            normalized.targetType = normalized.targetType || 'synth';
+            normalized.effectId = normalized.effectId || '';
+            normalized.paramId = normalized.paramId || '';
+            normalized.enabled = normalized.enabled !== false;
+            normalized.collapsed = normalized.collapsed === true;
+            normalized.mode = normalized.mode === 'smooth' ? 'smooth' : 'step';
+            if (Array.isArray(normalized.values) && normalized.patternIndex === undefined) {
+                normalized.patternIndex = channel.activePattern || 0;
+            }
+            automationPatternValues(normalized);
+            delete normalized.patternIndex;
+            return normalized;
+        });
+    }
+
+    function automationTargets(channel = selectedChannel()) {
+        const targets = [
+            {
+                id: 'channel:volume',
+                targetType: 'channel',
+                paramId: 'volume',
+                label: 'channel / volume',
+                param: { id: 'volume', label: 'volume', min: 0, max: 1, step: 0.01, default: channel.volume ?? 0.5 }
+            },
+            {
+                id: 'channel:pan',
+                targetType: 'channel',
+                paramId: 'pan',
+                label: 'channel / pan',
+                param: { id: 'pan', label: 'pan', min: -1, max: 1, step: 0.01, default: channel.pan ?? 0 }
+            }
+        ];
+
+        if (channel.source === 'synth') {
+            const definition = synthDefinitionForChannel(channel);
+            if (definition) {
+                ensureChannelSynth(channel);
+                (definition.params || []).forEach(param => {
+                    if (param.type === 'select') return;
+                    targets.push({
+                        id: 'synth:' + param.id,
+                        targetType: 'synth',
+                        paramId: param.id,
+                        label: 'synth / ' + (param.label || param.id),
+                        definition,
+                        param
+                    });
+                });
+            }
+        }
+
+        ensureChannelEffects(channel);
+        channel.effects.forEach(effect => {
+            const definition = effectDefinitions.get(effect.type);
+            if (!definition) return;
+            syncEffectSettings(definition, effect);
+            (definition.params || []).forEach(param => {
+                if (param.type === 'select') return;
+                targets.push({
+                    id: 'effect:' + effect.id + ':' + param.id,
+                    targetType: 'effect',
+                    effectId: effect.id,
+                    paramId: param.id,
+                    label: (definition.name || effect.type) + ' / ' + (param.label || param.id),
+                    definition,
+                    effect,
+                    param
+                });
+            });
+        });
+
+        return targets;
+    }
+
+    function automationTargetForLane(channel, lane) {
+        return automationTargets(channel).find(target => {
+            if (target.targetType !== lane.targetType || target.paramId !== lane.paramId) return false;
+            return target.targetType !== 'effect' || target.effectId === lane.effectId;
+        }) || null;
+    }
+
+    function clampAutomationValue(param, value) {
+        if (value === null || value === undefined || value === '') return null;
+        if (param.type === 'select') {
+            return param.options && param.options.includes(value) ? value : null;
+        }
+        const number = Number(value);
+        if (!Number.isFinite(number)) return null;
+        return Math.max(param.min ?? number, Math.min(param.max ?? number, number));
+    }
+
+    function automationValueAtStep(lane, param, step, patternIndex) {
+        const values = automationValuesForPattern(lane, patternIndex, false);
+        const direct = clampAutomationValue(param, values[step]);
+        if (direct !== null || param.type === 'select' || lane.mode !== 'smooth') return direct;
+        let previousIndex = -1;
+        let previousValue = null;
+        for (let index = step - 1; index >= 0; index -= 1) {
+            const value = clampAutomationValue(param, values[index]);
+            if (value !== null) {
+                previousIndex = index;
+                previousValue = value;
+                break;
+            }
+        }
+        let nextIndex = -1;
+        let nextValue = null;
+        for (let index = step + 1; index < values.length; index += 1) {
+            const value = clampAutomationValue(param, values[index]);
+            if (value !== null) {
+                nextIndex = index;
+                nextValue = value;
+                break;
+            }
+        }
+        if (previousValue === null && nextValue === null) return null;
+        if (previousValue === null) return nextValue;
+        if (nextValue === null) return previousValue;
+        const ratio = (step - previousIndex) / Math.max(1, nextIndex - previousIndex);
+        return previousValue + ((nextValue - previousValue) * ratio);
+    }
+
+    function setAutomationTargetValue(channel, target, value) {
+        const clamped = clampAutomationValue(target.param, value);
+        if (clamped === null) return false;
+        if (target.targetType === 'channel') {
+            channel[target.paramId] = clamped;
+            return false;
+        }
+        if (target.targetType === 'synth' && target.definition) {
+            setSynthParamById(channel, target.definition, target.paramId, clamped);
+            return false;
+        }
+        if (target.targetType === 'effect' && target.definition && target.effect) {
+            const before = target.effect.settings[target.paramId];
+            target.effect.settings[target.paramId] = clamped;
+            syncEffectSettings(target.definition, target.effect);
+            return target.effect.settings[target.paramId] !== before;
+        }
+        return false;
+    }
+
+    function applyAutomationStep(step, bar = currentBar) {
+        const needsRebuild = new Set();
+        const channelPatterns = currentView === 'roll'
+            ? [{ channel: selectedChannel(), patternIndex: selectedChannel().activePattern || 0 }]
+            : audibleChannels().map(channel => ({
+                channel,
+                patternIndex: state.clips[channel.id] ? state.clips[channel.id][bar] : null
+            })).filter(item => item.patternIndex !== null && item.patternIndex !== DISABLED_CLIP);
+
+        channelPatterns.forEach(({ channel, patternIndex }) => {
+            ensureChannelAutomation(channel);
+            channel.automation.forEach(lane => {
+                if (!lane.enabled) return;
+                const target = automationTargetForLane(channel, lane);
+                if (!target) return;
+                const value = automationValueAtStep(lane, target.param, step, patternIndex);
+                if (value === null) return;
+                const changedEffect = setAutomationTargetValue(channel, target, value);
+                if (changedEffect) needsRebuild.add(channel);
+            });
+        });
+        needsRebuild.forEach(channel => rebuildChannelOutput(channel, true));
+        if (currentView === 'automation' && bar === currentBar) renderAutomation(false);
     }
 
     function ensureChannelEffects(channel) {
@@ -696,10 +948,18 @@
         return rebuildChannelOutput(channel);
     }
 
-    function rebuildChannelOutput(channel) {
+    function rebuildChannelOutput(channel, preserveOld = false) {
         const engine = createAudio();
         const old = channelOutputs.get(channel.id);
-        if (old) old.nodes.forEach(disconnectNode);
+        if (old && preserveOld) {
+            retiredChannelOutputs.add(old);
+            window.setTimeout(() => {
+                old.nodes.forEach(disconnectNode);
+                retiredChannelOutputs.delete(old);
+            }, 8000);
+        } else if (old) {
+            old.nodes.forEach(disconnectNode);
+        }
         ensureChannelEffects(channel);
 
         const input = engine.context.createGain();
@@ -741,6 +1001,8 @@
         activeSamplePlayheads.length = 0;
         channelOutputs.forEach(output => output.nodes.forEach(disconnectNode));
         channelOutputs.clear();
+        retiredChannelOutputs.forEach(output => output.nodes.forEach(disconnectNode));
+        retiredChannelOutputs.clear();
         syncUtilityMeters();
         drawWaveform(true);
         if (currentView === 'waveform') drawSampleEditor();
@@ -1873,6 +2135,7 @@
     }
 
     function scheduleStep(step, bar, time) {
+        applyAutomationStep(step, bar);
         if (currentView === 'roll') {
             const channel = selectedChannel();
             getStepEvents(getPattern(channel), step).forEach(event => {
@@ -2174,6 +2437,7 @@
                 renderChannels();
                 syncSynthTab();
                 renderSynthEditor();
+                renderAutomation();
             }));
             controls.append(sourceField, instrumentField(channel));
             if (channel.source === 'soundfont') controls.append(soundfontBankField(channel), soundfontCustomField(channel));
@@ -2291,6 +2555,7 @@
             channel.synthSettings = normalizeParamSettings(synthDefinitionForChannel(channel) || definitions[0], channel.synthSettings || {});
             renderChannels();
             renderSynthEditor();
+            renderAutomation();
             updateStatus('selected synth: ' + ((synthDefinitionForChannel(channel) || {}).name || input.value));
         });
         return input;
@@ -3119,6 +3384,7 @@
                 effect.enabled = !effect.enabled;
                 rebuildChannelOutput(channel);
                 renderMixer();
+                renderAutomation();
             });
 
             const up = miniButton('<i class="fa-solid fa-arrow-up"></i>', 'move effect up', false);
@@ -3129,6 +3395,7 @@
                 channel.effects.splice(index - 1, 0, channel.effects.splice(index, 1)[0]);
                 rebuildChannelOutput(channel);
                 renderMixer();
+                renderAutomation();
             });
 
             const down = miniButton('<i class="fa-solid fa-arrow-down"></i>', 'move effect down', false);
@@ -3139,6 +3406,7 @@
                 channel.effects.splice(index + 1, 0, channel.effects.splice(index, 1)[0]);
                 rebuildChannelOutput(channel);
                 renderMixer();
+                renderAutomation();
             });
 
             const remove = miniButton('<i class="fa-solid fa-trash"></i>', 'remove effect', false);
@@ -3148,6 +3416,7 @@
                 channel.effects.splice(index, 1);
                 rebuildChannelOutput(channel);
                 renderMixer();
+                renderAutomation();
             });
 
             actions.append(collapse, bypass, up, down, remove);
@@ -3195,6 +3464,262 @@
         });
     }
 
+    function renderAutomationTargetPicker(channel = selectedChannel()) {
+        if (!els.automationTarget) return;
+        const selected = els.automationTarget.value;
+        const targets = automationTargets(channel).filter(target => target.param);
+        els.automationTarget.innerHTML = '';
+        targets.forEach(target => {
+            const option = document.createElement('option');
+            option.value = target.id;
+            option.textContent = target.label;
+            els.automationTarget.append(option);
+        });
+        const hasTargets = targets.length > 0;
+        els.automationTarget.disabled = !hasTargets;
+        if (els.addAutomation) els.addAutomation.disabled = !hasTargets;
+        if (hasTargets) {
+            els.automationTarget.value = targets.some(target => target.id === selected) ? selected : targets[0].id;
+        }
+    }
+
+    function renderAutomation(updatePicker = true) {
+        if (!els.automation) return;
+        const channel = selectedChannel();
+        ensureChannelAutomation(channel);
+        const patternIndex = normalizeAutomationPatternIndex(channel.activePattern || 0);
+        if (els.automationLabel) els.automationLabel.textContent = 'automate: ' + channel.name + ' / pattern ' + (patternIndex + 1);
+        renderAutomationPatternOptions(channel);
+        if (updatePicker) renderAutomationTargetPicker(channel);
+        els.automation.innerHTML = '';
+
+        const help = document.createElement('div');
+        help.className = 'fb-automation-help';
+        help.textContent = 'automation edits only the selected pattern. click cells to set values, drag to draw, right-click or shift-click to blank a cell.';
+        els.automation.append(help);
+
+        if (!channel.automation.length) {
+            const empty = document.createElement('div');
+            empty.className = 'fb-empty-state';
+            empty.textContent = 'no automation lanes yet';
+            els.automation.append(empty);
+            return;
+        }
+
+        let renderedLanes = 0;
+        channel.automation.forEach((lane, index) => {
+            const target = automationTargetForLane(channel, lane);
+            if (!target) return;
+            renderedLanes += 1;
+            const card = document.createElement('div');
+            card.className = 'fb-automation-lane' + (lane.enabled ? '' : ' is-bypassed');
+
+            const head = document.createElement('div');
+            head.className = 'fb-automation-head';
+            const title = document.createElement('div');
+            title.className = 'fb-automation-title';
+            title.textContent = target.label;
+            const actions = document.createElement('div');
+            actions.className = 'fb-effect-actions';
+
+            const mode = document.createElement('select');
+            mode.className = 'fb-select fb-automation-mode';
+            ['step', 'smooth'].forEach(value => {
+                const option = document.createElement('option');
+                option.value = value;
+                option.textContent = value;
+                option.selected = lane.mode === value;
+                mode.append(option);
+            });
+            mode.disabled = target.param.type === 'select';
+            mode.addEventListener('change', () => {
+                lane.mode = mode.value === 'smooth' ? 'smooth' : 'step';
+                renderAutomation(false);
+            });
+
+            const enable = miniButton(lane.enabled ? '<i class="fa-solid fa-power-off"></i>' : '<i class="fa-regular fa-circle"></i>', lane.enabled ? 'disable lane' : 'enable lane', lane.enabled);
+            enable.addEventListener('click', event => {
+                event.stopPropagation();
+                lane.enabled = !lane.enabled;
+                renderAutomation(false);
+            });
+
+            const clear = miniButton('<i class="fa-solid fa-eraser"></i>', 'clear lane values', false);
+            clear.addEventListener('click', event => {
+                event.stopPropagation();
+                setAutomationValuesForPattern(lane, patternIndex, []);
+                renderAutomation(false);
+                updateStatus('cleared automation for pattern ' + (patternIndex + 1));
+            });
+
+            const remove = miniButton('<i class="fa-solid fa-trash"></i>', 'remove lane', false);
+            remove.classList.add('fb-remove-button');
+            remove.addEventListener('click', event => {
+                event.stopPropagation();
+                channel.automation.splice(index, 1);
+                renderAutomation();
+            });
+
+            actions.append(mode, enable, clear, remove);
+            head.append(title, actions);
+
+            const grid = document.createElement('div');
+            grid.className = 'fb-automation-grid';
+            grid.style.gridTemplateColumns = 'repeat(' + stepCount() + ', minmax(32px, 1fr))';
+            for (let step = 0; step < stepCount(); step += 1) {
+                grid.append(automationCell(channel, lane, target, step, patternIndex));
+            }
+
+            const footer = document.createElement('div');
+            footer.className = 'fb-automation-footer';
+            footer.textContent = automationLaneSummary(lane, target, patternIndex);
+
+            card.append(head, grid, footer);
+            els.automation.append(card);
+        });
+        if (!renderedLanes) {
+            const missing = document.createElement('div');
+            missing.className = 'fb-empty-state';
+            missing.textContent = 'automation targets are loading or missing';
+            els.automation.append(missing);
+        }
+    }
+
+    function automationCell(channel, lane, target, step, patternIndex) {
+        const cell = document.createElement('button');
+        const values = automationValuesForPattern(lane, patternIndex, true);
+        const rawValue = clampAutomationValue(target.param, values[step]);
+        const resolvedValue = automationValueAtStep(lane, target.param, step, patternIndex);
+        const hasValue = rawValue !== null;
+        cell.className = 'fb-automation-cell' + (hasValue ? ' is-set' : '') + (!hasValue && resolvedValue !== null ? ' is-filled' : '');
+        cell.type = 'button';
+        cell.dataset.step = String(step);
+        cell.textContent = automationValueLabel(target.param, hasValue ? rawValue : resolvedValue);
+        if (resolvedValue !== null && target.param.type !== 'select') {
+            const min = target.param.min ?? 0;
+            const max = target.param.max ?? 1;
+            const ratio = (Number(resolvedValue) - min) / Math.max(0.00001, max - min);
+            cell.style.setProperty('--fb-automation-fill', (Math.max(0, Math.min(1, ratio)) * 100) + '%');
+        }
+        cell.setAttribute('aria-label', target.label + ' automation step ' + (step + 1));
+        cell.addEventListener('click', event => {
+            event.preventDefault();
+            if (suppressAutomationClick) return;
+            const laneValues = automationValuesForPattern(lane, patternIndex, true);
+            const current = clampAutomationValue(target.param, laneValues[step]);
+            if (event.shiftKey || current !== null) {
+                laneValues[step] = null;
+            } else {
+                laneValues[step] = automationCurrentValue(channel, target);
+            }
+            setAutomationValuesForPattern(lane, patternIndex, laneValues);
+            renderAutomation(false);
+        });
+        cell.addEventListener('pointerdown', event => {
+            if (event.button !== 0 || target.param.type === 'select') return;
+            event.preventDefault();
+            suppressAutomationClick = true;
+            cell.setPointerCapture(event.pointerId);
+            setAutomationCellFromPointer(cell, lane, target.param, event, patternIndex);
+            const move = moveEvent => {
+                const element = document.elementFromPoint(moveEvent.clientX, moveEvent.clientY);
+                const targetCell = element && element.closest ? element.closest('.fb-automation-cell') : null;
+                if (!targetCell || !targetCell.dataset.step) return;
+                setAutomationCellFromPointer(targetCell, lane, target.param, moveEvent, patternIndex);
+            };
+            const up = () => {
+                cell.removeEventListener('pointermove', move);
+                cell.removeEventListener('pointerup', up);
+                cell.removeEventListener('pointercancel', up);
+                renderAutomation(false);
+                window.setTimeout(() => {
+                    suppressAutomationClick = false;
+                }, 0);
+            };
+            cell.addEventListener('pointermove', move);
+            cell.addEventListener('pointerup', up, { once: true });
+            cell.addEventListener('pointercancel', up, { once: true });
+        });
+        cell.addEventListener('contextmenu', event => {
+            event.preventDefault();
+            const laneValues = automationValuesForPattern(lane, patternIndex, true);
+            laneValues[step] = null;
+            setAutomationValuesForPattern(lane, patternIndex, laneValues);
+            renderAutomation(false);
+        });
+        return cell;
+    }
+
+    function setAutomationCellFromPointer(cell, lane, param, event, patternIndex) {
+        const step = Number(cell.dataset.step);
+        if (!Number.isInteger(step)) return;
+        const rect = cell.getBoundingClientRect();
+        const min = param.min ?? 0;
+        const max = param.max ?? 1;
+        const ratio = 1 - Math.max(0, Math.min(1, (event.clientY - rect.top) / Math.max(1, rect.height)));
+        const raw = min + ((max - min) * ratio);
+        const snap = Number(param.step) || 0.01;
+        const value = Math.round(raw / snap) * snap;
+        const values = automationValuesForPattern(lane, patternIndex, true);
+        values[step] = Number(value.toFixed(5));
+        setAutomationValuesForPattern(lane, patternIndex, values);
+    }
+
+    function automationCurrentValue(channel, target) {
+        if (target.targetType === 'channel') return channel[target.paramId];
+        if (target.targetType === 'synth') return channel.synthSettings[target.paramId];
+        if (target.targetType === 'effect' && target.effect) return target.effect.settings[target.paramId];
+        return target.param.default ?? target.param.min ?? 0;
+    }
+
+    function automationValueLabel(param, value) {
+        if (value === null || value === undefined) return '-';
+        if (param.type === 'select') return String(value);
+        const decimals = Number(param.step) && Number(param.step) < 1 ? 2 : 0;
+        return Number(value).toFixed(decimals).replace(/\.?0+$/, '') + (param.unit || '');
+    }
+
+    function automationLaneSummary(lane, target, patternIndex) {
+        const values = automationValuesForPattern(lane, patternIndex, false);
+        const count = values.filter(value => clampAutomationValue(target.param, value) !== null).length;
+        const type = target.param.type === 'select' ? 'stepped' : lane.mode;
+        return 'pattern ' + (patternIndex + 1) + ' / ' + count + ' point' + (count === 1 ? '' : 's') + ' / ' + type;
+    }
+
+    function addAutomationLaneToSelectedChannel() {
+        const channel = selectedChannel();
+        const targetId = els.automationTarget ? els.automationTarget.value : '';
+        const target = automationTargets(channel).find(item => item.id === targetId);
+        if (!target) {
+            updateStatus('no automation target selected');
+            return;
+        }
+        ensureChannelAutomation(channel);
+        const existing = channel.automation.find(lane => {
+            return lane.targetType === target.targetType
+                && lane.effectId === (target.effectId || '')
+                && lane.paramId === target.paramId;
+        });
+        if (existing) {
+            updateStatus('automation lane already exists');
+            return;
+        }
+        channel.automation.push({
+            id: 'automation-' + Date.now() + '-' + Math.random().toString(16).slice(2),
+            targetType: target.targetType,
+            effectId: target.effectId || '',
+            paramId: target.paramId,
+            enabled: true,
+            collapsed: false,
+            mode: target.param.type === 'select' ? 'step' : 'smooth',
+            valuesByPattern: {
+                [String(normalizeAutomationPatternIndex(channel.activePattern || 0))]: resizeAutomationValues([])
+            }
+        });
+        renderAutomation();
+        updateStatus('added automation for ' + target.label);
+    }
+
     function renderEffectPresets(channel, effect, definition) {
         const presets = Array.isArray(definition.presets) ? definition.presets.filter(preset => preset && preset.name && preset.settings) : [];
         if (!presets.length) return null;
@@ -3220,6 +3745,7 @@
             effect.settings = normalizeEffectSettings(definition, { ...effect.settings, ...preset.settings });
             rebuildChannelOutput(channel);
             renderMixer();
+            renderAutomation();
             updateStatus('loaded ' + preset.name + ' preset');
         });
         wrap.append(label, picker);
@@ -3288,6 +3814,7 @@
         });
         rebuildChannelOutput(channel);
         renderMixer();
+        renderAutomation();
         updateStatus('added ' + definition.name + ' to ' + channel.name);
     }
 
@@ -5013,6 +5540,7 @@
         renderChannels();
         renderRoll();
         renderMixer();
+        renderAutomation();
         syncWaveformTab();
         syncSynthTab();
         renderSampleEditor();
@@ -5083,6 +5611,7 @@
             selectedId,
             channels: state.channels.map(channel => {
                 ensureChannelPatterns(channel);
+                ensureChannelAutomation(channel);
                 return {
                     id: channel.id,
                     name: channel.name,
@@ -5123,6 +5652,17 @@
                         collapsed: effect.collapsed !== false,
                         settings: effect.settings && typeof effect.settings === 'object' ? { ...effect.settings } : {}
                     })),
+                    automation: (channel.automation || []).map(lane => ({
+                        id: lane.id,
+                        targetType: lane.targetType,
+                        effectId: lane.effectId || '',
+                        paramId: lane.paramId,
+                        enabled: lane.enabled !== false,
+                        collapsed: lane.collapsed === true,
+                        mode: lane.mode === 'smooth' ? 'smooth' : 'step',
+                        valuesByPattern: Object.fromEntries(Object.entries(automationPatternValues(lane))
+                            .map(([patternIndex, values]) => [String(normalizeAutomationPatternIndex(patternIndex)), resizeAutomationValues(values)]))
+                    })),
                     patterns: channel.patterns,
                     pattern: channel.pattern
                 };
@@ -5133,6 +5673,8 @@
     async function hydrate(saved) {
         channelOutputs.forEach(output => output.nodes.forEach(disconnectNode));
         channelOutputs.clear();
+        retiredChannelOutputs.forEach(output => output.nodes.forEach(disconnectNode));
+        retiredChannelOutputs.clear();
         state.bpm = Number(saved.bpm) || 128;
         state.projectName = typeof saved.projectName === 'string' && saved.projectName.trim() ? saved.projectName.trim() : 'Untitled';
         state.octave = octavePage(saved.octave);
@@ -5161,6 +5703,7 @@
                 ensureChannelPatterns(hydrated);
                 ensureChannelEffects(hydrated);
                 ensureChannelSynth(hydrated);
+                ensureChannelAutomation(hydrated);
                 return hydrated;
             });
             state.channels.forEach(channel => {
@@ -5490,6 +6033,7 @@
         currentView = view;
         const isPlaylist = view === 'playlist';
         const isMixer = view === 'mixer';
+        const isAutomation = view === 'automation';
         const isWaveform = view === 'waveform';
         const isSynth = view === 'synth';
         if (isPlaying) {
@@ -5499,16 +6043,19 @@
         }
         els.playlistView.classList.toggle('fb-hidden', !isPlaylist);
         els.mixerView.classList.toggle('fb-hidden', !isMixer);
+        els.automationView.classList.toggle('fb-hidden', !isAutomation);
         els.waveformView.classList.toggle('fb-hidden', !isWaveform);
         els.synthView.classList.toggle('fb-hidden', !isSynth);
-        els.rollView.classList.toggle('fb-hidden', isPlaylist || isMixer || isWaveform || isSynth);
+        els.rollView.classList.toggle('fb-hidden', isPlaylist || isMixer || isAutomation || isWaveform || isSynth);
         els.playlistTab.classList.toggle('is-active', isPlaylist);
         els.mixerTab.classList.toggle('is-active', isMixer);
+        els.automationTab.classList.toggle('is-active', isAutomation);
         els.waveformTab.classList.toggle('is-active', isWaveform);
         els.synthTab.classList.toggle('is-active', isSynth);
-        els.rollTab.classList.toggle('is-active', !isPlaylist && !isMixer && !isWaveform && !isSynth);
-        if (!isPlaylist && !isMixer && !isWaveform && !isSynth) renderRoll();
+        els.rollTab.classList.toggle('is-active', !isPlaylist && !isMixer && !isAutomation && !isWaveform && !isSynth);
+        if (!isPlaylist && !isMixer && !isAutomation && !isWaveform && !isSynth) renderRoll();
         if (isMixer) renderMixer();
+        if (isAutomation) renderAutomation();
         if (isWaveform) renderSampleEditor();
         if (isSynth) renderSynthEditor();
         paintPlayhead();
@@ -5534,6 +6081,7 @@
         renderRoll();
         renderPlaylist();
         renderMixer();
+        renderAutomation();
         syncWaveformTab();
         syncSynthTab();
         renderSampleEditor();
@@ -5721,6 +6269,7 @@
                 for (const url of urls) await loadEffectScript(url);
                 renderEffectPicker();
                 renderMixer();
+                renderAutomation();
                 rebuildAllChannelOutputs();
                 updateStatus('loaded ' + effectDefinitions.size + ' effects');
             } catch (_) {
@@ -5751,6 +6300,7 @@
                 });
                 renderChannels();
                 renderSynthEditor();
+                renderAutomation();
                 syncSynthTab();
                 updateStatus('loaded ' + synthDefinitions.size + ' synths');
             } catch (_) {
@@ -5809,6 +6359,7 @@
         channel.pattern = getPattern(channel);
         renderChannels();
         renderRoll();
+        renderAutomation();
     });
     els.patternSteps.addEventListener('change', () => {
         setProjectSteps(els.patternSteps.value, true);
@@ -5835,8 +6386,19 @@
     els.rollTab.addEventListener('click', () => showView('roll'));
     els.playlistTab.addEventListener('click', () => showView('playlist'));
     els.mixerTab.addEventListener('click', () => showView('mixer'));
+    els.automationTab.addEventListener('click', () => showView('automation'));
     els.waveformTab.addEventListener('click', () => showView('waveform'));
     els.synthTab.addEventListener('click', () => showView('synth'));
+    els.automationPattern.addEventListener('change', () => {
+        const channel = selectedChannel();
+        channel.activePattern = normalizeAutomationPatternIndex(els.automationPattern.value);
+        channel.pattern = getPattern(channel);
+        els.pattern.value = String(channel.activePattern);
+        renderChannels();
+        renderRoll();
+        renderAutomation();
+    });
+    els.addAutomation.addEventListener('click', addAutomationLaneToSelectedChannel);
     els.sampleZoomOut.addEventListener('click', () => setSampleEditorZoom(0.5));
     els.sampleZoomReset.addEventListener('click', () => {
         const channel = selectedChannel();
