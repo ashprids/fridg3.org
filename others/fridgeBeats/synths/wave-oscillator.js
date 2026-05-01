@@ -257,6 +257,7 @@
             const attack = clamp(settings.attack, 0.002, 0.6);
             const release = clamp(settings.release, 0.02, 1.6);
             const end = api.time + duration;
+            const releaseEnd = end + release;
             const frequency = Math.max(1, api.frequency);
             const target = api.targetFrequency ? Math.max(1, api.targetFrequency) : null;
             const nodes = [];
@@ -269,21 +270,21 @@
                 osc.type = settings.wave;
                 osc.frequency.setValueAtTime(frequency, api.time);
                 if (target) {
-                    osc.frequency.exponentialRampToValueAtTime(target, Math.max(api.time + 0.01, end - release));
+                    osc.frequency.exponentialRampToValueAtTime(target, Math.max(api.time + 0.01, end));
                 }
                 osc.detune.setValueAtTime(voice.cents, api.time);
                 gain.gain.setValueAtTime(0.0001, api.time);
                 gain.gain.exponentialRampToValueAtTime(Math.max(0.001, voice.gain), api.time + attack);
                 if (api.duration) {
-                    gain.gain.setValueAtTime(Math.max(0.001, voice.gain), Math.max(api.time + attack, end - release));
-                    gain.gain.exponentialRampToValueAtTime(0.0001, end);
+                    gain.gain.setValueAtTime(Math.max(0.001, voice.gain), Math.max(api.time + attack, end));
+                    gain.gain.exponentialRampToValueAtTime(0.0001, releaseEnd);
                 }
                 pan.pan.value = voice.pan;
                 osc.connect(gain);
                 gain.connect(pan);
                 pan.connect(api.output);
                 osc.start(api.time);
-                if (api.duration) osc.stop(end + 0.02);
+                if (api.duration) osc.stop(releaseEnd + 0.02);
                 nodes.push(osc, gain, pan);
             });
 

@@ -17,6 +17,7 @@ Use this top-level shape:
   "bpm": 128,
   "projectName": "Demo Name",
   "octave": 2,
+  "noteSnap": 0.5,
   "steps": 16,
   "barCount": 4,
   "loopRange": null,
@@ -42,6 +43,7 @@ Important constants:
   - `1` means pattern 2
   - continue up to `127` for pattern 128
 - `octave`: piano-roll octave page. Use `1`, `2`, or `3`; each page shows two octaves, covering octaves 1-6 overall.
+- `noteSnap`: piano-roll note length snap. Use `1`, `0.5`, or `0.25`; omit only for legacy files.
 - `loopRange`: either `null` or `{ "start": 0, "end": 1 }`, using zero-based playlist bar rows.
 - `selectedId`: id of the initially selected channel.
 - `assets.soundfont`: either `null` or an embedded project-wide SoundFont asset.
@@ -206,12 +208,12 @@ Use note event objects:
 Rules:
 
 - `note`: note name like `C4`, `F#3`, `A5`.
-- `length`: integer step length, minimum `1`, max should not run past the end of the pattern.
+- `length`: step length snapped to the project `noteSnap`, max should not run past the end of the pattern.
 - `velocity`: number from `0` to `1`.
 - `slideTo`: optional note name target for a BeepBox-style pitch slide across the note length. Omit it for normal notes.
 - Chords are multiple note objects in the same step.
 - Use varied velocities to show the right-click velocity feature.
-- Use lengths greater than `1` to show note stretching.
+- Use lengths greater than `1` to show note stretching, and shorter snap values for quick notes.
 - Use a few `slideTo` notes to show vertical-drag slide support, especially on leads and basses.
 - Put the currently edited pattern in `pattern` too, usually the same array as `patterns[activePattern]`.
 

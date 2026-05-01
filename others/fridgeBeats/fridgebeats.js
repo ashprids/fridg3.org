@@ -9,6 +9,8 @@
     const DEFAULT_BAR_COUNT = 4;
     const MAX_BARS = 128;
     const MAX_PATTERNS = 128;
+    const DEFAULT_NOTE_LENGTH_SNAP = 0.5;
+    const NOTE_LENGTH_SNAP_OPTIONS = [1, 0.5, 0.25];
     const DISABLED_CLIP = -1;
     const NOTE_NAMES = ['C', 'D', 'E', 'F', 'G', 'A', 'B', 'C'];
     const CHROMATIC = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
@@ -75,6 +77,8 @@
     let movingNote = null;
     let rollPreviewVoice = null;
     let rollPreviewSerial = 0;
+    let rollResizeTimer = null;
+    let noteLengthSnap = DEFAULT_NOTE_LENGTH_SNAP;
     let sampleEditorDrag = null;
     const activeSamplePlayheads = [];
     const samplePitchCache = new WeakMap();
@@ -114,6 +118,7 @@
         projectName: 'Untitled',
         bpm: 128,
         octave: 2,
+        noteSnap: noteLengthSnap,
         masterVolume: 0.82,
         steps: projectSteps,
         barCount: DEFAULT_BAR_COUNT,
@@ -140,6 +145,7 @@
         pattern: document.getElementById('fb-pattern'),
         patternSteps: document.getElementById('fb-pattern-steps'),
         octave: document.getElementById('fb-octave'),
+        noteSnap: document.getElementById('fb-note-snap'),
         clearPattern: document.getElementById('fb-clear-pattern'),
         rollTab: document.getElementById('fb-roll-tab'),
         playlistTab: document.getElementById('fb-playlist-tab'),
@@ -196,6 +202,17 @@
     function normalizeStepCount(value) {
         const number = Number(value) || DEFAULT_STEPS;
         return STEP_OPTIONS.includes(number) ? number : DEFAULT_STEPS;
+    }
+
+    function normalizeNoteSnap(value) {
+        const number = Number(value);
+        return NOTE_LENGTH_SNAP_OPTIONS.includes(number) ? number : DEFAULT_NOTE_LENGTH_SNAP;
+    }
+
+    function setNoteSnap(value) {
+        noteLengthSnap = normalizeNoteSnap(value);
+        state.noteSnap = noteLengthSnap;
+        if (els.noteSnap) els.noteSnap.value = String(noteLengthSnap);
     }
 
     function stepCount() {
@@ -374,7 +391,7 @@
         if (!value) return null;
         if (typeof value === 'string') return { note: value, length: 1 };
         if (typeof value === 'object' && typeof value.note === 'string') {
-            const length = Math.max(1, Math.min(stepCount(), Number(value.length) || 1));
+            const length = Math.min(stepCount(), snapNoteLength(value.length));
             const rawVelocity = Number(value.velocity);
             const velocity = Math.max(0, Math.min(1, Number.isFinite(rawVelocity) ? rawVelocity : 1));
             const normalized = { note: value.note, length, velocity };
@@ -893,6 +910,26 @@
         return (60 / state.bpm) / 4;
     }
 
+    function snapNoteLength(value) {
+        const raw = Number(value);
+        const snapped = Math.round((Number.isFinite(raw) ? raw : 1) / noteLengthSnap) * noteLengthSnap;
+        return Math.max(noteLengthSnap, snapped);
+    }
+
+    function noteLengthSteps(event) {
+        const raw = Number(event && event.length);
+        return Math.max(0.001, Number.isFinite(raw) ? raw : 1);
+    }
+
+    function clampedNoteLength(event, step) {
+        return Math.max(0.001, Math.min(stepCount() - step, noteLengthSteps(event)));
+    }
+
+    function noteDurationSeconds(event, step = null) {
+        const length = step === null ? noteLengthSteps(event) : clampedNoteLength(event, step);
+        return stepSeconds() * length;
+    }
+
     function noteFrequency(note) {
         const parsed = /^([A-G]#?)([0-9])$/.exec(note || 'C4');
         if (!parsed) return 261.63;
@@ -942,6 +979,7 @@
         const attack = Math.max(0.002, channel.attack);
         const release = Math.max(0.02, channel.release);
         const end = time + duration;
+        const releaseEnd = end + release;
         const pitchRatio = channelPitchRatio(channel);
         const frequency = noteFrequency(note) * pitchRatio;
         const targetFrequency = slideTo && slideTo !== note ? noteFrequency(slideTo) * pitchRatio : null;
@@ -953,19 +991,19 @@
             osc.type = channel.wave;
             osc.frequency.setValueAtTime(frequency, time);
             if (targetFrequency) {
-                osc.frequency.exponentialRampToValueAtTime(Math.max(1, targetFrequency), Math.max(time + 0.01, end - release));
+                osc.frequency.exponentialRampToValueAtTime(Math.max(1, targetFrequency), Math.max(time + 0.01, end));
             }
             osc.detune.setValueAtTime(voice.cents, time);
             gain.gain.setValueAtTime(0.0001, time);
             gain.gain.exponentialRampToValueAtTime(Math.max(0.001, voice.gain), time + attack);
-            gain.gain.setValueAtTime(Math.max(0.001, voice.gain), Math.max(time + attack, end - release));
-            gain.gain.exponentialRampToValueAtTime(0.0001, end);
+            gain.gain.setValueAtTime(Math.max(0.001, voice.gain), Math.max(time + attack, end));
+            gain.gain.exponentialRampToValueAtTime(0.0001, releaseEnd);
             pan.pan.value = voice.pan;
             osc.connect(gain);
             gain.connect(pan);
             pan.connect(outputNodeForChannel(channel));
             osc.start(time);
-            osc.stop(end + 0.02);
+            osc.stop(releaseEnd + 0.02);
         });
     }
 
@@ -1443,16 +1481,17 @@
                 source.loopEnd = playback.loopEnd;
             }
             const level = Math.max(0.0001, channel.volume * noteGain);
-            const release = Math.min(Math.max(0.02, channel.release), Math.max(0.02, stopAfter * 0.45));
+            const release = Math.max(0.02, channel.release);
+            const releaseEnd = when + stopAfter + release;
             gain.gain.setValueAtTime(level, when);
-            gain.gain.setValueAtTime(level, Math.max(when, when + stopAfter - release));
-            gain.gain.exponentialRampToValueAtTime(0.0001, when + stopAfter);
+            gain.gain.setValueAtTime(level, Math.max(when, when + stopAfter));
+            gain.gain.exponentialRampToValueAtTime(0.0001, releaseEnd);
             pan.pan.value = channel.pan;
             source.connect(gain);
             gain.connect(pan);
             pan.connect(outputNodeForChannel(channel));
             source.start(when, playback.offset);
-            source.stop(when + stopAfter + 0.02);
+            source.stop(releaseEnd + 0.02);
             trackSamplePlayback(channel, note, mode, when, stopAfter, bounds, effectivePlaybackRate);
             return source;
         };
@@ -1607,7 +1646,8 @@
         const pitchRatio = channelPitchRatio(channel);
         const playbackRate = Math.pow(2, ((midiNote - rootKey) * 100 + cents) / 1200) * pitchRatio;
         const playDuration = Math.max(0.03, duration || 0.5);
-        const release = Math.min(Math.max(0.03, channel.release), Math.max(0.03, playDuration * 0.45));
+        const release = Math.max(0.03, channel.release);
+        const releaseEnd = time + playDuration + release;
         const attenuation = Math.pow(10, -(zone.attenuation || 0) / 200);
 
         const buffer = soundfontAudioBuffer(zone, engine.context, bank);
@@ -1628,14 +1668,14 @@
         }
         const level = Math.max(0.0001, channel.volume * attenuation * noteGain);
         gain.gain.setValueAtTime(level, time);
-        gain.gain.setValueAtTime(level, Math.max(time, time + playDuration - release));
-        gain.gain.exponentialRampToValueAtTime(0.0001, time + playDuration);
+        gain.gain.setValueAtTime(level, Math.max(time, time + playDuration));
+        gain.gain.exponentialRampToValueAtTime(0.0001, releaseEnd);
         pan.pan.value = Math.max(-1, Math.min(1, channel.pan + (zone.pan || 0)));
         source.connect(gain);
         gain.connect(pan);
         pan.connect(outputNodeForChannel(channel));
         source.start(time);
-        source.stop(time + playDuration + 0.02);
+        source.stop(releaseEnd + 0.02);
     }
 
     function startSoundfontVoice(channel, note) {
@@ -1771,7 +1811,7 @@
         } catch (_) {
             return;
         }
-        const duration = Math.max(0.08, Math.min(stepSeconds() * (event.length || 1) * 0.88, 0.75));
+        const duration = Math.max(0.08, noteDurationSeconds(event));
         playChannelNote(channel, event.note, engine.context.currentTime + 0.01, duration, noteVelocity(event), event.slideTo);
         if (!meterAnimation) animateMeter();
     }
@@ -1833,12 +1873,10 @@
     }
 
     function scheduleStep(step, bar, time) {
-        const duration = stepSeconds() * 0.88;
         if (currentView === 'roll') {
             const channel = selectedChannel();
             getStepEvents(getPattern(channel), step).forEach(event => {
-                const noteDuration = duration * (event.length || 1);
-                playChannelNote(channel, event.note, time, noteDuration, noteVelocity(event), event.slideTo);
+                playChannelNote(channel, event.note, time, noteDurationSeconds(event, step), noteVelocity(event), event.slideTo);
             });
             return;
         }
@@ -1846,8 +1884,7 @@
             const patternIndex = state.clips[channel.id] ? state.clips[channel.id][bar] : null;
             if (patternIndex === null || patternIndex === DISABLED_CLIP) return;
             getStepEvents(getPattern(channel, patternIndex), step).forEach(event => {
-                const noteDuration = duration * (event.length || 1);
-                playChannelNote(channel, event.note, time, noteDuration, noteVelocity(event), event.slideTo);
+                playChannelNote(channel, event.note, time, noteDurationSeconds(event, step), noteVelocity(event), event.slideTo);
             });
         });
     }
@@ -2777,6 +2814,56 @@
         updateStatus(state.loopRange ? 'looping bar ' + (state.loopRange.start + 1) + '-' + (state.loopRange.end + 1) : 'playlist loop off');
     }
 
+    function rollStepRect(step) {
+        const label = els.pianoRoll.querySelector('.fb-bar-label[data-step="' + step + '"]');
+        return label ? label.getBoundingClientRect() : null;
+    }
+
+    function noteLengthAtPointer(step, clientX) {
+        const maxLength = Math.max(noteLengthSnap, stepCount() - step);
+        const startRect = rollStepRect(step);
+        if (!startRect || startRect.width <= 0) return noteLengthSnap;
+        if (clientX <= startRect.left) return noteLengthSnap;
+        for (let index = step; index < stepCount(); index += 1) {
+            const rect = rollStepRect(index);
+            if (!rect || rect.width <= 0) continue;
+            if (clientX < rect.left) return Math.max(noteLengthSnap, index - step);
+            if (clientX <= rect.right) {
+                return Math.max(noteLengthSnap, (index - step) + ((clientX - rect.left) / rect.width));
+            }
+        }
+        return maxLength;
+    }
+
+    function noteEndX(step, length) {
+        const end = Math.min(stepCount(), step + length);
+        if (end >= stepCount()) {
+            const lastRect = rollStepRect(stepCount() - 1);
+            return lastRect ? lastRect.right : null;
+        }
+        const endStep = Math.floor(end);
+        const fraction = end - endStep;
+        if (fraction <= 0) {
+            const rect = rollStepRect(endStep);
+            return rect ? rect.left : null;
+        }
+        const rect = rollStepRect(endStep);
+        return rect ? rect.left + (rect.width * fraction) : null;
+    }
+
+    function setNoteBlockLengthStyles(block, handle, step, length) {
+        const startRect = rollStepRect(step);
+        const endX = noteEndX(step, length);
+        if (!startRect || startRect.width <= 0 || endX === null) {
+            if (block) block.style.width = 'calc(' + (length * 100) + '% - 8px)';
+            if (handle) handle.style.left = 'calc(' + (length * 100) + '% - 5px)';
+            return;
+        }
+        const noteWidth = Math.max(10, endX - startRect.left - 8);
+        if (block) block.style.width = noteWidth + 'px';
+        if (handle) handle.style.left = (endX - startRect.left - 5) + 'px';
+    }
+
     function renderRoll() {
         const channel = selectedChannel();
         ensureChannelPatterns(channel);
@@ -2842,14 +2929,14 @@
                         block.append(slideText);
                     }
                     block.style.opacity = String(Math.max(0.28, noteVelocity(event)));
-                    block.style.width = 'calc(' + (Math.min(event.length, stepCount() - step) * 100) + '% - 8px)';
+                    const length = clampedNoteLength(event, step);
                     const handle = document.createElement('span');
                     handle.className = 'fb-note-resize';
                     handle.dataset.step = String(step);
                     handle.dataset.note = note;
                     handle.dataset.eventIndex = String(eventIndex);
-                    handle.style.left = 'calc(' + (Math.min(event.length, stepCount() - step) * 100) + '% - 5px)';
                     cell.append(block, handle);
+                    setNoteBlockLengthStyles(block, handle, step, length);
                 }
                 els.pianoRoll.append(cell);
             }
@@ -3745,19 +3832,14 @@
             if (Math.abs(deltaX) < 4) return;
             resizingNote.locked = true;
         }
-        const rawLength = Math.ceil((clientX - resizingNote.left) / Math.max(1, resizingNote.width));
-        const length = Math.max(1, Math.min(stepCount() - resizingNote.step, rawLength));
+        const rawLength = noteLengthAtPointer(resizingNote.step, clientX);
+        const length = Math.max(noteLengthSnap, Math.min(stepCount() - resizingNote.step, snapNoteLength(rawLength)));
         const events = getStepEvents(resizingNote.pattern, resizingNote.step);
         const event = events[resizingNote.eventIndex];
         if (!event || event.note !== resizingNote.note) return;
         event.length = length;
         resizingNote.channel.pattern = resizingNote.pattern;
-        if (resizingNote.block) {
-            resizingNote.block.style.width = 'calc(' + (length * 100) + '% - 8px)';
-        }
-        if (resizingNote.handle) {
-            resizingNote.handle.style.left = 'calc(' + (length * 100) + '% - 5px)';
-        }
+        setNoteBlockLengthStyles(resizingNote.block, resizingNote.handle, resizingNote.step, length);
     }
 
     function noteUnderPointer(clientY) {
@@ -3897,7 +3979,7 @@
         const eventIndex = fromEvents.findIndex(item => item.note === movingNote.note);
         if (eventIndex < 0) return;
         const noteEvent = fromEvents[eventIndex];
-        const maxStep = Math.max(0, stepCount() - (Number(noteEvent.length) || 1));
+        const maxStep = Math.max(0, Math.floor(stepCount() - noteLengthSteps(noteEvent)));
         const safeStep = Math.max(0, Math.min(maxStep, targetStep));
         if (safeStep === movingNote.step) return;
         const toEvents = getStepEvents(movingNote.pattern, safeStep);
@@ -4126,8 +4208,7 @@
         const step = Number(handle.dataset.step);
         const eventIndex = Number(handle.dataset.eventIndex);
         const note = handle.dataset.note;
-        const rect = cell.getBoundingClientRect();
-        resizingNote = { channel, pattern, step, note, eventIndex, left: rect.left, width: rect.width, block, handle, startX: event.clientX, startY: event.clientY, locked: false };
+        resizingNote = { channel, pattern, step, note, eventIndex, block, handle, startX: event.clientX, startY: event.clientY, locked: false };
         try {
             handle.setPointerCapture(event.pointerId);
         } catch (_) {
@@ -4292,7 +4373,7 @@
                         const midiNote = noteNumber(event.note);
                         const midiChannel = channelIndex % 16;
                         const velocity = Math.max(1, Math.min(127, Math.round(noteVelocity(event) * 127)));
-                        const eventTicks = Math.floor(ticksPerStep * Math.max(1, event.length) * 0.8);
+                        const eventTicks = Math.max(1, Math.floor(ticksPerStep * noteLengthSteps(event)));
                         if (event.slideTo && event.slideTo !== event.note) {
                             const semitones = Math.max(-2, Math.min(2, noteNumber(event.slideTo) - midiNote));
                             events.push({ tick, data: pitchBendData(midiChannel, 0) });
@@ -4346,7 +4427,7 @@
             const progress = length > 1 ? i / (length - 1) : 1;
             const baseFrequency = frequency + ((targetFrequency - frequency) * progress);
             const fadeIn = Math.min(1, i / Math.max(1, sampleRate * 0.01));
-            const fadeOut = Math.min(1, (length - i) / Math.max(1, sampleRate * 0.06));
+            const fadeOut = Math.min(1, (length - i) / Math.max(1, sampleRate * 0.005));
             voices.forEach((voice, voiceIndex) => {
                 const voiceFrequency = baseFrequency * Math.pow(2, voice.cents / 1200);
                 phases[voiceIndex] = (phases[voiceIndex] + (voiceFrequency / sampleRate)) % 1;
@@ -4409,7 +4490,7 @@
             const frac = cursor - index;
             const sample = ((bank.sampleData[index] * (1 - frac)) + (bank.sampleData[next] * frac)) / 32768;
             const fadeIn = Math.min(1, i / Math.max(1, sampleRate * 0.006));
-            const fadeOut = Math.min(1, (length - i) / Math.max(1, sampleRate * Math.max(0.03, channel.release || 0.08)));
+            const fadeOut = Math.min(1, (length - i) / Math.max(1, sampleRate * 0.005));
             const amp = sample * channel.volume * attenuation * noteGain * fadeIn * fadeOut;
             left[start + i] += amp * leftGain;
             right[start + i] += amp * rightGain;
@@ -4493,7 +4574,7 @@
             }
             const frame = Math.max(startFrame, Math.min(endFrame - 1, startFrame + Math.floor(frameOffset)));
             const fadeIn = Math.min(1, i / Math.max(1, sampleRate * 0.004));
-            const fadeOut = Math.min(1, (maxLength - i) / Math.max(1, sampleRate * 0.02));
+            const fadeOut = Math.min(1, (maxLength - i) / Math.max(1, sampleRate * 0.005));
             const amp = channel.volume * noteGain * fadeIn * fadeOut;
             left[start + i] += leftData[frame] * amp * leftGain;
             right[start + i] += rightData[frame] * amp * rightGain;
@@ -4595,7 +4676,6 @@
         const barCount = usedBarCount();
         const totalSteps = barCount * stepCount();
         const samplesPerStep = Math.floor(stepSeconds() * sampleRate);
-        const noteLength = Math.floor(samplesPerStep * 0.88);
         const totalSamples = totalSteps * samplesPerStep + sampleRate;
         const left = new Float32Array(totalSamples);
         const right = new Float32Array(totalSamples);
@@ -4619,9 +4699,10 @@
                     getStepEvents(getPattern(channel, patternIndex), step).forEach(event => {
                         const start = ((bar * stepCount()) + step) * samplesPerStep;
                         const velocity = noteVelocity(event);
-                        if (channel.source === 'sample') mixSample(channelLeft, channelRight, sampleRate, start, Math.max(Math.floor(sampleRate * 0.38), noteLength * Math.max(1, event.length)), channel, event.note, velocity);
-                        else if (channel.source === 'soundfont') mixSoundfont(channelLeft, channelRight, sampleRate, start, noteLength * Math.max(1, event.length), channel, event.note, velocity, event.slideTo);
-                        else mixTone(channelLeft, channelRight, sampleRate, start, noteLength * Math.max(1, event.length), channel, event.note, velocity, event.slideTo);
+                        const lengthSamples = Math.max(1, Math.floor(samplesPerStep * clampedNoteLength(event, step)));
+                        if (channel.source === 'sample') mixSample(channelLeft, channelRight, sampleRate, start, Math.max(Math.floor(sampleRate * 0.38), lengthSamples), channel, event.note, velocity);
+                        else if (channel.source === 'soundfont') mixSoundfont(channelLeft, channelRight, sampleRate, start, lengthSamples, channel, event.note, velocity, event.slideTo);
+                        else mixTone(channelLeft, channelRight, sampleRate, start, lengthSamples, channel, event.note, velocity, event.slideTo);
                     });
                 });
                 await setExportProgress(progress, ((completed + 1) / renderUnits) * 100, detail, 12);
@@ -4989,6 +5070,7 @@
             bpm: state.bpm,
             projectName: state.projectName,
             octave: state.octave,
+            noteSnap: state.noteSnap,
             masterVolume: state.masterVolume,
             steps: stepCount(),
             barCount: state.barCount,
@@ -5054,6 +5136,7 @@
         state.bpm = Number(saved.bpm) || 128;
         state.projectName = typeof saved.projectName === 'string' && saved.projectName.trim() ? saved.projectName.trim() : 'Untitled';
         state.octave = octavePage(saved.octave);
+        setNoteSnap(saved.noteSnap);
         state.masterVolume = Math.max(0, Math.min(1, Number(saved.masterVolume) || 0.82));
         setProjectSteps(inferProjectSteps(saved), false);
         state.loopRange = saved.loopRange && typeof saved.loopRange === 'object'
@@ -5095,6 +5178,7 @@
         els.projectName.value = state.projectName;
         els.pattern.value = String(selectedChannel().activePattern || 0);
         els.octave.value = String(state.octave);
+        els.noteSnap.value = String(state.noteSnap);
         els.masterVolume.value = String(state.masterVolume);
         if (audio) audio.master.gain.value = state.masterVolume;
         await hydrateAssets(saved);
@@ -5186,6 +5270,7 @@
         state.projectName = 'Untitled';
         state.bpm = 128;
         state.octave = 2;
+        setNoteSnap(DEFAULT_NOTE_LENGTH_SNAP);
         state.masterVolume = 0.82;
         setProjectSteps(DEFAULT_STEPS, false);
         state.barCount = DEFAULT_BAR_COUNT;
@@ -5204,6 +5289,7 @@
         if (audio) audio.master.gain.value = state.masterVolume;
         els.pattern.value = '0';
         els.patternSteps.value = String(stepCount());
+        els.noteSnap.value = String(state.noteSnap);
         renderAll();
         updateStatus('started new project');
     }
@@ -5421,6 +5507,7 @@
         els.waveformTab.classList.toggle('is-active', isWaveform);
         els.synthTab.classList.toggle('is-active', isSynth);
         els.rollTab.classList.toggle('is-active', !isPlaylist && !isMixer && !isWaveform && !isSynth);
+        if (!isPlaylist && !isMixer && !isWaveform && !isSynth) renderRoll();
         if (isMixer) renderMixer();
         if (isWaveform) renderSampleEditor();
         if (isSynth) renderSynthEditor();
@@ -5711,6 +5798,11 @@
         renderRoll();
         warmSamplePitchCache();
     });
+    els.noteSnap.addEventListener('change', () => {
+        setNoteSnap(els.noteSnap.value);
+        renderRoll();
+        updateStatus('note snap set to ' + els.noteSnap.options[els.noteSnap.selectedIndex].textContent);
+    });
     els.pattern.addEventListener('change', () => {
         const channel = selectedChannel();
         channel.activePattern = Number(els.pattern.value) || 0;
@@ -5961,6 +6053,12 @@
         movingNote = null;
     });
 
+    window.addEventListener('resize', () => {
+        if (!root.isConnected || currentView !== 'roll') return;
+        window.clearTimeout(rollResizeTimer);
+        rollResizeTimer = window.setTimeout(renderRoll, 60);
+    });
+
     window.addEventListener('pagehide', () => {
         stopKeyboardNotes();
         stopRollPreviewVoice();
@@ -5974,6 +6072,7 @@
     els.projectName.value = state.projectName;
     els.pattern.value = String(selectedChannel().activePattern || 0);
     els.patternSteps.value = String(stepCount());
+    els.noteSnap.value = String(state.noteSnap);
     els.masterVolume.value = String(state.masterVolume);
     renderAll();
     syncUtilityMeters();

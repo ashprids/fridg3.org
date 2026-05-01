@@ -471,7 +471,8 @@
             const sustain = clamp(settings.sustain, 0, 1);
             const release = clamp(settings.release, 0.02, 3);
             const end = api.time + duration;
-            const noteEnd = api.duration ? end : api.time + 3600;
+            const releaseEnd = end + release;
+            const noteEnd = api.duration ? releaseEnd : api.time + 3600;
             const output = context.createGain();
             const filter = context.createBiquadFilter();
             const drive = context.createWaveShaper();
@@ -495,8 +496,8 @@
             amp.gain.exponentialRampToValueAtTime(Math.max(0.001, api.channel.volume * api.velocity), api.time + attack);
             amp.gain.exponentialRampToValueAtTime(Math.max(0.0001, api.channel.volume * api.velocity * sustain), api.time + attack + decay);
             if (api.duration) {
-                amp.gain.setValueAtTime(Math.max(0.0001, api.channel.volume * api.velocity * sustain), Math.max(api.time + attack + decay, end - release));
-                amp.gain.exponentialRampToValueAtTime(0.0001, end);
+                amp.gain.setValueAtTime(Math.max(0.0001, api.channel.volume * api.velocity * sustain), Math.max(api.time + attack + decay, end));
+                amp.gain.exponentialRampToValueAtTime(0.0001, releaseEnd);
             }
 
             voices.forEach(voice => {
@@ -510,8 +511,8 @@
                 oscA.frequency.setValueAtTime(Math.max(1, api.frequency), api.time);
                 oscB.frequency.setValueAtTime(Math.max(1, api.frequency * Math.pow(2, semitoneB / 12)), api.time);
                 if (target) {
-                    oscA.frequency.exponentialRampToValueAtTime(target, Math.max(api.time + 0.01, end - release));
-                    oscB.frequency.exponentialRampToValueAtTime(target * Math.pow(2, semitoneB / 12), Math.max(api.time + 0.01, end - release));
+                    oscA.frequency.exponentialRampToValueAtTime(target, Math.max(api.time + 0.01, end));
+                    oscB.frequency.exponentialRampToValueAtTime(target * Math.pow(2, semitoneB / 12), Math.max(api.time + 0.01, end));
                 }
                 oscA.detune.setValueAtTime(voice.cents, api.time);
                 oscB.detune.setValueAtTime(voice.cents + fineB, api.time);
@@ -538,7 +539,7 @@
                 const subPan = context.createStereoPanner();
                 sub.type = 'sine';
                 sub.frequency.setValueAtTime(Math.max(1, api.frequency / 2), api.time);
-                if (target) sub.frequency.exponentialRampToValueAtTime(target / 2, Math.max(api.time + 0.01, end - release));
+                if (target) sub.frequency.exponentialRampToValueAtTime(target / 2, Math.max(api.time + 0.01, end));
                 subGain.gain.value = clamp(settings.sub, 0, 1) * 0.46;
                 subPan.pan.value = clamp(api.channel.pan, -1, 1);
                 sub.connect(subGain);
