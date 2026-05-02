@@ -44,6 +44,33 @@ if (!$template_path) {
 }
 
 $template = file_get_contents($template_path);
+$frdgbeats_css_path = __DIR__ . '/frdgbeats.css';
+$frdgbeats_css_href = '/others/frdgbeats/frdgbeats.css';
+if (is_file($frdgbeats_css_path)) {
+    $frdgbeats_css_href .= '?v=' . filemtime($frdgbeats_css_path);
+}
+$frdgbeats_css_link = '    <link rel="stylesheet" href="' . htmlspecialchars($frdgbeats_css_href, ENT_QUOTES, 'UTF-8') . '">' . "\n";
+if (stripos($template, '</head>') !== false && strpos($template, '/others/frdgbeats/frdgbeats.css') === false) {
+    $template = preg_replace('/<\/head>/i', $frdgbeats_css_link . '</head>', $template, 1);
+}
+if (function_exists('apply_preferred_theme_stylesheet')) {
+    $template = apply_preferred_theme_stylesheet($template, __DIR__);
+}
+$frdgbeats_layout_style = <<<'HTML'
+    <style>
+    #content:has(.frdgbeats-daw),
+    #content-layout:has(.frdgbeats-daw),
+    #content-main:has(.frdgbeats-daw) {
+        box-sizing: border-box;
+        max-width: none !important;
+        width: 100% !important;
+    }
+    </style>
+
+HTML;
+if (stripos($template, '</head>') !== false && strpos($template, '#content:has(.frdgbeats-daw)') === false) {
+    $template = preg_replace('/<\/head>/i', $frdgbeats_layout_style . '</head>', $template, 1);
+}
 
 $content_filename = function_exists('should_use_mobile_template') && should_use_mobile_template(__DIR__)
     ? 'content_mobile.html'

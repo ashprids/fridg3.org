@@ -479,3 +479,43 @@ body.mobile-template #footer-buttons > a.mobile-footer-link > #footer-button.mob
 body.mobile-template #footer-buttons > a.mobile-footer-link > #footer-button.mobile-footer-button.active:hover {
     color: #f6f8f3 !important;
 }
+
+/* frdgBeats app theme support */
+.frdgbeats-daw {
+    --fb-panel: color-mix(in srgb, var(--bg) 88%, var(--fg) 12%);
+    --fb-panel-soft: color-mix(in srgb, var(--bg) 94%, var(--fg) 6%);
+    --fb-panel-strong: color-mix(in srgb, var(--bg) 80%, var(--fg) 20%);
+    --fb-popover: color-mix(in srgb, var(--bg) 96%, var(--fg) 4%);
+    --fb-canvas: color-mix(in srgb, var(--bg) 92%, var(--fg) 8%);
+    --fb-hover: color-mix(in srgb, var(--bg) 88%, var(--fg) 12%);
+    --fb-grid: color-mix(in srgb, var(--fg) 4%, transparent);
+    --fb-grid-strong: color-mix(in srgb, var(--fg) 8%, transparent);
+    --fb-line: color-mix(in srgb, var(--border) 90%, transparent);
+    --fb-border-strong: color-mix(in srgb, var(--border) 82%, transparent);
+    --fb-border-medium: color-mix(in srgb, var(--border) 62%, transparent);
+    --fb-border-soft: color-mix(in srgb, var(--border) 42%, transparent);
+    --fb-border-faint: color-mix(in srgb, var(--border) 24%, transparent);
+    --fb-swatch-border: color-mix(in srgb, var(--fg) 38%, transparent);
+    --fb-hot: var(--links);
+    --fb-warm: var(--subtle);
+    --fb-muted: var(--subtle);
+    --fb-danger-base: #cf6c6c;
+    --fb-danger: color-mix(in srgb, var(--fb-danger-base) 72%, var(--fg) 28%);
+    --fb-danger-fg: color-mix(in srgb, var(--fb-danger) 28%, var(--fg) 72%);
+    --fb-danger-contrast: var(--bg);
+    --fb-hot-soft: color-mix(in srgb, var(--fb-hot) 12%, transparent);
+    --fb-hot-mid: color-mix(in srgb, var(--fb-hot) 34%, transparent);
+    --fb-hot-strong: color-mix(in srgb, var(--fb-hot) 82%, transparent);
+    --fb-warm-soft: color-mix(in srgb, var(--fb-warm) 12%, transparent);
+    --fb-warm-mid: color-mix(in srgb, var(--fb-warm) 34%, transparent);
+    --fb-focus: color-mix(in srgb, var(--fb-hot) 70%, var(--fg) 30%);
+    --fb-note-fill: linear-gradient(180deg, color-mix(in srgb, var(--fb-hot) 86%, var(--fg) 14%), color-mix(in srgb, var(--fb-hot) 62%, var(--bg) 38%));
+    --fb-note-fill-slide: linear-gradient(135deg, color-mix(in srgb, var(--fb-hot) 82%, var(--fg) 18%), color-mix(in srgb, var(--fb-warm) 82%, var(--fg) 18%));
+    --fb-note-fg: var(--bg);
+    --fb-piano-white: color-mix(in srgb, var(--fg) 86%, var(--bg) 14%);
+    --fb-piano-black: color-mix(in srgb, var(--bg) 86%, var(--fg) 14%);
+    --fb-shadow: color-mix(in srgb, var(--bg) 38%, transparent);
+    --fb-shadow-soft: color-mix(in srgb, var(--bg) 22%, transparent);
+    --fb-overlay: color-mix(in srgb, var(--bg) 58%, transparent);
+    --fb-code-bg: color-mix(in srgb, var(--fg) 8%, transparent);
+}
