@@ -224,7 +224,7 @@ frdgBeats lives at `/others/frdgbeats/` and must be treated as part of every the
 - `--fb-note-fill`, `--fb-note-fill-slide`, `--fb-note-fg`
 - `--fb-piano-white`, `--fb-piano-black`, `--fb-swatch-border`, `--fb-code-bg`
 
-when creating or updating a theme, preview `/others/frdgbeats/` and make sure the toolbar, channel rack, menus, credits modal, piano roll, playlist, mixer, automation grid, synth panels, sample editor, meters, sliders, toggles, buttons, and popovers are readable and feel like the theme. if the default derived variables are not enough, override the `--fb-*` variables inside the theme CSS rather than hardcoding frdgBeats component selectors everywhere.
+when creating or updating a theme, preview `/others/frdgbeats/` and make sure the toolbar, channel rack, menus, credits modal, piano roll, playlist, mixer, automation grid, sample editor, meters, sliders, toggles, buttons, and popovers are readable and feel like the theme. synth and effect custom editors keep their own unique styling across every theme, so do not hardcode theme overrides into their internal panel/control classes. if the default derived variables are not enough, override the `--fb-*` variables inside the theme CSS rather than hardcoding frdgBeats component selectors everywhere.
 
 when styling menus, do not only set the background on hover/active states. set the foreground color too. this includes `#tab:hover`, `#tab.active`, `#footer-button:hover`, `#footer-button.active`, mobile nav buttons, mobile footer buttons, and pseudo-elements like `#tab::before` if the theme uses them. invisible active menu text is a tiny little css jump scare and it is your job to prevent it.
 

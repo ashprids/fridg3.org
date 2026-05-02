@@ -10,6 +10,7 @@ The top toolbar contains the transport and project-wide settings.
 
 - The `frdgBeats` title opens the credits popup.
 - The credits popup renders `/others/frdgbeats/credits.md` with common Markdown blocks and inline formatting, including links, images, quotes, tables, rules, task lists, and fenced code.
+- Popups darken the page behind them so the focused dialog stays readable.
 - Play or pause starts and stops playback.
 - Stop resets playback and can panic-stop hanging sounds.
 - Record arms keyboard note recording.

@@ -131,6 +131,7 @@
     };
 
     const els = {
+        app: document.getElementById('frdgbeats-daw'),
         play: document.getElementById('fb-play'),
         stop: document.getElementById('fb-stop'),
         record: document.getElementById('fb-record'),
@@ -206,6 +207,60 @@
         midiFile: document.getElementById('fb-midi-file'),
         globalSoundfontFile: document.getElementById('fb-global-soundfont-file')
     };
+
+    const popupThemeProperties = [
+        '--bg',
+        '--fg',
+        '--border',
+        '--subtle',
+        '--links',
+        '--fb-panel',
+        '--fb-panel-soft',
+        '--fb-panel-strong',
+        '--fb-popover',
+        '--fb-canvas',
+        '--fb-hover',
+        '--fb-grid',
+        '--fb-grid-strong',
+        '--fb-line',
+        '--fb-border-strong',
+        '--fb-border-medium',
+        '--fb-border-soft',
+        '--fb-border-faint',
+        '--fb-swatch-border',
+        '--fb-hot',
+        '--fb-warm',
+        '--fb-muted',
+        '--fb-danger-base',
+        '--fb-danger',
+        '--fb-danger-fg',
+        '--fb-danger-contrast',
+        '--fb-hot-soft',
+        '--fb-hot-mid',
+        '--fb-hot-strong',
+        '--fb-warm-soft',
+        '--fb-warm-mid',
+        '--fb-focus',
+        '--fb-note-fill',
+        '--fb-note-fill-slide',
+        '--fb-note-fg',
+        '--fb-piano-white',
+        '--fb-piano-black',
+        '--fb-shadow',
+        '--fb-shadow-soft',
+        '--fb-overlay',
+        '--fb-code-bg'
+    ];
+
+    function applyPopupTheme(element) {
+        const source = els.app || document.querySelector('.frdgbeats-daw');
+        if (!source || !element) return;
+        const styles = window.getComputedStyle(source);
+        popupThemeProperties.forEach(property => {
+            const value = styles.getPropertyValue(property).trim();
+            if (value) element.style.setProperty(property, value);
+        });
+    }
 
     function normalizeBarCount(value = state.barCount) {
         return Math.max(1, Math.min(MAX_BARS, Number(value) || DEFAULT_BAR_COUNT));
@@ -1112,6 +1167,7 @@
         const percentEl = overlay.querySelector('.fb-export-percent');
         titleEl.textContent = title;
         detailEl.textContent = detail;
+        applyPopupTheme(overlay);
         document.body.append(overlay);
         return {
             set(progress, text = detailEl.textContent) {
@@ -1143,6 +1199,7 @@
             detailEl.textContent = detail;
             cancel.textContent = cancelText;
             ok.textContent = confirmText;
+            applyPopupTheme(overlay);
             const close = (value) => {
                 document.removeEventListener('keydown', onKeydown);
                 overlay.classList.add('is-closing');
@@ -1419,6 +1476,7 @@
             if (event.target === overlay) close();
         });
         document.addEventListener('keydown', onKeydown);
+        applyPopupTheme(overlay);
         document.body.append(overlay);
         closeButton.focus();
 
