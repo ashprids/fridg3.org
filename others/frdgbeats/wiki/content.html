@@ -43,7 +43,9 @@
         padding: 26px 18px;
         position: sticky;
         top: 0;
-        min-height: 100dvh;
+        height: 100dvh;
+        min-height: 0;
+        overflow-y: auto;
         box-sizing: border-box;
         background: rgba(10, 10, 10, 0.82);
     }
@@ -196,6 +198,8 @@
 
         #wiki-sidebar {
             position: static;
+            height: auto;
+            overflow-y: visible;
             min-height: 0;
             border-right: 0;
             border-bottom: 1px solid var(--border);
@@ -210,7 +214,7 @@
 
 <div id="wiki-layout">
     <aside id="wiki-sidebar">
-        <h2><span id="title">frdgBeats</span> Wiki</h2>
+        <h2><span id="title">fridg3.org</span> frdgBeats Wiki</h2>
         <ul id="wiki-page-list">
             {wiki_page_list}
         </ul>

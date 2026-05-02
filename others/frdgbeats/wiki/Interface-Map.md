@@ -8,11 +8,14 @@ frdgBeats has one main screen. Most of the app is split into three zones: the to
 
 The top toolbar contains the transport and project-wide settings.
 
+- The `frdgBeats` title opens the credits popup.
+- The credits popup renders `/others/frdgbeats/credits.md` with common Markdown blocks and inline formatting, including links, images, quotes, tables, rules, task lists, and fenced code.
 - Play or pause starts and stops playback.
 - Stop resets playback and can panic-stop hanging sounds.
 - Record arms keyboard note recording.
 - BPM controls project tempo.
 - Beats switches the pattern length between 16 and 32 steps.
+- The book button opens this wiki.
 - Project name controls the default filename when exporting.
 - Master controls final output volume.
 - The waveform and meters show current output activity.

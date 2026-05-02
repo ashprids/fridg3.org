@@ -134,6 +134,8 @@
         play: document.getElementById('fb-play'),
         stop: document.getElementById('fb-stop'),
         record: document.getElementById('fb-record'),
+        openCredits: document.getElementById('fb-open-credits'),
+        openWiki: document.getElementById('fb-open-wiki'),
         projectName: document.getElementById('fb-project-name'),
         bpm: document.getElementById('fb-bpm'),
         status: document.getElementById('fb-status'),
@@ -1160,6 +1162,273 @@
             document.body.append(overlay);
             ok.focus();
         });
+    }
+
+    function escapeHtml(value) {
+        return String(value)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
+
+    function isSafeCreditsUrl(url) {
+        return /^(https?:|mailto:|tel:|\/|\.\/|\.\.\/|#)/i.test(String(url || '').trim());
+    }
+
+    function splitCreditsTableRow(row) {
+        const text = String(row || '').trim().replace(/^\|/, '').replace(/\|$/, '');
+        const cells = [];
+        let cell = '';
+        for (let index = 0; index < text.length; index++) {
+            const char = text[index];
+            if (char === '|' && text[index - 1] !== '\\') {
+                cells.push(cell.replace(/\\\|/g, '|').trim());
+                cell = '';
+            } else {
+                cell += char;
+            }
+        }
+        cells.push(cell.replace(/\\\|/g, '|').trim());
+        return cells;
+    }
+
+    function renderCreditsInline(text) {
+        const tokens = [];
+        const stash = html => {
+            const token = '\u0000' + tokens.length + '\u0000';
+            tokens.push(html);
+            return token;
+        };
+        const restore = html => html.replace(/\u0000(\d+)\u0000/g, (_, index) => tokens[Number(index)] || '');
+        let html = escapeHtml(text);
+
+        html = html.replace(/`([^`]+)`/g, (_, code) => stash('<code>' + code + '</code>'));
+        html = html.replace(/!\[([^\]]*)\]\(([^)\s]+)(?:\s+&quot;([^&]*)&quot;)?\)/g, (_, alt, href, title) => {
+            const target = String(href || '').trim();
+            if (!target || !isSafeCreditsUrl(target)) return '';
+            const titleAttr = title ? ' title="' + title + '"' : '';
+            return stash('<img src="' + escapeHtml(target) + '" alt="' + alt + '"' + titleAttr + '>');
+        });
+        html = html.replace(/\[([^\]]+)\]\(([^)\s]+)(?:\s+&quot;([^&]*)&quot;)?\)/g, (_, label, href, title) => {
+            const target = String(href || '').trim();
+            if (!target || !isSafeCreditsUrl(target)) return label;
+            const external = /^(https?:)?\/\//i.test(target);
+            const titleAttr = title ? ' title="' + title + '"' : '';
+            return stash('<a href="' + escapeHtml(target) + '"' + titleAttr + (external ? ' rel="noopener noreferrer"' : '') + '>' + renderCreditsInline(label) + '</a>');
+        });
+        html = html.replace(/&lt;((?:https?:\/\/|mailto:)[^&\s]+)&gt;/gi, (_, target) => {
+            const label = target.replace(/^mailto:/i, '');
+            return stash('<a href="' + escapeHtml(target) + '"' + (/^https?:\/\//i.test(target) ? ' rel="noopener noreferrer"' : '') + '>' + escapeHtml(label) + '</a>');
+        });
+        html = html.replace(/~~(.+?)~~/g, '<del>$1</del>');
+        html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+        html = html.replace(/__(.+?)__/g, '<strong>$1</strong>');
+        html = html.replace(/(^|[^*])\*(?!\*)([^*]+?)\*(?!\*)/g, '$1<em>$2</em>');
+        html = html.replace(/(^|[^_])_(?!_)([^_]+?)_(?!_)/g, '$1<em>$2</em>');
+        html = restore(html);
+        return html;
+    }
+
+    function renderCreditsMarkdown(markdown) {
+        const lines = String(markdown || '').split(/\r\n|\n|\r/);
+        const html = [];
+        let paragraph = [];
+        let inList = null;
+        let inCode = false;
+        let codeLanguage = '';
+        let codeLines = [];
+
+        const flushParagraph = () => {
+            const text = paragraph.join(' ').trim();
+            if (text) html.push('<p>' + renderCreditsInline(text) + '</p>');
+            paragraph = [];
+        };
+        const closeList = () => {
+            if (!inList) return;
+            html.push('</' + inList + '>');
+            inList = null;
+        };
+
+        const flushCode = () => {
+            const classAttr = codeLanguage ? ' class="language-' + escapeHtml(codeLanguage) + '"' : '';
+            html.push('<pre><code' + classAttr + '>' + escapeHtml(codeLines.join('\n')) + '</code></pre>');
+            codeLines = [];
+            codeLanguage = '';
+            inCode = false;
+        };
+
+        for (let index = 0; index < lines.length; index++) {
+            const line = lines[index];
+            const fence = /^```([A-Za-z0-9_-]+)?\s*$/.exec(line);
+            if (fence) {
+                flushParagraph();
+                closeList();
+                if (inCode) {
+                    flushCode();
+                } else {
+                    inCode = true;
+                    codeLanguage = fence[1] || '';
+                }
+                continue;
+            }
+            if (inCode) {
+                codeLines.push(line);
+                continue;
+            }
+            if (!line.trim()) {
+                flushParagraph();
+                closeList();
+                continue;
+            }
+            const setextHeading = index + 1 < lines.length ? /^\s*(=+|-+)\s*$/.exec(lines[index + 1]) : null;
+            if (setextHeading && line.trim() && !/^\s*[-*+]\s+/.test(line) && !/^\s*\d+\.\s+/.test(line)) {
+                flushParagraph();
+                closeList();
+                const level = setextHeading[1][0] === '=' ? 1 : 2;
+                html.push('<h' + level + (level === 1 ? ' id="title"' : '') + '>' + renderCreditsInline(line.trim()) + '</h' + level + '>');
+                index++;
+                continue;
+            }
+            const quote = /^\s*>\s?(.*)$/.exec(line);
+            if (quote) {
+                const quoteLines = [quote[1]];
+                while (index + 1 < lines.length && /^\s*>\s?(.*)$/.test(lines[index + 1])) {
+                    index++;
+                    quoteLines.push((/^\s*>\s?(.*)$/.exec(lines[index]) || [])[1] || '');
+                }
+                flushParagraph();
+                closeList();
+                html.push('<blockquote>' + renderCreditsMarkdown(quoteLines.join('\n')) + '</blockquote>');
+                continue;
+            }
+            const heading = /^(#{1,6})\s+(.*)$/.exec(line);
+            if (heading) {
+                flushParagraph();
+                closeList();
+                const level = heading[1].length;
+                const id = level === 1 ? ' id="title"' : '';
+                html.push('<h' + level + id + '>' + renderCreditsInline(heading[2].trim()) + '</h' + level + '>');
+                continue;
+            }
+            if (/^\s*---+\s*$/.test(line)) {
+                flushParagraph();
+                closeList();
+                html.push('<hr>');
+                continue;
+            }
+            if (/^\s*\|?.+\|.+\|?\s*$/.test(line) && index + 1 < lines.length && /^\s*\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)+\|?\s*$/.test(lines[index + 1])) {
+                flushParagraph();
+                closeList();
+                const headers = splitCreditsTableRow(line);
+                const aligns = splitCreditsTableRow(lines[index + 1]).map(cell => {
+                    if (/^:-+:$/.test(cell)) return 'center';
+                    if (/^-+:$/.test(cell)) return 'right';
+                    if (/^:-+$/.test(cell)) return 'left';
+                    return '';
+                });
+                index += 2;
+                const rows = [];
+                while (index < lines.length && /^\s*\|?.+\|.+\|?\s*$/.test(lines[index])) {
+                    rows.push(splitCreditsTableRow(lines[index]));
+                    index++;
+                }
+                index--;
+                const alignAttr = align => align ? ' style="text-align: ' + align + '"' : '';
+                html.push('<table><thead><tr>' + headers.map((cell, cellIndex) => '<th' + alignAttr(aligns[cellIndex]) + '>' + renderCreditsInline(cell) + '</th>').join('') + '</tr></thead><tbody>');
+                rows.forEach(row => {
+                    html.push('<tr>' + headers.map((_, cellIndex) => '<td' + alignAttr(aligns[cellIndex]) + '>' + renderCreditsInline(row[cellIndex] || '') + '</td>').join('') + '</tr>');
+                });
+                html.push('</tbody></table>');
+                continue;
+            }
+            if (/^!\[([^\]]*)\]\((.*?)\)\s*$/.test(line.trim())) {
+                flushParagraph();
+                closeList();
+                html.push(renderCreditsInline(line.trim()));
+                continue;
+            }
+            const indentedCode = /^(?: {4}|\t)(.*)$/.exec(line);
+            if (indentedCode) {
+                flushParagraph();
+                closeList();
+                const block = [indentedCode[1]];
+                while (index + 1 < lines.length && /^(?: {4}|\t)(.*)$/.test(lines[index + 1])) {
+                    index++;
+                    block.push((/^(?: {4}|\t)(.*)$/.exec(lines[index]) || [])[1] || '');
+                }
+                html.push('<pre><code>' + escapeHtml(block.join('\n')) + '</code></pre>');
+                continue;
+            }
+            const unordered = /^\s*[-*+]\s+(.*)$/.exec(line);
+            if (unordered) {
+                flushParagraph();
+                if (inList !== 'ul') {
+                    closeList();
+                    html.push('<ul>');
+                    inList = 'ul';
+                }
+                const task = /^\[( |x)\]\s+(.*)$/i.exec(unordered[1].trim());
+                if (task) {
+                    html.push('<li class="fb-credits-task"><input type="checkbox" disabled' + (task[1].toLowerCase() === 'x' ? ' checked' : '') + '> ' + renderCreditsInline(task[2].trim()) + '</li>');
+                } else {
+                    html.push('<li>' + renderCreditsInline(unordered[1].trim()) + '</li>');
+                }
+                continue;
+            }
+            const ordered = /^\s*\d+\.\s+(.*)$/.exec(line);
+            if (ordered) {
+                flushParagraph();
+                if (inList !== 'ol') {
+                    closeList();
+                    html.push('<ol>');
+                    inList = 'ol';
+                }
+                html.push('<li>' + renderCreditsInline(ordered[1].trim()) + '</li>');
+                continue;
+            }
+            closeList();
+            paragraph.push(line.trim());
+        }
+
+        if (inCode) flushCode();
+        flushParagraph();
+        closeList();
+        return html.join('\n') || '<p class="fb-credits-empty">credits.md is empty right now.</p>';
+    }
+
+    async function showCreditsDialog() {
+        const overlay = document.createElement('div');
+        overlay.className = 'fb-export-overlay fb-credits-overlay';
+        overlay.setAttribute('role', 'dialog');
+        overlay.setAttribute('aria-modal', 'true');
+        overlay.innerHTML = '<div class="fb-export-dialog fb-credits-dialog"><button class="fb-button fb-credits-close" type="button" data-tooltip="close"><i class="fa-solid fa-xmark"></i></button><div class="fb-credits-body"><p class="fb-credits-empty">loading credits...</p></div></div>';
+        const body = overlay.querySelector('.fb-credits-body');
+        const closeButton = overlay.querySelector('.fb-credits-close');
+        const onKeydown = event => {
+            if (event.key === 'Escape') close();
+        };
+        const close = () => {
+            overlay.classList.add('is-closing');
+            window.setTimeout(() => overlay.remove(), 160);
+            document.removeEventListener('keydown', onKeydown);
+        };
+        closeButton.addEventListener('click', close);
+        overlay.addEventListener('click', event => {
+            if (event.target === overlay) close();
+        });
+        document.addEventListener('keydown', onKeydown);
+        document.body.append(overlay);
+        closeButton.focus();
+
+        try {
+            const response = await fetch('/others/frdgbeats/credits.md', { cache: 'no-store' });
+            if (!response.ok) throw new Error('credits load failed');
+            body.innerHTML = renderCreditsMarkdown(await response.text());
+        } catch (_) {
+            body.innerHTML = '<p class="fb-credits-empty">credits.md could not be loaded.</p>';
+        }
     }
 
     async function setExportProgress(progress, value, text, delay = 80) {
@@ -6314,6 +6583,10 @@
 
     els.play.addEventListener('click', togglePlayback);
     els.stop.addEventListener('click', stopButtonPressed);
+    els.openCredits.addEventListener('click', showCreditsDialog);
+    els.openWiki.addEventListener('click', () => {
+        window.location.href = '/others/frdgbeats/wiki/';
+    });
     els.record.addEventListener('click', () => {
         isRecording = !isRecording;
         els.record.classList.toggle('is-active', isRecording);
