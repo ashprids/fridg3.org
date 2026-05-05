@@ -164,6 +164,15 @@ album JSON shape:
 - published newsletter bodies as `{id}.html`
 - commonly date-shaped ids like `YYYY-MM-DD`
 
+## `data/mdpaste/`
+
+- temporary markdown paste records as `{id}.json`
+- ids are 16 lowercase hex characters
+- records expire after 30 days and are cleaned up opportunistically on create/view
+- unencrypted records store a `markdown` string
+- encrypted records store only AES-256-GCM ciphertext plus PBKDF2-SHA256 salt/nonce/tag metadata; the password is never stored
+- `hard_breaks` controls whether single paragraph newlines render as `<br>` instead of spaces
+
 ## `data/etc/`
 
 ### `wip`

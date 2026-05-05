@@ -22,20 +22,18 @@
 
 <body>
 	<main class="page">
-		<section class="card" aria-labelledby="page-title">
+		<header class="service-header" aria-labelledby="page-title">
+			<a class="home-link" href="/others/">fridg3.org / others</a>
 			<h1 id="page-title">mdpaste</h1>
-			<p>
-				mdpaste is a tool for quickly pasting markdown content and sharing it with others. it's simple; paste your markdown into the textbox or upload a file, press "generate link" and share the result!
-                <br><br>
-                you may also choose to use a password. your file will be securely encrypted using that password, and will be inaccessible to anyone without it, even site administrators and developers.
-                <br><br>
-                all content is stored in the UK (London) and is automatically deleted after 30 days.
-			</p>
+			<p>paste markdown, preview it, then ship a share link.<br>encrypted pastes are locked before they're stored on disk.</p>
+		</header>
 
-			<div class="mdpaste-controls">
-				<div class="control-row">
-					<label for="markdown-file" class="btn" id="upload-trigger">upload .md file</label>
-					<input id="markdown-file" type="file" accept=".md,text/markdown" aria-label="Upload markdown file">
+		<section class="workspace" aria-label="Markdown paste editor">
+			<form class="editor-panel" id="mdpaste-form">
+				<div class="panel-header">
+					<h2>write</h2>
+					<label for="markdown-file" class="btn btn-secondary" id="upload-trigger">upload file</label>
+					<input id="markdown-file" type="file" accept=".md,.txt,text/markdown,text/plain" aria-label="Upload markdown or text file">
 				</div>
 
 				<label class="field-label" for="markdown-input">markdown text</label>
@@ -45,18 +43,39 @@
 					placeholder="# Title&#10;&#10;Write markdown here or upload a .md file..."
 				></textarea>
 
-				<label class="field-label" for="password-input">password (optional)</label>
-				<input
-					id="password-input"
-					type="password"
-					class="password-input"
-					placeholder="enter password"
-				>
+				<div class="password-row">
+					<label class="password-wrap" for="password-input">
+						<span class="field-label">password (optional)</span>
+						<input
+							id="password-input"
+							type="password"
+							class="password-input"
+							placeholder="leave blank for public"
+							autocomplete="new-password"
+						>
+					</label>
+					<button type="submit" class="btn" id="create-link-btn">create link</button>
+				</div>
 
-				<button type="button" class="btn" id="create-link-btn">create link</button>
-			</div>
+				<label class="checkbox-option" for="hard-breaks-input">
+					<input id="hard-breaks-input" type="checkbox">
+					<span>keep single line breaks</span>
+				</label>
 
-			<section class="card markdown-preview" aria-labelledby="preview-title">
+				<p class="status-line" id="status-line" role="status" aria-live="polite">stored for 30 days. max size: 512 KiB.</p>
+				<div class="result-box" id="result-box" hidden>
+					<label class="field-label" for="share-link">share link</label>
+					<div class="share-row">
+						<input id="share-link" class="share-link" type="url" readonly>
+						<button type="button" class="btn btn-secondary" id="copy-link-btn">copy</button>
+					</div>
+				</div>
+			</form>
+
+			<section class="preview-panel" aria-labelledby="preview-title">
+				<div class="panel-header">
+					<h2 id="preview-title">preview</h2>
+				</div>
 				<article id="markdown-preview-body" class="markdown-body">
 					<p>your formatted markdown will appear here automatically.</p>
 				</article>

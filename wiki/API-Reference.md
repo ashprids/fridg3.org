@@ -38,6 +38,17 @@ all API routes live under `/api/*` and are handled by PHP.
 
 ## Content / Media
 
+### `/others/mdpaste/`
+
+`POST` JSON payload with `{ markdown, password, hardBreaks }`.
+
+- stores temporary markdown paste records in `data/mdpaste`
+- empty passwords create public pastes
+- non-empty passwords encrypt the markdown before storage
+- `hardBreaks` stores whether single line breaks render as line breaks in formatted paragraphs
+- returns `{ ok, id, url, expires_at, encrypted }`
+- rejects blank pastes and content over 512 KiB
+
 ### `/api/feed-post`
 
 - returns parsed feed post JSON for a supplied `?id=`

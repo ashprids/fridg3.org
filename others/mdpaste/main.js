@@ -3,12 +3,29 @@
 const fileInput = document.getElementById("markdown-file");
 const markdownInput = document.getElementById("markdown-input");
 const preview = document.getElementById("markdown-preview-body");
+const form = document.getElementById("mdpaste-form");
+const passwordInput = document.getElementById("password-input");
+const statusLine = document.getElementById("status-line");
+const resultBox = document.getElementById("result-box");
+const shareLink = document.getElementById("share-link");
+const copyLinkButton = document.getElementById("copy-link-btn");
+const createButton = document.getElementById("create-link-btn");
+const hardBreaksInput = document.getElementById("hard-breaks-input");
 
 if (!fileInput || !markdownInput || !preview) {
 	// Do nothing when this script is loaded on a page without the mdfpaste UI.
 } else {
 	fileInput.addEventListener("change", handleFileUpload);
 	markdownInput.addEventListener("input", updatePreview);
+	if (hardBreaksInput) {
+		hardBreaksInput.addEventListener("change", updatePreview);
+	}
+	if (form) {
+		form.addEventListener("submit", createPaste);
+	}
+	if (copyLinkButton && shareLink) {
+		copyLinkButton.addEventListener("click", copyShareLink);
+	}
 	updatePreview();
 }
 
@@ -21,8 +38,8 @@ function handleFileUpload(event) {
 	}
 
 	const filename = file.name.toLowerCase();
-	if (!filename.endsWith(".md")) {
-		alert("Only .md files are allowed.");
+	if (!filename.endsWith(".md") && !filename.endsWith(".txt")) {
+		setStatus("only .md and .txt files are allowed.", true);
 		target.value = "";
 		return;
 	}
@@ -30,18 +47,95 @@ function handleFileUpload(event) {
 	const reader = new FileReader();
 	reader.onload = function onLoad() {
 		markdownInput.value = String(reader.result || "");
+		setStatus("file loaded. preview updated.", false);
 		updatePreview();
 	};
 	reader.onerror = function onError() {
-		alert("Could not read the file. Please try again.");
+		setStatus("could not read the file. try again.", true);
 		target.value = "";
 	};
 	reader.readAsText(file, "utf-8");
 }
 
+async function createPaste(event) {
+	event.preventDefault();
+
+	const markdown = markdownInput.value || "";
+	if (!markdown.trim()) {
+		setStatus("error: empty file!", true);
+		return;
+	}
+
+	if (createButton) {
+		createButton.disabled = true;
+		createButton.textContent = "creating...";
+	}
+	setStatus("saving paste...", false);
+
+	try {
+		const response = await fetch("/others/mdpaste/", {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json"
+			},
+			body: JSON.stringify({
+				markdown,
+				password: passwordInput ? passwordInput.value : "",
+				hardBreaks: hardBreaksInput ? hardBreaksInput.checked : false
+			})
+		});
+		const data = await response.json().catch(function () {
+			return {};
+		});
+
+		if (!response.ok || !data.ok) {
+			throw new Error(data.error || "could not create paste.");
+		}
+
+		const absoluteUrl = new URL(data.url, window.location.origin).toString();
+		if (shareLink && resultBox) {
+			shareLink.value = absoluteUrl;
+			resultBox.hidden = false;
+			shareLink.focus();
+			shareLink.select();
+		}
+		setStatus(data.encrypted ? "encrypted paste created. send the password separately." : "paste created.", false);
+	} catch (error) {
+		setStatus(error.message || "could not create paste.", true);
+	} finally {
+		if (createButton) {
+			createButton.disabled = false;
+			createButton.textContent = "create link";
+		}
+	}
+}
+
+async function copyShareLink() {
+	if (!shareLink || !shareLink.value) {
+		return;
+	}
+
+	try {
+		await navigator.clipboard.writeText(shareLink.value);
+		setStatus("copied. delicious.", false);
+	} catch (error) {
+		shareLink.focus();
+		shareLink.select();
+		setStatus("copy failed, but the link is selected.", true);
+	}
+}
+
+function setStatus(message, isError) {
+	if (!statusLine) {
+		return;
+	}
+	statusLine.textContent = message;
+	statusLine.classList.toggle("is-error", Boolean(isError));
+}
+
 function updatePreview() {
 	const raw = markdownInput.value || "";
-	preview.innerHTML = renderMarkdown(raw);
+	preview.innerHTML = renderMarkdown(raw, hardBreaksInput ? hardBreaksInput.checked : false);
 }
 
 function escapeHtml(value) {
@@ -59,11 +153,31 @@ function applyInline(text) {
 	out = out.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
 	out = out.replace(/\*([^*]+)\*/g, "<em>$1</em>");
 	out = out.replace(/~~([^~]+)~~/g, "<del>$1</del>");
+	out = out.replace(/!\[\[([^\]]+)\]\]/g, function renderObsidianImage(match, target) {
+		const src = safeObsidianImageUrl(target);
+		return src ? '<img src="' + escapeAttribute(src) + '" alt="">' : match;
+	});
+	out = out.replace(/!\[([^\]]*)\]\((https?:\/\/[^\s)]+|\/data\/images\/[^\s)]+)\)/g, '<img src="$2" alt="$1">');
 	out = out.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noreferrer">$1</a>');
 	return out;
 }
 
-function renderMarkdown(markdown) {
+function escapeAttribute(value) {
+	return String(value).replace(/"/g, "&quot;");
+}
+
+function safeObsidianImageUrl(target) {
+	const cleanTarget = String(target || "").replace(/\|.*$/, "").trim();
+	if (/^https?:\/\//i.test(cleanTarget) || cleanTarget.startsWith("/data/images/")) {
+		return cleanTarget;
+	}
+	if (/^[A-Za-z0-9][A-Za-z0-9._ -]+\.(png|jpe?g|gif|webp|svg)$/i.test(cleanTarget)) {
+		return "/data/images/" + encodeURIComponent(cleanTarget);
+	}
+	return "";
+}
+
+function renderMarkdown(markdown, hardBreaks) {
 	const lines = markdown.replace(/\r\n/g, "\n").split("\n");
 	const html = [];
 	let paragraph = [];
@@ -77,7 +191,7 @@ function renderMarkdown(markdown) {
 		if (!paragraph.length) {
 			return;
 		}
-		html.push("<p>" + applyInline(paragraph.join(" ")) + "</p>");
+		html.push("<p>" + applyInline(paragraph.join(hardBreaks ? "\n" : " ")).replace(/\n/g, "<br>") + "</p>");
 		paragraph = [];
 	};
 
