@@ -19,10 +19,10 @@ A project file includes:
 - BPM and project name.
 - Master volume.
 - Step count: 16 or 32.
-- Playlist row count and loop range.
+- Playlist bar count and loop range.
 - Channels.
 - Patterns.
-- Playlist clips.
+- Global playlist pattern clips and audio clips.
 - Synth settings.
 - Sample settings.
 - SoundFont settings.
@@ -36,7 +36,7 @@ Use export project when you want a real copy.
 
 The new project menu can load starter `.frdgbeats` presets from `/others/frdgbeats/presets/`.
 
-Presets are meant to be starting points. They can include channels, sounds, patterns, and arrangement setup.
+Presets are meant to be starting points. They can include channels, sounds, patterns, playlist clips, and arrangement setup.
 
 ## Demo Projects
 

@@ -18,7 +18,11 @@ The exported top-level object includes:
   "projectName": "Untitled",
   "steps": 16,
   "barCount": 4,
+  "activePattern": 0,
+  "playlistTrackCount": 8,
+  "playlistPatternClips": [],
   "clips": {},
+  "playlistAudioClips": [],
   "channels": []
 }
 ```
@@ -33,10 +37,14 @@ The exported top-level object includes:
 - `noteSnap`: note length snap value.
 - `masterVolume`: final output volume.
 - `steps`: `16` or `32`.
-- `barCount`: playlist row count.
+- `barCount`: playlist bar count.
+- `activePattern`: selected global pattern index.
 - `loopRange`: playlist loop range or `null`.
+- `playlistTrackCount`: number of FL-style playlist lanes.
 - `assets`: embedded or bundled asset references.
-- `clips`: playlist clip map by channel id.
+- `playlistPatternClips`: global pattern clips placed on the playlist timeline.
+- `clips`: legacy channel clip map, kept for old project compatibility.
+- `playlistAudioClips`: external audio files dropped onto playlist lanes.
 - `selectedId`: selected channel id.
 - `channels`: channel array.
 
@@ -62,30 +70,68 @@ Source-specific fields are included too.
 
 ## Pattern Data
 
-Each channel has up to 128 patterns.
+Each channel stores its note data for up to 128 global patterns.
 
-Each pattern is an array of steps. Each step contains zero or more note events.
+Each pattern slot is an array of steps. A global pattern is the same pattern index across every channel, so pattern `1` can contain drums, bass, and keys at the same time.
 
 ```json
 {
   "note": "C4",
+  "offset": 0.5,
   "length": 1,
   "velocity": 1,
   "slideTo": "D4"
 }
 ```
 
-`slideTo` is optional.
+`offset` and `slideTo` are optional. `offset` is the note's fractional start inside the step, used for half-step and quarter-step piano roll placement.
 
-## Playlist Clips
+## Legacy Playlist Clips
 
-`clips` is keyed by channel id. Each value is an array matching playlist rows.
+`clips` is the old channel-based playlist map. It is still read for migration, but new projects use `playlistPatternClips`.
 
 - `null`: empty cell.
-- `-1`: disabled cell, displayed as `0`.
+- `-1`: legacy disabled cell.
 - `0` or higher: pattern index.
 
-The UI displays pattern indexes as one-based numbers, so stored `0` appears as pattern `1`.
+The current playlist UI does not edit this map directly.
+
+## Playlist Pattern Clips
+
+`playlistPatternClips` stores FL-style global pattern clips:
+
+```json
+{
+  "id": "pattern-123",
+  "pattern": 0,
+  "bar": 0,
+  "track": 0
+}
+```
+
+`pattern`, `bar`, and `track` are zero-based. The UI displays pattern and bar numbers as one-based.
+
+## Playlist Audio Clips
+
+`playlistAudioClips` stores audio files dropped directly onto the playlist:
+
+```json
+{
+  "id": "audio-123",
+  "channelId": "track-1",
+  "track": 2,
+  "bar": 2,
+  "name": "vocal chop",
+  "duration": 1.84,
+  "asset": {
+    "name": "vocal-chop.wav",
+    "type": "audio/wav",
+    "data": "base64..."
+  }
+}
+```
+
+Audio clip `bar` values are zero-based. The UI displays them as one-based bars.
 
 ## Assets
 

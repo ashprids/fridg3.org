@@ -1,14 +1,16 @@
 # Piano Roll
 
-The piano roll is where you edit notes for the selected channel and selected pattern.
+The piano roll is where you edit the selected channel's notes inside the selected global pattern.
 
 ![Screenshot of the piano roll showing note names on the left, numbered steps across the top, several notes with different lengths, and one slide note](placeholder:piano-roll)
 
 ## Patterns
 
-Each channel has up to 128 patterns. The pattern dropdown selects which one you are editing.
+frdgBeats has up to 128 global patterns. The pattern dropdown lists patterns that already contain notes, plus the current empty pattern while you are editing it.
 
-Patterns are per channel. Pattern `1` on your kick channel is not the same data as pattern `1` on your bass channel.
+Use `+ new pattern` in the dropdown to jump to the next empty pattern slot.
+
+A single pattern can contain notes for multiple channels. Select a channel to edit that instrument's part inside the current pattern.
 
 ## Steps
 
@@ -20,7 +22,9 @@ Changing step count resizes patterns. If a project needs more detail, 32 steps g
 
 Click an empty cell to place a note.
 
-Click an existing note to remove it.
+When snap is `1/2` or `1/4`, click inside a cell to place the note on that half-step or quarter-step position.
+
+Right-click an existing note to remove it.
 
 Drag after placing to move the note vertically before letting go.
 
@@ -46,7 +50,7 @@ This affects how precise note lengths can be.
 
 ## Velocity
 
-Right-click a note block to open the velocity popover.
+Middle-click a note block to open the velocity popover.
 
 Velocity is note strength. At `100`, the note plays at full strength. Lower values are quieter and visually dimmer.
 
@@ -62,10 +66,12 @@ Slides are subtle but useful for bass lines, leads, and pitch-bend style motion.
 
 The octave selector changes the two-octave range shown in the piano roll and used by the computer keyboard.
 
+The arrow buttons move every note in the selected pattern up or down one octave.
+
 If you cannot find the note you want, change octave before blaming the app. The note is probably just above or below the current view, hiding like a coward.
 
 ## Clear Pattern
 
-The eraser button clears the selected channel's current pattern.
+The eraser button clears the current global pattern.
 
-It does not delete other patterns, other channels, playlist clips, effects, or automation.
+It does not delete other patterns, channels, playlist clips, effects, or automation.

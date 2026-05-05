@@ -1,58 +1,58 @@
 # Playlist
 
-The playlist turns patterns into an arrangement. Patterns are the musical chunks. Playlist rows decide when those chunks play.
+The playlist turns patterns and audio clips into an arrangement. Think FL Studio style: tracks go down the left, bars go across the top, and clips sit on the timeline.
 
-![Screenshot of the playlist tab with bar rows, channel columns, numbered pattern clips, muted zero clips, loop buttons, and an add-row button](placeholder:playlist)
+![Screenshot of the playlist tab with track lanes, bar numbers, pattern clips, and audio clips](placeholder:playlist)
 
-## Rows and Columns
+## Tracks And Bars
 
-Rows are bars.
+Rows are channel tracks.
 
-Columns are channels.
+Columns are bars in the song timeline.
 
-Each cell says what pattern that channel should play on that bar.
+Click a track name to select that channel.
 
-## Cell States
+Use the plus button at the end of the header to add more bars. Use a bar header's trash button to remove that bar.
 
-A playlist cell can be:
+## Pattern Clips
 
-- Empty: no clip is set.
-- Numbered: play that pattern number.
-- `0`: intentionally silent for that channel on that row.
+The pattern picker above the playlist only lists global patterns that contain notes. Drag the pattern chip beside it onto a lane to place that pattern.
 
-Click a cell to cycle forward. Right-click a cell to cycle backward.
+Drag a pattern onto a lane cell to place it. Drag an existing pattern clip to move it somewhere else.
 
-## Starting Playback From a Row
+Click an empty lane cell to place the selected pattern quickly.
 
-Use the row number button to start playback from that bar.
+Right-click a pattern clip to delete it.
 
-If playback is already running, clicking a row jumps playback to that row.
+## Audio Clips
 
-## Looping Rows
+Drop an audio file from your file manager onto a playlist lane to add it as an audio clip.
 
-The repeat button on each row toggles the playlist loop range.
+Audio clips play from the bar where they are dropped and are embedded when you export a `.frdgbeats` project.
 
-You can build a loop range by clicking adjacent rows. When a loop range is active, playback stays inside that row range.
+Drag an audio clip to move it. Right-click an audio clip to delete it.
 
-Click the same single-row loop again to turn looping off.
+## Starting Playback From A Bar
 
-## Adding and Removing Rows
+Use the bar number button to start playback from that bar.
 
-Use the plus button at the bottom of the playlist to add rows.
+If playback is already running, clicking a bar jumps playback to that bar.
 
-Use the trash button on a row to delete it.
+## Looping Bars
 
-frdgBeats supports up to 128 playlist rows.
+The repeat button on each bar toggles the playlist loop range.
+
+You can build a loop range by clicking adjacent bars. When a loop range is active, playback stays inside that bar range.
+
+Click the same single-bar loop again to turn looping off.
 
 ## Common Arrangement Workflow
 
-1. Make pattern `1` for drums.
-2. Make pattern `1` for bass.
-3. Make pattern `2` for bass variation.
-4. Open playlist.
-5. Put drums on every row.
-6. Put bass pattern `1` on rows `1` and `2`.
-7. Put bass pattern `2` on row `4`.
-8. Leave row `3` sparse for breathing room.
+1. Make pattern `1` with drums and bass.
+2. Make pattern `2` as a variation.
+3. Open playlist.
+4. Drag pattern `1` across the bars you want.
+5. Drag pattern `2` onto bar `4`.
+6. Drop a vocal chop or loop onto an audio lane if the song needs sauce.
 
 That is basically arrangement without the mystical nonsense.

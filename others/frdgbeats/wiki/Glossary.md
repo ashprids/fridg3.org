@@ -4,7 +4,7 @@ Tiny dictionary for the terms frdgBeats uses.
 
 ## Bar
 
-A chunk of time in the playlist. In frdgBeats, each playlist row is treated like a bar of the arrangement.
+A chunk of time in the playlist timeline.
 
 ## BPM
 
@@ -16,7 +16,7 @@ One instrument lane. A channel can be a synth, sample, or SoundFont.
 
 ## Clip
 
-A playlist cell that tells a channel which pattern to play on a row.
+A pattern or audio block placed on the playlist timeline.
 
 ## Effect Chain
 
@@ -28,7 +28,7 @@ A file or protocol for musical instructions: notes, timing, velocity, program ch
 
 ## Pattern
 
-A reusable note grid for one channel.
+A reusable song chunk. One pattern can contain notes for multiple channels.
 
 ## Piano Roll
 

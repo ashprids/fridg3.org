@@ -92,6 +92,7 @@
     let suppressRollClick = false;
     let suppressAutomationClick = false;
     let velocityEditor = null;
+    let playlistDrag = null;
     const heldKeys = new Set();
     const activeKeyboardVoices = new Map();
     let soundfontBank = {
@@ -126,7 +127,11 @@
         steps: projectSteps,
         barCount: DEFAULT_BAR_COUNT,
         loopRange: null,
-        clips: { [initialChannel.id]: Array.from({ length: DEFAULT_BAR_COUNT }, () => DISABLED_CLIP) },
+        activePattern: 0,
+        playlistTrackCount: 8,
+        playlistPatternClips: [],
+        clips: { [initialChannel.id]: Array.from({ length: DEFAULT_BAR_COUNT }, () => null) },
+        playlistAudioClips: [],
         channels: [initialChannel]
     };
 
@@ -152,6 +157,8 @@
         patternSteps: document.getElementById('fb-pattern-steps'),
         octave: document.getElementById('fb-octave'),
         noteSnap: document.getElementById('fb-note-snap'),
+        octaveDown: document.getElementById('fb-octave-down'),
+        octaveUp: document.getElementById('fb-octave-up'),
         clearPattern: document.getElementById('fb-clear-pattern'),
         rollTab: document.getElementById('fb-roll-tab'),
         playlistTab: document.getElementById('fb-playlist-tab'),
@@ -185,6 +192,7 @@
         effectPicker: document.getElementById('fb-effect-picker'),
         addEffect: document.getElementById('fb-add-effect'),
         playlist: document.getElementById('fb-playlist'),
+        playlistTools: document.getElementById('fb-playlist-tools'),
         clearPlaylist: document.getElementById('fb-clear-playlist'),
         save: document.getElementById('fb-save'),
         load: document.getElementById('fb-load'),
@@ -362,32 +370,47 @@
     }
 
     function renderPatternOptions() {
-        const selected = Number(els.pattern.value) || 0;
+        const selected = activePatternIndex();
+        const usedPatterns = usedPatternIndexes();
         els.pattern.innerHTML = '';
         const options = document.createDocumentFragment();
-        for (let index = 0; index < MAX_PATTERNS; index += 1) {
+        const visiblePatterns = usedPatterns.includes(selected)
+            ? usedPatterns
+            : usedPatterns.concat(selected).sort((a, b) => a - b);
+        visiblePatterns.forEach(index => {
             const option = document.createElement('option');
             option.value = String(index);
-            option.textContent = String(index + 1);
+            option.textContent = String(index + 1) + (patternHasNotes(index) ? '' : ' (new)');
             options.append(option);
-        }
+        });
+        const addOption = document.createElement('option');
+        addOption.value = '__new__';
+        addOption.textContent = '+ new pattern';
+        options.append(addOption);
         els.pattern.append(options);
-        els.pattern.value = String(Math.max(0, Math.min(MAX_PATTERNS - 1, selected)));
+        els.pattern.value = String(selected);
     }
 
     function renderAutomationPatternOptions(channel = selectedChannel()) {
         if (!els.automationPattern) return;
         const selected = normalizeAutomationPatternIndex(channel.activePattern || 0);
+        const usedPatterns = usedPatternIndexes();
         els.automationPattern.innerHTML = '';
         const options = document.createDocumentFragment();
-        for (let index = 0; index < MAX_PATTERNS; index += 1) {
+        if (!usedPatterns.length) {
+            const option = document.createElement('option');
+            option.value = String(selected);
+            option.textContent = 'no patterns with notes';
+            options.append(option);
+        }
+        usedPatterns.forEach(index => {
             const option = document.createElement('option');
             option.value = String(index);
             option.textContent = String(index + 1);
             options.append(option);
-        }
+        });
         els.automationPattern.append(options);
-        els.automationPattern.value = String(selected);
+        els.automationPattern.value = usedPatterns.includes(selected) ? String(selected) : String(usedPatterns[0] ?? selected);
     }
 
     function clearFloatingTooltips() {
@@ -484,7 +507,10 @@
             const length = Math.min(stepCount(), snapNoteLength(value.length));
             const rawVelocity = Number(value.velocity);
             const velocity = Math.max(0, Math.min(1, Number.isFinite(rawVelocity) ? rawVelocity : 1));
+            const rawOffset = Number(value.offset);
+            const offset = Math.max(0, Math.min(0.999, Number.isFinite(rawOffset) ? rawOffset : 0));
             const normalized = { note: value.note, length, velocity };
+            if (offset > 0) normalized.offset = Number(offset.toFixed(5));
             if (typeof value.slideTo === 'string' && /^([A-G]#?)([0-9])$/.test(value.slideTo) && value.slideTo !== value.note) {
                 normalized.slideTo = value.slideTo;
             }
@@ -518,15 +544,63 @@
         return getStepEvents(pattern, step).find(event => event.note === note) || null;
     }
 
+    function noteStartOffset(event) {
+        const raw = Number(event && event.offset);
+        return Math.max(0, Math.min(0.999, Number.isFinite(raw) ? raw : 0));
+    }
+
+    function noteStartKey(event) {
+        return Math.round(noteStartOffset(event) * 1000);
+    }
+
     function getPattern(channel, index = channel.activePattern) {
         ensureChannelPatterns(channel);
         const safeIndex = Math.max(0, Math.min(MAX_PATTERNS - 1, Number(index) || 0));
         return channel.patterns[safeIndex];
     }
 
+    function patternHasNotes(patternIndex) {
+        return state.channels.some(channel => {
+            return getPattern(channel, patternIndex).some(stepEvents => normalizeStepEvents(stepEvents).length);
+        });
+    }
+
+    function usedPatternIndexes() {
+        const indexes = [];
+        for (let index = 0; index < MAX_PATTERNS; index += 1) {
+            if (patternHasNotes(index)) indexes.push(index);
+        }
+        return indexes;
+    }
+
+    function firstEmptyPatternIndex() {
+        for (let index = 0; index < MAX_PATTERNS; index += 1) {
+            if (!patternHasNotes(index)) return index;
+        }
+        return null;
+    }
+
+    function activePatternIndex() {
+        return Math.max(0, Math.min(MAX_PATTERNS - 1, Number(state.activePattern) || 0));
+    }
+
+    function setActivePattern(index) {
+        state.activePattern = Math.max(0, Math.min(MAX_PATTERNS - 1, Number(index) || 0));
+        state.channels.forEach(channel => {
+            channel.activePattern = state.activePattern;
+            channel.pattern = getPattern(channel, state.activePattern);
+        });
+        if (els.pattern) els.pattern.value = String(state.activePattern);
+    }
+
+    function playlistPatternClipsAt(bar) {
+        return state.playlistPatternClips.filter(clip => clip.bar === bar);
+    }
+
     function ensureClipMap() {
         state.barCount = normalizeBarCount();
         if (currentBar >= state.barCount) currentBar = 0;
+        state.playlistTrackCount = Math.max(1, Math.min(64, Number(state.playlistTrackCount) || 8));
         if (state.loopRange) {
             const start = Math.max(0, Math.min(state.barCount - 1, Number(state.loopRange.start) || 0));
             const end = Math.max(start, Math.min(state.barCount - 1, Number(state.loopRange.end) || start));
@@ -550,6 +624,40 @@
         Object.keys(state.clips).forEach(id => {
             if (!state.channels.some(channel => channel.id === id)) delete state.clips[id];
         });
+        if (!Array.isArray(state.playlistPatternClips)) {
+            const migrated = [];
+            for (let bar = 0; bar < state.barCount; bar += 1) {
+                const patterns = Array.from(new Set(state.channels
+                    .map(channel => state.clips[channel.id] ? state.clips[channel.id][bar] : null)
+                    .filter(value => value !== null && value !== DISABLED_CLIP)));
+                patterns.forEach((pattern, track) => {
+                    migrated.push({
+                        id: 'pattern-' + Date.now() + '-' + bar + '-' + track + '-' + pattern,
+                        pattern,
+                        bar,
+                        track: track % state.playlistTrackCount
+                    });
+                });
+            }
+            state.playlistPatternClips = migrated;
+        }
+        state.playlistPatternClips = state.playlistPatternClips.map(clip => ({
+            id: clip.id || ('pattern-' + Date.now() + '-' + Math.random().toString(16).slice(2)),
+            pattern: Math.max(0, Math.min(MAX_PATTERNS - 1, Number(clip.pattern) || 0)),
+            bar: Math.max(0, Math.min(state.barCount - 1, Number(clip.bar) || 0)),
+            track: Math.max(0, Math.min(state.playlistTrackCount - 1, Number(clip.track) || 0))
+        }));
+        if (!Array.isArray(state.playlistAudioClips)) state.playlistAudioClips = [];
+        state.playlistAudioClips = state.playlistAudioClips.map(clip => ({
+            id: clip.id || ('audio-' + Date.now() + '-' + Math.random().toString(16).slice(2)),
+            channelId: state.channels.some(channel => channel.id === clip.channelId) ? clip.channelId : state.channels[0].id,
+            bar: Math.max(0, Math.min(state.barCount - 1, Number(clip.bar) || 0)),
+            track: Math.max(0, Math.min(state.playlistTrackCount - 1, Number(clip.track) || 0)),
+            name: typeof clip.name === 'string' && clip.name ? clip.name : 'audio clip',
+            duration: Math.max(0.001, Number(clip.duration) || (clip.buffer ? clip.buffer.duration : 1)),
+            asset: clip.asset || null,
+            buffer: clip.buffer || null
+        })).filter(clip => state.channels.some(channel => channel.id === clip.channelId));
     }
 
     renderPatternOptions();
@@ -756,11 +864,11 @@
     function applyAutomationStep(step, bar = currentBar) {
         const needsRebuild = new Set();
         const channelPatterns = currentView === 'roll'
-            ? [{ channel: selectedChannel(), patternIndex: selectedChannel().activePattern || 0 }]
-            : audibleChannels().map(channel => ({
+            ? [{ channel: selectedChannel(), patternIndex: activePatternIndex() }]
+            : playlistPatternClipsAt(bar).flatMap(clip => audibleChannels().map(channel => ({
                 channel,
-                patternIndex: state.clips[channel.id] ? state.clips[channel.id][bar] : null
-            })).filter(item => item.patternIndex !== null && item.patternIndex !== DISABLED_CLIP);
+                patternIndex: clip.pattern
+            })));
 
         channelPatterns.forEach(({ channel, patternIndex }) => {
             ensureChannelAutomation(channel);
@@ -1505,13 +1613,20 @@
         return Math.max(noteLengthSnap, snapped);
     }
 
+    function snapNoteStartOffset(value) {
+        const raw = Number(value);
+        if (!Number.isFinite(raw) || noteLengthSnap >= 1) return 0;
+        const snapped = Math.round(raw / noteLengthSnap) * noteLengthSnap;
+        return Math.max(0, Math.min(1 - noteLengthSnap, Number(snapped.toFixed(5))));
+    }
+
     function noteLengthSteps(event) {
         const raw = Number(event && event.length);
         return Math.max(0.001, Number.isFinite(raw) ? raw : 1);
     }
 
     function clampedNoteLength(event, step) {
-        return Math.max(0.001, Math.min(stepCount() - step, noteLengthSteps(event)));
+        return Math.max(0.001, Math.min(stepCount() - step - noteStartOffset(event), noteLengthSteps(event)));
     }
 
     function noteDurationSeconds(event, step = null) {
@@ -1913,6 +2028,12 @@
         return ensureSampleZones(channel).find(zone => zone.note === note) || null;
     }
 
+    function samplePlaybackRateForNote(channel, note) {
+        return sampleZoneForNote(channel, note)
+            ? 1
+            : sampleRateForNote(channel, note) * channelPitchRatio(channel);
+    }
+
     function sampleRatioBounds(channel, note = null) {
         const zone = note ? sampleZoneForNote(channel, note) : null;
         return {
@@ -2021,7 +2142,7 @@
                 return;
             }
             try {
-                const rate = sampleRateForNote(channel, note) * channelPitchRatio(channel);
+                const rate = samplePlaybackRateForNote(channel, note);
                 if (rate !== 1) samplePlaybackBuffer(createAudio().context, channel, note, mode, rate);
             } catch (_) {
                 samplePitchWarmQueue.delete(queueKey);
@@ -2045,7 +2166,7 @@
         if (!channel.sampleBuffer) makeSyntheticKick(channel);
         const mode = sampleType(channel);
         const bounds = sampleBounds(channel, note, false);
-        const pitchRate = sampleRateForNote(channel, note) * channelPitchRatio(channel);
+        const pitchRate = samplePlaybackRateForNote(channel, note);
         const speedRate = sampleSpeedRatio(channel);
         const segmentDuration = Math.max(0.01, (bounds.end - bounds.start) / speedRate);
         const requestedDuration = Math.max(0.03, duration || segmentDuration);
@@ -2098,7 +2219,7 @@
         const time = engine.context.currentTime;
         const mode = sampleType(channel);
         const bounds = sampleBounds(channel, note, false);
-        const pitchRate = sampleRateForNote(channel, note) * channelPitchRatio(channel);
+        const pitchRate = samplePlaybackRateForNote(channel, note);
         const speedRate = sampleSpeedRatio(channel);
         const segmentDuration = Math.max(0.01, (bounds.end - bounds.start) / speedRate);
         const playDuration = mode === 'loop' ? 3600 : segmentDuration;
@@ -2380,6 +2501,22 @@
         return state.channels.filter(channel => !channel.muted && (!soloed || channel.solo));
     }
 
+    function playPlaylistAudioClip(channel, clip, time) {
+        if (!clip || !clip.buffer) return;
+        const engine = createAudio();
+        const source = engine.context.createBufferSource();
+        const gain = engine.context.createGain();
+        const pan = engine.context.createStereoPanner();
+        source.buffer = clip.buffer;
+        gain.gain.value = Math.max(0.0001, channel.volume);
+        pan.pan.value = channel.pan;
+        source.connect(gain);
+        gain.connect(pan);
+        pan.connect(outputNodeForChannel(channel));
+        source.start(time);
+        source.stop(time + clip.buffer.duration + 0.05);
+    }
+
     function playChannelNote(channel, note, time, duration, velocity = 1, slideTo = null) {
         if (channel.source === 'sample') {
             playSample(channel, note, time, duration, velocity, slideTo);
@@ -2466,17 +2603,25 @@
         if (currentView === 'roll') {
             const channel = selectedChannel();
             getStepEvents(getPattern(channel), step).forEach(event => {
-                playChannelNote(channel, event.note, time, noteDurationSeconds(event, step), noteVelocity(event), event.slideTo);
+                playChannelNote(channel, event.note, time + (noteStartOffset(event) * stepSeconds()), noteDurationSeconds(event, step), noteVelocity(event), event.slideTo);
             });
             return;
         }
-        audibleChannels().forEach(channel => {
-            const patternIndex = state.clips[channel.id] ? state.clips[channel.id][bar] : null;
-            if (patternIndex === null || patternIndex === DISABLED_CLIP) return;
-            getStepEvents(getPattern(channel, patternIndex), step).forEach(event => {
-                playChannelNote(channel, event.note, time, noteDurationSeconds(event, step), noteVelocity(event), event.slideTo);
+        playlistPatternClipsAt(bar).forEach(clip => {
+            audibleChannels().forEach(channel => {
+                getStepEvents(getPattern(channel, clip.pattern), step).forEach(event => {
+                    playChannelNote(channel, event.note, time + (noteStartOffset(event) * stepSeconds()), noteDurationSeconds(event, step), noteVelocity(event), event.slideTo);
+                });
             });
         });
+        if (step === 0) {
+            state.playlistAudioClips
+                .filter(clip => clip.bar === bar)
+                .forEach(clip => {
+                    const channel = state.channels.find(item => item.id === clip.channelId);
+                    if (channel && audibleChannels().includes(channel)) playPlaylistAudioClip(channel, clip, time);
+                });
+        }
     }
 
     function scheduler() {
@@ -3411,30 +3556,67 @@
         return label ? label.getBoundingClientRect() : null;
     }
 
-    function noteLengthAtPointer(step, clientX) {
-        const maxLength = Math.max(noteLengthSnap, stepCount() - step);
+    function rollPositionAtPointer(clientX) {
+        const labels = Array.from(els.pianoRoll.querySelectorAll('.fb-bar-label[data-step]'));
+        for (const label of labels) {
+            const rect = label.getBoundingClientRect();
+            if (rect.width <= 0) continue;
+            if (clientX >= rect.left && clientX <= rect.right) {
+                const step = Number(label.dataset.step) || 0;
+                return Math.max(0, Math.min(stepCount(), step + ((clientX - rect.left) / rect.width)));
+            }
+        }
+        if (!labels.length) return null;
+        const first = labels[0].getBoundingClientRect();
+        const last = labels[labels.length - 1].getBoundingClientRect();
+        if (clientX < first.left) return 0;
+        if (clientX > last.right) return stepCount();
+        return null;
+    }
+
+    function snapRollPosition(value) {
+        const raw = Number(value);
+        if (!Number.isFinite(raw)) return null;
+        const snapped = Math.round(raw / noteLengthSnap) * noteLengthSnap;
+        return Math.max(0, Math.min(stepCount() - noteLengthSnap, Number(snapped.toFixed(5))));
+    }
+
+    function noteStartFromPointer(cell, clientX) {
+        const fallbackStep = Number(cell.dataset.step) || 0;
+        const position = snapRollPosition(rollPositionAtPointer(clientX));
+        const absolute = position === null ? fallbackStep : position;
+        const step = Math.max(0, Math.min(stepCount() - 1, Math.floor(absolute)));
+        return {
+            step,
+            offset: snapNoteStartOffset(absolute - step)
+        };
+    }
+
+    function noteLengthAtPointer(step, offset, clientX) {
+        const maxLength = Math.max(noteLengthSnap, stepCount() - step - offset);
         const startRect = rollStepRect(step);
         if (!startRect || startRect.width <= 0) return noteLengthSnap;
-        if (clientX <= startRect.left) return noteLengthSnap;
+        const startX = startRect.left + (startRect.width * offset);
+        if (clientX <= startX) return noteLengthSnap;
         for (let index = step; index < stepCount(); index += 1) {
             const rect = rollStepRect(index);
             if (!rect || rect.width <= 0) continue;
-            if (clientX < rect.left) return Math.max(noteLengthSnap, index - step);
+            if (clientX < rect.left) return Math.max(noteLengthSnap, index - step - offset);
             if (clientX <= rect.right) {
-                return Math.max(noteLengthSnap, (index - step) + ((clientX - rect.left) / rect.width));
+                return Math.max(noteLengthSnap, (index - step) + ((clientX - rect.left) / rect.width) - offset);
             }
         }
         return maxLength;
     }
 
-    function noteEndX(step, length) {
-        const end = Math.min(stepCount(), step + length);
-        if (end >= stepCount()) {
+    function notePositionX(position) {
+        const safePosition = Math.max(0, Math.min(stepCount(), Number(position) || 0));
+        if (safePosition >= stepCount()) {
             const lastRect = rollStepRect(stepCount() - 1);
             return lastRect ? lastRect.right : null;
         }
-        const endStep = Math.floor(end);
-        const fraction = end - endStep;
+        const endStep = Math.floor(safePosition);
+        const fraction = safePosition - endStep;
         if (fraction <= 0) {
             const rect = rollStepRect(endStep);
             return rect ? rect.left : null;
@@ -3443,15 +3625,19 @@
         return rect ? rect.left + (rect.width * fraction) : null;
     }
 
-    function setNoteBlockLengthStyles(block, handle, step, length) {
+    function setNoteBlockLengthStyles(block, handle, step, offset, length) {
         const startRect = rollStepRect(step);
-        const endX = noteEndX(step, length);
-        if (!startRect || startRect.width <= 0 || endX === null) {
+        const startX = notePositionX(step + offset);
+        const endX = notePositionX(step + offset + length);
+        if (!startRect || startRect.width <= 0 || startX === null || endX === null) {
+            if (block) block.style.left = 'calc(' + (offset * 100) + '% + 4px)';
             if (block) block.style.width = 'calc(' + (length * 100) + '% - 8px)';
             if (handle) handle.style.left = 'calc(' + (length * 100) + '% - 5px)';
             return;
         }
-        const noteWidth = Math.max(10, endX - startRect.left - 8);
+        const noteLeft = Math.max(4, startX - startRect.left + 4);
+        const noteWidth = Math.max(10, endX - startX - 8);
+        if (block) block.style.left = noteLeft + 'px';
         if (block) block.style.width = noteWidth + 'px';
         if (handle) handle.style.left = (endX - startRect.left - 5) + 'px';
     }
@@ -3460,11 +3646,10 @@
         const channel = selectedChannel();
         ensureChannelPatterns(channel);
         const baseOctave = octavePageBase(els.octave.value);
-        const selectedPattern = Number(els.pattern.value);
-        const patternIndex = Number.isInteger(selectedPattern) ? selectedPattern : (channel.activePattern || 0);
-        channel.activePattern = Math.max(0, Math.min(MAX_PATTERNS - 1, patternIndex));
+        setActivePattern(activePatternIndex());
+        renderPatternOptions();
         const pattern = getPattern(channel);
-        els.selectedLabel.textContent = 'selected: ' + channel.name + ' / pattern ' + (channel.activePattern + 1) + ' / ' + stepCount() + ' beats';
+        els.selectedLabel.textContent = 'selected: ' + channel.name + ' / global pattern ' + (activePatternIndex() + 1) + ' / ' + stepCount() + ' beats';
         els.pianoRoll.innerHTML = '';
         els.pianoRoll.style.gridTemplateColumns = '72px repeat(' + stepCount() + ', minmax(34px, 1fr))';
 
@@ -3495,8 +3680,11 @@
 
             for (let step = 0; step < stepCount(); step += 1) {
                 const stepEvents = getStepEvents(pattern, step);
-                const event = stepEvents.find(item => item.note === note) || null;
-                const isActiveNote = !!event;
+                const noteEvents = stepEvents
+                    .map((event, eventIndex) => ({ event, eventIndex }))
+                    .filter(item => item.event.note === note)
+                    .sort((a, b) => noteStartOffset(a.event) - noteStartOffset(b.event));
+                const isActiveNote = noteEvents.length > 0;
                 const cell = document.createElement('div');
                 cell.className = 'fb-cell' + (isActiveNote ? ' is-on' : '');
                 cell.setAttribute('role', 'button');
@@ -3504,13 +3692,13 @@
                 cell.dataset.step = String(step);
                 cell.dataset.note = note;
                 cell.setAttribute('aria-label', note + ' step ' + (step + 1));
-                if (isActiveNote) {
-                    const eventIndex = stepEvents.indexOf(event);
+                noteEvents.forEach(({ event, eventIndex }) => {
                     const block = document.createElement('span');
                     block.className = 'fb-note-block' + (event.slideTo ? ' is-slide' : '');
                     block.dataset.step = String(step);
                     block.dataset.note = note;
                     block.dataset.eventIndex = String(eventIndex);
+                    block.dataset.offset = String(noteStartOffset(event));
                     block.dataset.velocity = String(noteVelocity(event));
                     if (event.slideTo) {
                         block.dataset.slideTo = event.slideTo;
@@ -3527,37 +3715,266 @@
                     handle.dataset.step = String(step);
                     handle.dataset.note = note;
                     handle.dataset.eventIndex = String(eventIndex);
+                    handle.dataset.offset = String(noteStartOffset(event));
                     cell.append(block, handle);
-                    setNoteBlockLengthStyles(block, handle, step, length);
-                }
+                    setNoteBlockLengthStyles(block, handle, step, noteStartOffset(event), length);
+                });
                 els.pianoRoll.append(cell);
             }
         });
     }
 
+    function renderPlaylistTools() {
+        if (!els.playlistTools) return;
+        ensureClipMap();
+        els.playlistTools.innerHTML = '';
+        const label = document.createElement('div');
+        label.className = 'fb-playlist-tool-label';
+        label.textContent = 'pattern clip';
+        els.playlistTools.append(label);
+        const picker = document.createElement('select');
+        picker.className = 'fb-select fb-playlist-pattern-picker';
+        const usedPatterns = usedPatternIndexes();
+        const selectedPattern = usedPatterns.includes(activePatternIndex()) ? activePatternIndex() : (usedPatterns[0] ?? null);
+        if (!usedPatterns.length) {
+            const option = document.createElement('option');
+            option.value = '';
+            option.textContent = 'no patterns with notes';
+            picker.append(option);
+        }
+        usedPatterns.forEach(index => {
+            const option = document.createElement('option');
+            option.value = String(index);
+            option.textContent = 'pattern ' + (index + 1);
+            picker.append(option);
+        });
+        picker.disabled = !usedPatterns.length;
+        picker.value = selectedPattern === null ? '' : String(selectedPattern);
+        picker.addEventListener('change', () => {
+            setActivePattern(picker.value);
+            renderChannels();
+            renderRoll();
+            renderAutomation();
+            renderPlaylistTools();
+        });
+        const dragButton = document.createElement('button');
+        dragButton.className = 'fb-playlist-pattern-source is-active';
+        dragButton.type = 'button';
+        dragButton.draggable = true;
+        dragButton.disabled = selectedPattern === null;
+        dragButton.draggable = selectedPattern !== null;
+        dragButton.textContent = selectedPattern === null ? 'no pattern' : 'drag pattern ' + (selectedPattern + 1);
+        dragButton.addEventListener('click', () => {
+            const pattern = Number(picker.value);
+            if (Number.isInteger(pattern)) setActivePattern(pattern);
+            renderRoll();
+        });
+        dragButton.addEventListener('dragstart', event => {
+            const pattern = Number(picker.value);
+            if (!Number.isInteger(pattern)) {
+                event.preventDefault();
+                return;
+            }
+            playlistDrag = { type: 'pattern', pattern };
+            event.dataTransfer.effectAllowed = 'copyMove';
+            event.dataTransfer.setData('application/frdgbeats-pattern', JSON.stringify(playlistDrag));
+            event.dataTransfer.setData('text/plain', 'pattern ' + (pattern + 1));
+        });
+        dragButton.addEventListener('dragend', () => {
+            playlistDrag = null;
+        });
+        els.playlistTools.append(picker, dragButton);
+        const hint = document.createElement('div');
+        hint.className = 'fb-playlist-drop-hint';
+        hint.textContent = 'drop audio files onto lanes';
+        els.playlistTools.append(hint);
+    }
+
+    function playlistPatternClipsFor(track, bar) {
+        return state.playlistPatternClips.filter(clip => clip.track === track && clip.bar === bar);
+    }
+
+    function playlistAudioClipsFor(track, bar) {
+        return state.playlistAudioClips.filter(clip => clip.track === track && clip.bar === bar);
+    }
+
+    function audioClipBars(clip) {
+        const barSeconds = stepSeconds() * stepCount();
+        return Math.max(1, Math.ceil((Number(clip.duration) || (clip.buffer ? clip.buffer.duration : barSeconds)) / Math.max(0.001, barSeconds)));
+    }
+
+    function playlistLaneCell(trackIndex, bar) {
+        const cell = document.createElement('div');
+        cell.className = 'fb-playlist-cell'
+            + (state.loopRange && !isBarInLoop(bar) ? ' is-loop-muted' : '')
+            + (state.loopRange && isBarInLoop(bar) ? ' is-looped' : '');
+        cell.dataset.bar = String(bar);
+        cell.dataset.track = String(trackIndex);
+        cell.setAttribute('role', 'button');
+        cell.tabIndex = 0;
+        cell.addEventListener('click', () => {
+            state.playlistPatternClips.push({
+                id: 'pattern-' + Date.now() + '-' + Math.random().toString(16).slice(2),
+                pattern: activePatternIndex(),
+                bar,
+                track: trackIndex
+            });
+            renderPlaylist();
+        });
+        cell.addEventListener('contextmenu', event => {
+            event.preventDefault();
+        });
+        cell.addEventListener('dragover', event => {
+            event.preventDefault();
+            cell.classList.add('is-drop-target');
+            event.dataTransfer.dropEffect = event.dataTransfer.files && event.dataTransfer.files.length ? 'copy' : 'move';
+        });
+        cell.addEventListener('dragleave', () => cell.classList.remove('is-drop-target'));
+        cell.addEventListener('drop', event => {
+            event.preventDefault();
+            cell.classList.remove('is-drop-target');
+            handlePlaylistDrop(event, trackIndex, bar);
+        });
+        playlistPatternClipsFor(trackIndex, bar).forEach(patternClip => {
+            const clip = document.createElement('div');
+            clip.className = 'fb-playlist-clip fb-playlist-pattern-clip';
+            clip.draggable = true;
+            clip.textContent = 'pattern ' + (patternClip.pattern + 1);
+            clip.title = 'pattern ' + (patternClip.pattern + 1);
+            clip.addEventListener('click', event => event.stopPropagation());
+            clip.addEventListener('dragstart', event => {
+                playlistDrag = { type: 'pattern', id: patternClip.id, pattern: patternClip.pattern, sourceTrack: trackIndex, sourceBar: bar };
+                event.dataTransfer.effectAllowed = 'move';
+                event.dataTransfer.setData('application/frdgbeats-pattern', JSON.stringify(playlistDrag));
+            });
+            clip.addEventListener('dragend', () => {
+                playlistDrag = null;
+            });
+            clip.addEventListener('contextmenu', event => {
+                event.preventDefault();
+                event.stopPropagation();
+                state.playlistPatternClips = state.playlistPatternClips.filter(item => item.id !== patternClip.id);
+                renderPlaylist();
+            });
+            cell.append(clip);
+        });
+        playlistAudioClipsFor(trackIndex, bar).forEach(audioClip => {
+            const clip = document.createElement('div');
+            clip.className = 'fb-playlist-clip fb-playlist-audio-clip';
+            clip.draggable = true;
+            clip.textContent = audioClip.name;
+            clip.title = audioClip.name;
+            clip.style.width = 'calc(' + audioClipBars(audioClip) + '00% - 8px)';
+            clip.addEventListener('click', event => event.stopPropagation());
+            clip.addEventListener('dragstart', event => {
+                playlistDrag = { type: 'audio', id: audioClip.id };
+                event.dataTransfer.effectAllowed = 'move';
+                event.dataTransfer.setData('application/frdgbeats-audio-clip', audioClip.id);
+            });
+            clip.addEventListener('dragend', () => {
+                playlistDrag = null;
+            });
+            clip.addEventListener('contextmenu', event => {
+                event.preventDefault();
+                state.playlistAudioClips = state.playlistAudioClips.filter(item => item.id !== audioClip.id);
+                renderPlaylist();
+            });
+            cell.append(clip);
+        });
+        return cell;
+    }
+
+    function playlistDropData(event) {
+        if (playlistDrag) return playlistDrag;
+        try {
+            const pattern = event.dataTransfer.getData('application/frdgbeats-pattern');
+            if (pattern) return JSON.parse(pattern);
+        } catch (_) {}
+        const audioId = event.dataTransfer.getData('application/frdgbeats-audio-clip');
+        if (audioId) return { type: 'audio', id: audioId };
+        return null;
+    }
+
+    async function handlePlaylistDrop(event, trackIndex, bar) {
+        const files = Array.from(event.dataTransfer.files || []).filter(file => /^audio\//i.test(file.type) || /\.(wav|mp3|ogg|flac|m4a|aac)$/i.test(file.name));
+        if (files.length) {
+            for (const file of files) {
+                await addAudioFileToPlaylist(file, trackIndex, bar);
+                bar = Math.min(state.barCount - 1, bar + 1);
+            }
+            renderPlaylist();
+            return;
+        }
+        const data = playlistDropData(event);
+        if (!data) return;
+        if (data.type === 'pattern') {
+            const patternIndex = Math.max(0, Math.min(MAX_PATTERNS - 1, Number(data.pattern) || 0));
+            const existing = data.id ? state.playlistPatternClips.find(clip => clip.id === data.id) : null;
+            if (existing) {
+                existing.track = trackIndex;
+                existing.bar = bar;
+            } else {
+                state.playlistPatternClips.push({
+                    id: 'pattern-' + Date.now() + '-' + Math.random().toString(16).slice(2),
+                    pattern: patternIndex,
+                    bar,
+                    track: trackIndex
+                });
+            }
+            renderPlaylist();
+            return;
+        }
+        if (data.type === 'audio') {
+            const clip = state.playlistAudioClips.find(item => item.id === data.id);
+            if (!clip) return;
+            clip.track = trackIndex;
+            clip.bar = bar;
+            renderPlaylist();
+        }
+    }
+
+    async function addAudioFileToPlaylist(file, trackIndex, bar) {
+        const progress = showExportProgress('adding audio...', 'reading ' + file.name);
+        try {
+            await setExportProgress(progress, 25, 'packing audio asset', 20);
+            const asset = await fileToAsset(file);
+            await setExportProgress(progress, 55, 'decoding audio', 20);
+            const engine = createAudio();
+            const buffer = await engine.context.decodeAudioData(base64ToArrayBuffer(asset.data).slice(0));
+            const durationBars = Math.ceil(buffer.duration / Math.max(0.001, stepSeconds() * stepCount()));
+            if (bar + durationBars > state.barCount) {
+                state.barCount = normalizeBarCount(bar + durationBars);
+                ensureClipMap();
+            }
+            state.playlistAudioClips.push({
+                id: 'audio-' + Date.now() + '-' + Math.random().toString(16).slice(2),
+                channelId: selectedId,
+                track: trackIndex,
+                bar,
+                name: file.name.replace(/\.[^.]+$/, '') || file.name,
+                duration: buffer.duration,
+                asset,
+                buffer
+            });
+            await setExportProgress(progress, 100, 'audio added', 40);
+            updateStatus('added audio clip: ' + file.name);
+        } catch (_) {
+            updateStatus('audio drop failed');
+        } finally {
+            progress.close();
+        }
+    }
+
     function renderPlaylist() {
         ensureClipMap();
+        renderPlaylistTools();
         els.playlist.innerHTML = '';
-        els.playlist.style.setProperty('--fb-playlist-columns', '110px repeat(' + state.channels.length + ', minmax(86px, 1fr))');
-        els.playlist.style.setProperty('--fb-playlist-min-width', (110 + (state.channels.length * 96)) + 'px');
+        els.playlist.style.setProperty('--fb-playlist-columns', '118px repeat(' + state.barCount + ', minmax(72px, 1fr)) 42px');
+        els.playlist.style.setProperty('--fb-playlist-min-width', (160 + (state.barCount * 74)) + 'px');
         const first = document.createElement('div');
-        first.className = 'fb-playlist-track';
-        first.textContent = 'bars';
+        first.className = 'fb-playlist-track fb-playlist-corner';
+        first.textContent = 'tracks';
         els.playlist.append(first);
-
-        state.channels.forEach(channel => {
-            const columnLabel = document.createElement('div');
-            columnLabel.className = 'fb-playlist-track';
-            columnLabel.dataset.channelId = channel.id;
-            const color = document.createElement('div');
-            color.className = 'fb-playlist-track-color';
-            color.style.background = channel.color;
-            const name = document.createElement('span');
-            name.textContent = channel.name;
-            columnLabel.append(color, name);
-            columnLabel.addEventListener('click', () => selectChannel(channel.id));
-            els.playlist.append(columnLabel);
-        });
 
         for (let bar = 0; bar < state.barCount; bar += 1) {
             const head = document.createElement('div');
@@ -3595,63 +4012,32 @@
             });
             head.append(label, loop, deleteColumn);
             els.playlist.append(head);
-
-            state.channels.forEach(channel => {
-                const clipPattern = state.clips[channel.id][bar];
-                const cell = document.createElement('button');
-                cell.className = 'fb-playlist-cell'
-                    + (clipPattern !== null && clipPattern !== DISABLED_CLIP ? ' is-on' : '')
-                    + (clipPattern === DISABLED_CLIP ? ' is-disabled' : '')
-                    + (state.loopRange && !isBarInLoop(bar) ? ' is-loop-muted' : '')
-                    + (state.loopRange && isBarInLoop(bar) ? ' is-looped' : '');
-                cell.type = 'button';
-                cell.dataset.bar = String(bar);
-                cell.dataset.channelId = channel.id;
-                cell.textContent = clipPattern === DISABLED_CLIP ? '0' : (clipPattern !== null ? String(clipPattern + 1) : '');
-                cell.addEventListener('click', () => {
-                    const current = state.clips[channel.id][bar];
-                    if (current === null) {
-                        state.clips[channel.id][bar] = channel.id === selectedId ? channel.activePattern : 0;
-                    } else if (current === DISABLED_CLIP) {
-                        state.clips[channel.id][bar] = 0;
-                    } else if (current < MAX_PATTERNS - 1) {
-                        state.clips[channel.id][bar] = current + 1;
-                    } else {
-                        state.clips[channel.id][bar] = null;
-                    }
-                    renderPlaylist();
-                });
-                cell.addEventListener('contextmenu', event => {
-                    event.preventDefault();
-                    const current = state.clips[channel.id][bar];
-                    if (current === null) {
-                        state.clips[channel.id][bar] = DISABLED_CLIP;
-                    } else if (current === DISABLED_CLIP) {
-                        state.clips[channel.id][bar] = null;
-                    } else if (current > 0) {
-                        state.clips[channel.id][bar] = current - 1;
-                    } else {
-                        state.clips[channel.id][bar] = DISABLED_CLIP;
-                    }
-                    renderPlaylist();
-                });
-                els.playlist.append(cell);
-            });
         }
-
         const addColumn = document.createElement('button');
         addColumn.className = 'fb-playlist-column-button';
         addColumn.type = 'button';
         addColumn.disabled = state.barCount >= MAX_BARS;
         addColumn.innerHTML = '<i class="fa-solid fa-plus"></i>';
-        addColumn.setAttribute('aria-label', state.barCount >= MAX_BARS ? 'maximum rows reached' : 'add playlist row');
+        addColumn.setAttribute('aria-label', state.barCount >= MAX_BARS ? 'maximum bars reached' : 'add playlist bar');
         addColumn.addEventListener('click', addPlaylistColumn);
         els.playlist.append(addColumn);
-        state.channels.forEach(() => {
+
+        for (let trackIndex = 0; trackIndex < state.playlistTrackCount; trackIndex += 1) {
+            const track = document.createElement('div');
+            track.className = 'fb-playlist-track';
+            track.dataset.track = String(trackIndex);
+            const name = document.createElement('span');
+            name.textContent = 'Track ' + (trackIndex + 1);
+            track.append(name);
+            els.playlist.append(track);
+
+            for (let bar = 0; bar < state.barCount; bar += 1) {
+                els.playlist.append(playlistLaneCell(trackIndex, bar));
+            }
             const spacer = document.createElement('div');
             spacer.className = 'fb-playlist-column-spacer';
             els.playlist.append(spacer);
-        });
+        }
     }
 
     function renderMixer() {
@@ -4621,7 +5007,7 @@
 
     function addPlaylistColumn() {
         if (state.barCount >= MAX_BARS) {
-            updateStatus('playlist is already at 128 rows');
+            updateStatus('playlist is already at 128 bars');
             return;
         }
         clearFloatingTooltips();
@@ -4629,15 +5015,15 @@
         state.barCount += 1;
         ensureClipMap();
         state.channels.forEach(channel => {
-            state.clips[channel.id][newBar] = DISABLED_CLIP;
+            state.clips[channel.id][newBar] = null;
         });
         renderPlaylist();
-        updateStatus('added playlist row ' + state.barCount);
+        updateStatus('added playlist bar ' + state.barCount);
     }
 
     function removePlaylistColumn(barIndex) {
         if (state.barCount <= 1) {
-            updateStatus('keep at least one playlist row');
+            updateStatus('keep at least one playlist bar');
             return;
         }
         const removedColumn = Math.max(0, Math.min(state.barCount - 1, Number(barIndex) || 0));
@@ -4658,9 +5044,15 @@
         state.channels.forEach(channel => {
             if (Array.isArray(state.clips[channel.id])) state.clips[channel.id].splice(removedColumn, 1);
         });
+        state.playlistPatternClips = state.playlistPatternClips
+            .filter(clip => clip.bar !== removedColumn)
+            .map(clip => ({ ...clip, bar: clip.bar > removedColumn ? clip.bar - 1 : clip.bar }));
+        state.playlistAudioClips = state.playlistAudioClips
+            .filter(clip => clip.bar !== removedColumn)
+            .map(clip => ({ ...clip, bar: clip.bar > removedColumn ? clip.bar - 1 : clip.bar }));
         ensureClipMap();
         renderPlaylist();
-        updateStatus('deleted playlist row ' + (removedColumn + 1));
+        updateStatus('deleted playlist bar ' + (removedColumn + 1));
     }
 
     function resizeActiveNote(clientX, clientY = null) {
@@ -4686,14 +5078,15 @@
             if (Math.abs(deltaX) < 4) return;
             resizingNote.locked = true;
         }
-        const rawLength = noteLengthAtPointer(resizingNote.step, clientX);
-        const length = Math.max(noteLengthSnap, Math.min(stepCount() - resizingNote.step, snapNoteLength(rawLength)));
         const events = getStepEvents(resizingNote.pattern, resizingNote.step);
         const event = events[resizingNote.eventIndex];
         if (!event || event.note !== resizingNote.note) return;
+        const offset = noteStartOffset(event);
+        const rawLength = noteLengthAtPointer(resizingNote.step, offset, clientX);
+        const length = Math.max(noteLengthSnap, Math.min(stepCount() - resizingNote.step - offset, snapNoteLength(rawLength)));
         event.length = length;
         resizingNote.channel.pattern = resizingNote.pattern;
-        setNoteBlockLengthStyles(resizingNote.block, resizingNote.handle, resizingNote.step, length);
+        setNoteBlockLengthStyles(resizingNote.block, resizingNote.handle, resizingNote.step, offset, length);
     }
 
     function noteUnderPointer(clientY) {
@@ -4733,6 +5126,18 @@
         return closest;
     }
 
+    function rollStartAtPointer(clientX, clientY, noteEvent = null) {
+        const position = snapRollPosition(rollPositionAtPointer(clientX));
+        if (position === null) {
+            const step = rollStepAtPointer(clientX, clientY);
+            return step === null ? null : { step, offset: noteStartOffset(noteEvent) };
+        }
+        const maxPosition = Math.max(0, stepCount() - noteLengthSteps(noteEvent || { length: noteLengthSnap }));
+        const safePosition = Math.max(0, Math.min(maxPosition, position));
+        const step = Math.max(0, Math.min(stepCount() - 1, Math.floor(safePosition)));
+        return { step, offset: snapNoteStartOffset(safePosition - step) };
+    }
+
     function slideActiveNote(clientX, clientY) {
         if (!slidingNote) return;
         if (!slidingNote.dragged && Math.abs(clientY - slidingNote.startY) < 5) return;
@@ -4767,12 +5172,12 @@
     function moveNoteBlockDom(step, previousNote, note, eventIndex) {
         const oldCell = els.pianoRoll.querySelector('.fb-cell[data-step="' + step + '"][data-note="' + previousNote + '"]');
         const newCell = els.pianoRoll.querySelector('.fb-cell[data-step="' + step + '"][data-note="' + note + '"]');
-        const oldBlock = oldCell ? oldCell.querySelector('.fb-note-block') : null;
-        const oldHandle = oldCell ? oldCell.querySelector('.fb-note-resize') : null;
-        if (!oldBlock || !newCell || newCell.querySelector('.fb-note-block')) return false;
-        oldCell.classList.remove('is-on');
+        const oldBlock = oldCell ? oldCell.querySelector('.fb-note-block[data-event-index="' + eventIndex + '"]') : null;
+        const oldHandle = oldCell ? oldCell.querySelector('.fb-note-resize[data-event-index="' + eventIndex + '"]') : null;
+        if (!oldBlock || !newCell) return false;
         oldCell.removeChild(oldBlock);
         if (oldHandle) oldCell.removeChild(oldHandle);
+        if (!oldCell.querySelector('.fb-note-block')) oldCell.classList.remove('is-on');
         oldBlock.dataset.note = note;
         oldBlock.dataset.eventIndex = String(eventIndex);
         oldBlock.classList.remove('is-slide');
@@ -4797,9 +5202,12 @@
         if (!note || note === state.note) return null;
         state.pattern = getPattern(state.channel);
         const events = getStepEvents(state.pattern, state.step);
-        if (events.some(item => item.note === note)) return null;
-        const eventIndex = events.findIndex(item => item.note === state.note);
+        const eventIndex = events[state.eventIndex] && events[state.eventIndex].note === state.note
+            ? state.eventIndex
+            : events.findIndex(item => item.note === state.note);
         if (eventIndex < 0) return null;
+        const movingOffset = noteStartKey(events[eventIndex]);
+        if (events.some(item => item.note === note && noteStartKey(item) === movingOffset)) return null;
         const previousNote = state.note;
         const event = { ...events[eventIndex], note };
         delete event.slideTo;
@@ -4826,20 +5234,24 @@
     function moveExistingNote(clientX, clientY) {
         if (!movingNote) return;
         if (!movingNote.dragged && Math.abs(clientX - movingNote.startX) < 5) return;
-        const targetStep = rollStepAtPointer(clientX, clientY);
-        if (targetStep === null || targetStep === movingNote.step) return;
         movingNote.pattern = getPattern(movingNote.channel);
         const fromEvents = getStepEvents(movingNote.pattern, movingNote.step);
-        const eventIndex = fromEvents.findIndex(item => item.note === movingNote.note);
+        const eventIndex = fromEvents[movingNote.eventIndex] && fromEvents[movingNote.eventIndex].note === movingNote.note
+            ? movingNote.eventIndex
+            : fromEvents.findIndex(item => item.note === movingNote.note);
         if (eventIndex < 0) return;
         const noteEvent = fromEvents[eventIndex];
-        const maxStep = Math.max(0, Math.floor(stepCount() - noteLengthSteps(noteEvent)));
-        const safeStep = Math.max(0, Math.min(maxStep, targetStep));
-        if (safeStep === movingNote.step) return;
+        const targetStart = rollStartAtPointer(clientX, clientY, noteEvent);
+        if (!targetStart) return;
+        const safeStep = targetStart.step;
+        const safeOffset = targetStart.offset;
+        if (safeStep === movingNote.step && noteStartKey(noteEvent) === Math.round(safeOffset * 1000)) return;
         const toEvents = getStepEvents(movingNote.pattern, safeStep);
-        if (toEvents.some(item => item.note === movingNote.note)) return;
+        if (toEvents.some(item => item.note === movingNote.note && noteStartKey(item) === Math.round(safeOffset * 1000))) return;
         fromEvents.splice(eventIndex, 1);
         movingNote.pattern[movingNote.step] = fromEvents;
+        if (safeOffset > 0) noteEvent.offset = safeOffset;
+        else delete noteEvent.offset;
         toEvents.push(noteEvent);
         movingNote.pattern[safeStep] = toEvents;
         movingNote.dragged = true;
@@ -4871,6 +5283,41 @@
         }
         pattern[step] = events;
         channel.pattern = pattern;
+    }
+
+    function transposeNoteName(note, semitones) {
+        const midi = noteNumber(note);
+        if (!Number.isFinite(midi)) return note;
+        return midiToNote(Math.max(0, Math.min(127, midi + semitones)));
+    }
+
+    function transposeCurrentPatternOctave(direction) {
+        const semitones = direction > 0 ? 12 : -12;
+        let changed = 0;
+        state.channels.forEach(channel => {
+            const pattern = getPattern(channel, activePatternIndex());
+            pattern.forEach((stepEvents, step) => {
+                const seen = new Set();
+                pattern[step] = getStepEvents(pattern, step).map(event => {
+                    const transposed = {
+                        ...event,
+                        note: transposeNoteName(event.note, semitones)
+                    };
+                    if (event.slideTo) transposed.slideTo = transposeNoteName(event.slideTo, semitones);
+                    changed += transposed.note !== event.note ? 1 : 0;
+                    return transposed;
+                }).filter(event => {
+                    const key = event.note + ':' + noteStartKey(event);
+                    if (seen.has(key)) return false;
+                    seen.add(key);
+                    return true;
+                });
+            });
+            channel.pattern = pattern;
+        });
+        renderRoll();
+        renderChannels();
+        updateStatus((direction > 0 ? 'moved pattern up' : 'moved pattern down') + ' one octave' + (changed ? '' : ' (already at edge)'));
     }
 
     function closeVelocityEditor() {
@@ -4913,6 +5360,7 @@
             syncValue();
         });
         editor.append(label, slider, value);
+        applyPopupTheme(editor);
         document.body.append(editor);
         const rect = editor.getBoundingClientRect();
         const x = Math.min(window.innerWidth - rect.width - 8, Math.max(8, event.clientX));
@@ -4938,21 +5386,24 @@
         }) || null;
     }
 
-    function placePianoRollNoteFromCell(cell) {
+    function placePianoRollNoteFromCell(cell, clientX = null) {
         const channel = selectedChannel();
         const pattern = getPattern(channel);
-        const step = Number(cell.dataset.step);
+        const start = clientX === null ? { step: Number(cell.dataset.step), offset: 0 } : noteStartFromPointer(cell, clientX);
+        const step = start.step;
+        const offset = start.offset;
         const note = cell.dataset.note;
         const events = getStepEvents(pattern, step);
-        if (events.some(item => item.note === note)) return null;
-        const noteEvent = { note, length: 1, velocity: 1 };
+        if (events.some(item => item.note === note && noteStartKey(item) === Math.round(offset * 1000))) return null;
+        const noteEvent = { note, length: Math.min(1, stepCount() - step - offset), velocity: 1 };
+        if (offset > 0) noteEvent.offset = offset;
         events.push(noteEvent);
         channel.pattern = pattern;
         renderRoll();
         renderChannels();
         const renderedPattern = getPattern(channel);
         const renderedEvents = getStepEvents(renderedPattern, step);
-        const renderedIndex = renderedEvents.findIndex(item => item.note === note);
+        const renderedIndex = renderedEvents.findIndex(item => item.note === note && noteStartKey(item) === Math.round(offset * 1000));
         return {
             channel,
             pattern: renderedPattern,
@@ -4977,32 +5428,35 @@
         if (block && els.pianoRoll.contains(block)) {
             event.preventDefault();
             event.stopPropagation();
-            const step = Number(block.dataset.step);
-            const note = block.dataset.note;
-            const eventIndex = Number(block.dataset.eventIndex);
-            removeNoteEvent(channel, pattern, step, note, Number.isFinite(eventIndex) ? eventIndex : null);
-            renderRoll();
-            renderChannels();
             return;
         }
 
         const cell = event.target.closest('.fb-cell');
         if (!cell || !els.pianoRoll.contains(cell)) return;
         event.preventDefault();
-        const placed = placePianoRollNoteFromCell(cell);
+        const placed = placePianoRollNoteFromCell(cell, event.clientX);
         if (placed) previewPianoRollNote(placed.channel, placed.noteEvent);
     }
 
     function handlePianoRollPointerDown(event) {
+        if (event.button === 1) {
+            const block = noteBlockAtEvent(event);
+            if (block) {
+                event.preventDefault();
+                event.stopPropagation();
+                openVelocityEditor(block, event);
+            }
+            return;
+        }
         if (event.button !== 0) return;
         const handle = event.target.closest('.fb-note-resize');
 
         const emptyCell = event.target.closest('.fb-cell');
-        if (emptyCell && els.pianoRoll.contains(emptyCell) && !emptyCell.querySelector('.fb-note-block')) {
+        if (emptyCell && els.pianoRoll.contains(emptyCell) && !event.target.closest('.fb-note-block, .fb-note-resize')) {
             event.preventDefault();
             event.stopPropagation();
             suppressRollClick = true;
-            const placed = placePianoRollNoteFromCell(emptyCell);
+            const placed = placePianoRollNoteFromCell(emptyCell, event.clientX);
             if (placed) {
                 placingNote = {
                     channel: placed.channel,
@@ -5079,10 +5533,27 @@
         if (block) {
             event.preventDefault();
             event.stopPropagation();
-            openVelocityEditor(block, event);
+            const channel = selectedChannel();
+            const pattern = getPattern(channel);
+            const step = Number(block.dataset.step);
+            const note = block.dataset.note;
+            const eventIndex = Number(block.dataset.eventIndex);
+            removeNoteEvent(channel, pattern, step, note, Number.isFinite(eventIndex) ? eventIndex : null);
+            closeVelocityEditor();
+            renderRoll();
+            renderChannels();
             return;
         }
         if (event.target.closest('.fb-cell')) event.preventDefault();
+    });
+
+    els.pianoRoll.addEventListener('auxclick', event => {
+        if (event.button !== 1) return;
+        const block = noteBlockAtEvent(event);
+        if (!block) return;
+        event.preventDefault();
+        event.stopPropagation();
+        openVelocityEditor(block, event);
     });
 
     function paintPlaylistHead() {
@@ -5093,7 +5564,8 @@
     function activeBars() {
         ensureClipMap();
         return Array.from({ length: state.barCount }, (_, bar) => {
-            return state.channels.some(channel => state.clips[channel.id][bar] !== null && state.clips[channel.id][bar] !== DISABLED_CLIP);
+            return playlistPatternClipsAt(bar).length > 0
+                || state.playlistAudioClips.some(clip => bar >= clip.bar && bar < clip.bar + audioClipBars(clip));
         });
     }
 
@@ -5217,29 +5689,29 @@
         let lastTick = 0;
         const events = [];
         const barCount = usedBarCount();
-        state.channels.forEach((channel, channelIndex) => {
-            for (let bar = 0; bar < barCount; bar += 1) {
-                const patternIndex = state.clips[channel.id] ? state.clips[channel.id][bar] : null;
-                if (patternIndex === null || patternIndex === DISABLED_CLIP) continue;
-                getPattern(channel, patternIndex).forEach((stepEvents, step) => {
-                    getStepEvents(getPattern(channel, patternIndex), step).forEach(event => {
-                        const tick = ((bar * stepCount()) + step) * ticksPerStep;
-                        const midiNote = noteNumber(event.note);
-                        const midiChannel = channelIndex % 16;
-                        const velocity = Math.max(1, Math.min(127, Math.round(noteVelocity(event) * 127)));
-                        const eventTicks = Math.max(1, Math.floor(ticksPerStep * noteLengthSteps(event)));
-                        if (event.slideTo && event.slideTo !== event.note) {
-                            const semitones = Math.max(-2, Math.min(2, noteNumber(event.slideTo) - midiNote));
-                            events.push({ tick, data: pitchBendData(midiChannel, 0) });
-                            events.push({ tick: tick + Math.max(1, eventTicks - 1), data: pitchBendData(midiChannel, semitones / 2) });
-                            events.push({ tick: tick + eventTicks + 1, data: pitchBendData(midiChannel, 0) });
-                        }
-                        events.push({ tick, data: [0x90 + midiChannel, midiNote, velocity] });
-                        events.push({ tick: tick + eventTicks, data: [0x80 + midiChannel, midiNote, 0] });
+        for (let bar = 0; bar < barCount; bar += 1) {
+            playlistPatternClipsAt(bar).forEach(clip => {
+                state.channels.forEach((channel, channelIndex) => {
+                    getPattern(channel, clip.pattern).forEach((stepEvents, step) => {
+                        getStepEvents(getPattern(channel, clip.pattern), step).forEach(event => {
+                            const tick = Math.round(((bar * stepCount()) + step + noteStartOffset(event)) * ticksPerStep);
+                            const midiNote = noteNumber(event.note);
+                            const midiChannel = channelIndex % 16;
+                            const velocity = Math.max(1, Math.min(127, Math.round(noteVelocity(event) * 127)));
+                            const eventTicks = Math.max(1, Math.floor(ticksPerStep * clampedNoteLength(event, step)));
+                            if (event.slideTo && event.slideTo !== event.note) {
+                                const semitones = Math.max(-2, Math.min(2, noteNumber(event.slideTo) - midiNote));
+                                events.push({ tick, data: pitchBendData(midiChannel, 0) });
+                                events.push({ tick: tick + Math.max(1, eventTicks - 1), data: pitchBendData(midiChannel, semitones / 2) });
+                                events.push({ tick: tick + eventTicks + 1, data: pitchBendData(midiChannel, 0) });
+                            }
+                            events.push({ tick, data: [0x90 + midiChannel, midiNote, velocity] });
+                            events.push({ tick: tick + eventTicks, data: [0x80 + midiChannel, midiNote, 0] });
+                        });
                     });
                 });
-            }
-        });
+            });
+        }
         await setExportProgress(progress, 62, 'sorting MIDI notes');
         events.sort((a, b) => a.tick - b.tick || a.data[0] - b.data[0]);
         events.forEach(event => {
@@ -5381,7 +5853,7 @@
         let source = channel.sampleBuffer;
         let bounds = sampleBounds(channel, note);
         const speedRate = sampleSpeedRatio(channel);
-        let playbackRate = sampleRateForNote(channel, note) * channelPitchRatio(channel);
+        let playbackRate = samplePlaybackRateForNote(channel, note);
         if (sampleKeepsDuration(channel) && playbackRate !== 1 && (mode === 'one-shot' || mode === 'loop')) {
             const shifted = pitchShiftedSegment(createAudio().context, source, bounds.start, bounds.end, playbackRate);
             if (shifted) {
@@ -5432,6 +5904,26 @@
             const amp = channel.volume * noteGain * fadeIn * fadeOut;
             left[start + i] += leftData[frame] * amp * leftGain;
             right[start + i] += rightData[frame] * amp * rightGain;
+        }
+    }
+
+    function mixPlaylistAudioClip(left, right, sampleRate, start, channel, clip) {
+        if (!clip || !clip.buffer) return;
+        const source = clip.buffer;
+        const sourceLeft = source.getChannelData(0);
+        const sourceRight = source.numberOfChannels > 1 ? source.getChannelData(1) : sourceLeft;
+        const step = source.sampleRate / sampleRate;
+        const outputLength = Math.min(left.length - start, Math.ceil((source.length / source.sampleRate) * sampleRate));
+        const pan = Math.max(-1, Math.min(1, channel.pan));
+        const leftGain = Math.cos((pan + 1) * Math.PI / 4);
+        const rightGain = Math.sin((pan + 1) * Math.PI / 4);
+        for (let i = 0; i < outputLength; i += 1) {
+            const frame = Math.min(source.length - 1, Math.floor(i * step));
+            const fadeIn = Math.min(1, i / Math.max(1, sampleRate * 0.004));
+            const fadeOut = Math.min(1, (outputLength - i) / Math.max(1, sampleRate * 0.005));
+            const amp = channel.volume * fadeIn * fadeOut;
+            left[start + i] += sourceLeft[frame] * amp * leftGain;
+            right[start + i] += sourceRight[frame] * amp * rightGain;
         }
     }
 
@@ -5544,21 +6036,27 @@
             const channelLeft = new Float32Array(totalSamples);
             const channelRight = new Float32Array(totalSamples);
             for (let bar = 0; bar < barCount; bar += 1) {
-                const patternIndex = state.clips[channel.id] ? state.clips[channel.id][bar] : null;
                 const completed = (channelIndex * barCount) + bar;
                 const detail = 'rendering ' + channel.name + ', bar ' + (bar + 1) + ' / ' + barCount;
                 await setExportProgress(progress, (completed / renderUnits) * 100, detail, 12);
-                if (patternIndex === null || patternIndex === DISABLED_CLIP) continue;
-                getPattern(channel, patternIndex).forEach((stepEvents, step) => {
-                    getStepEvents(getPattern(channel, patternIndex), step).forEach(event => {
-                        const start = ((bar * stepCount()) + step) * samplesPerStep;
-                        const velocity = noteVelocity(event);
-                        const lengthSamples = Math.max(1, Math.floor(samplesPerStep * clampedNoteLength(event, step)));
-                        if (channel.source === 'sample') mixSample(channelLeft, channelRight, sampleRate, start, Math.max(Math.floor(sampleRate * 0.38), lengthSamples), channel, event.note, velocity);
-                        else if (channel.source === 'soundfont') mixSoundfont(channelLeft, channelRight, sampleRate, start, lengthSamples, channel, event.note, velocity, event.slideTo);
-                        else mixTone(channelLeft, channelRight, sampleRate, start, lengthSamples, channel, event.note, velocity, event.slideTo);
+                playlistPatternClipsAt(bar).forEach(clip => {
+                    getPattern(channel, clip.pattern).forEach((stepEvents, step) => {
+                        getStepEvents(getPattern(channel, clip.pattern), step).forEach(event => {
+                            const start = Math.floor(((bar * stepCount()) + step + noteStartOffset(event)) * samplesPerStep);
+                            const velocity = noteVelocity(event);
+                            const lengthSamples = Math.max(1, Math.floor(samplesPerStep * clampedNoteLength(event, step)));
+                            if (channel.source === 'sample') mixSample(channelLeft, channelRight, sampleRate, start, Math.max(Math.floor(sampleRate * 0.38), lengthSamples), channel, event.note, velocity);
+                            else if (channel.source === 'soundfont') mixSoundfont(channelLeft, channelRight, sampleRate, start, lengthSamples, channel, event.note, velocity, event.slideTo);
+                            else mixTone(channelLeft, channelRight, sampleRate, start, lengthSamples, channel, event.note, velocity, event.slideTo);
+                        });
                     });
                 });
+                state.playlistAudioClips
+                    .filter(clip => clip.channelId === channel.id && clip.bar === bar)
+                    .forEach(clip => {
+                        const start = Math.floor(((bar * stepCount()) * samplesPerStep));
+                        mixPlaylistAudioClip(channelLeft, channelRight, sampleRate, start, channel, clip);
+                    });
                 await setExportProgress(progress, ((completed + 1) / renderUnits) * 100, detail, 12);
             }
             if (hasRenderableEffects(channel)) {
@@ -5780,8 +6278,11 @@
         state.masterVolume = 0.82;
         state.barCount = normalizeBarCount(Math.max(DEFAULT_BAR_COUNT, lastImportedBar + 1));
         state.loopRange = null;
+        state.activePattern = 0;
+        state.playlistTrackCount = 8;
         const importedGroups = midiGroups.slice(0, 16);
         state.channels = [];
+        const importedChannelData = [];
         for (let index = 0; index < importedGroups.length; index += 1) {
             const group = importedGroups[index];
             await setExportProgress(progress, 62 + ((index / Math.max(1, importedGroups.length)) * 24), 'creating ' + group.name, 18);
@@ -5802,43 +6303,56 @@
                 if (note.slideTo) event.slideTo = note.slideTo;
                 importedBars[bar][step].push(event);
             });
-            const patternMap = new Map();
-            let nextPatternIndex = 0;
-            channel._importedClipMap = Array.from({ length: state.barCount }, () => DISABLED_CLIP);
-            importedBars.forEach((pattern, bar) => {
-                if (!pattern.some(stepEvents => normalizeStepEvents(stepEvents).length)) return;
-                const normalized = pattern.map(stepEvents => normalizeStepEvents(stepEvents).sort((a, b) => {
-                    return noteNumber(a.note) - noteNumber(b.note)
-                        || (a.length || 1) - (b.length || 1)
-                        || noteVelocity(a) - noteVelocity(b)
-                        || String(a.slideTo || '').localeCompare(String(b.slideTo || ''));
-                }));
-                const signature = JSON.stringify(normalized);
-                let patternIndex = patternMap.get(signature);
-                if (patternIndex === undefined) {
-                    patternIndex = nextPatternIndex;
-                    nextPatternIndex = Math.min(MAX_PATTERNS, nextPatternIndex + 1);
-                    if (patternIndex < MAX_PATTERNS) {
-                        channel.patterns[patternIndex] = normalized.map(stepEvents => stepEvents.map(event => ({ ...event })));
-                        patternMap.set(signature, patternIndex);
-                    }
-                }
-                channel._importedClipMap[bar] = patternIndex < MAX_PATTERNS ? patternIndex : DISABLED_CLIP;
-            });
             channel.pattern = channel.patterns[0];
             state.channels.push(channel);
+            importedChannelData.push({ channel, importedBars });
         }
         await setExportProgress(progress, 88, 'mapping playlist clips');
         state.clips = {};
+        state.channels.forEach(channel => {
+            state.clips[channel.id] = Array.from({ length: state.barCount }, () => null);
+        });
+        state.playlistAudioClips = [];
+        state.playlistPatternClips = [];
+        const normalizeImportedPattern = pattern => pattern.map(stepEvents => normalizeStepEvents(stepEvents).sort((a, b) => {
+            return noteNumber(a.note) - noteNumber(b.note)
+                || noteStartOffset(a) - noteStartOffset(b)
+                || (a.length || 1) - (b.length || 1)
+                || noteVelocity(a) - noteVelocity(b)
+                || String(a.slideTo || '').localeCompare(String(b.slideTo || ''));
+        }));
+        const globalPatternMap = new Map();
+        let nextPatternIndex = 0;
+        for (let bar = 0; bar < state.barCount; bar += 1) {
+            const normalizedByChannel = importedChannelData.map(({ importedBars }) => normalizeImportedPattern(importedBars[bar]));
+            const hasNotes = normalizedByChannel.some(pattern => pattern.some(stepEvents => stepEvents.length));
+            if (!hasNotes) continue;
+            const signature = JSON.stringify(normalizedByChannel);
+            let patternIndex = globalPatternMap.get(signature);
+            if (patternIndex === undefined) {
+                patternIndex = nextPatternIndex;
+                nextPatternIndex += 1;
+                if (patternIndex < MAX_PATTERNS) {
+                    normalizedByChannel.forEach((pattern, index) => {
+                        importedChannelData[index].channel.patterns[patternIndex] = pattern.map(stepEvents => stepEvents.map(event => ({ ...event })));
+                    });
+                    globalPatternMap.set(signature, patternIndex);
+                }
+            }
+            if (patternIndex < MAX_PATTERNS) {
+                state.playlistPatternClips.push({
+                    id: 'midi-pattern-' + Date.now() + '-' + bar + '-' + patternIndex,
+                    pattern: patternIndex,
+                    bar,
+                    track: 0
+                });
+            }
+        }
         ensureClipMap();
         state.channels.forEach(channel => {
-            state.clips[channel.id] = Array.from({ length: state.barCount }, () => DISABLED_CLIP);
-            for (let bar = 0; bar < state.barCount; bar += 1) {
-                state.clips[channel.id][bar] = Array.isArray(channel._importedClipMap) ? channel._importedClipMap[bar] : DISABLED_CLIP;
-            }
-            delete channel._importedClipMap;
             ensureChannelPatterns(channel);
         });
+        setActivePattern(0);
         selectedId = state.channels[0].id;
         els.projectName.value = state.projectName;
         els.bpm.value = String(state.bpm);
@@ -5863,7 +6377,7 @@
         selectedId = id;
         const channel = selectedChannel();
         ensureChannelPatterns(channel);
-        els.pattern.value = String(channel.activePattern);
+        setActivePattern(activePatternIndex());
         renderChannels();
         renderRoll();
         renderMixer();
@@ -5912,7 +6426,7 @@
         const index = state.channels.length + 1;
         const id = 'channel-' + Date.now();
         state.channels.push(makeChannel(id, 'channel ' + index, 'wave', COLORS[index % COLORS.length], Array(stepCount()).fill(false), 'C4'));
-        state.clips[id] = Array.from({ length: state.barCount }, () => DISABLED_CLIP);
+        state.clips[id] = Array.from({ length: state.barCount }, () => null);
         ensureClipMap();
         selectChannel(id);
         renderPlaylist();
@@ -5926,15 +6440,32 @@
             projectName: state.projectName,
             octave: state.octave,
             noteSnap: state.noteSnap,
+            activePattern: activePatternIndex(),
             masterVolume: state.masterVolume,
             steps: stepCount(),
             barCount: state.barCount,
             loopRange: state.loopRange,
+            playlistTrackCount: state.playlistTrackCount,
             assets: {
                 soundfont: soundfontBank.asset || null,
                 soundfontUrl: soundfontBank.asset ? null : (soundfontBank.url || DEFAULT_SOUNDFONT_URL)
             },
             clips: state.clips,
+            playlistPatternClips: state.playlistPatternClips.map(clip => ({
+                id: clip.id,
+                pattern: clip.pattern,
+                bar: clip.bar,
+                track: clip.track
+            })),
+            playlistAudioClips: state.playlistAudioClips.map(clip => ({
+                id: clip.id,
+                channelId: clip.channelId,
+                track: clip.track,
+                bar: clip.bar,
+                name: clip.name,
+                duration: clip.duration,
+                asset: clip.asset || null
+            })),
             selectedId,
             channels: state.channels.map(channel => {
                 ensureChannelPatterns(channel);
@@ -6006,12 +6537,20 @@
         state.projectName = typeof saved.projectName === 'string' && saved.projectName.trim() ? saved.projectName.trim() : 'Untitled';
         state.octave = octavePage(saved.octave);
         setNoteSnap(saved.noteSnap);
+        state.activePattern = Math.max(0, Math.min(MAX_PATTERNS - 1, Number(saved.activePattern) || 0));
         state.masterVolume = Math.max(0, Math.min(1, Number(saved.masterVolume) || 0.82));
         setProjectSteps(inferProjectSteps(saved), false);
+        state.playlistTrackCount = Math.max(1, Math.min(64, Number(saved.playlistTrackCount) || 8));
         state.loopRange = saved.loopRange && typeof saved.loopRange === 'object'
             ? { start: Number(saved.loopRange.start) || 0, end: Number(saved.loopRange.end) || 0 }
             : null;
         state.clips = saved.clips && typeof saved.clips === 'object' ? saved.clips : {};
+        state.playlistPatternClips = Object.prototype.hasOwnProperty.call(saved, 'playlistPatternClips')
+            ? (Array.isArray(saved.playlistPatternClips) ? saved.playlistPatternClips.map(clip => ({ ...clip })) : [])
+            : null;
+        state.playlistAudioClips = Array.isArray(saved.playlistAudioClips)
+            ? saved.playlistAudioClips.map(clip => ({ ...clip, buffer: null }))
+            : [];
         const savedClipLengths = Object.values(state.clips).reduce((highest, clip) => {
             return Array.isArray(clip) ? Math.max(highest, clip.length) : highest;
         }, 0);
@@ -6043,10 +6582,11 @@
             });
         }
         ensureClipMap();
+        setActivePattern(state.activePattern);
         selectedId = state.channels.some(channel => channel.id === saved.selectedId) ? saved.selectedId : state.channels[0].id;
         els.bpm.value = String(state.bpm);
         els.projectName.value = state.projectName;
-        els.pattern.value = String(selectedChannel().activePattern || 0);
+        els.pattern.value = String(activePatternIndex());
         els.octave.value = String(state.octave);
         els.noteSnap.value = String(state.noteSnap);
         els.masterVolume.value = String(state.masterVolume);
@@ -6086,7 +6626,8 @@
         }
 
         const needsSampleAudio = state.channels.some(channel => channel.source === 'sample' && ((channel.sampleAsset && channel.sampleAsset.data) || channel.sampleUrl));
-        const engine = audio || (needsSampleAudio ? createAudio() : null);
+        const needsPlaylistAudio = state.playlistAudioClips.some(clip => clip.asset && clip.asset.data);
+        const engine = audio || (needsSampleAudio || needsPlaylistAudio ? createAudio() : null);
         if (!engine) return;
         const sampleChannels = state.channels.filter(channel => channel.source === 'sample' && channel.sampleAsset && channel.sampleAsset.data);
         for (const channel of sampleChannels) {
@@ -6103,6 +6644,16 @@
         const bundledSampleChannels = state.channels.filter(channel => channel.source === 'sample' && !channel.sampleAsset && channel.sampleUrl);
         for (const channel of bundledSampleChannels) {
             await loadSampleFromUrl(channel, channel.sampleUrl, channel.sampleName || '', false);
+        }
+        for (const clip of state.playlistAudioClips) {
+            if (!clip.asset || !clip.asset.data) continue;
+            try {
+                clip.buffer = await engine.context.decodeAudioData(base64ToArrayBuffer(clip.asset.data).slice(0));
+                clip.duration = clip.buffer.duration;
+            } catch (_) {
+                clip.buffer = null;
+                updateStatus('playlist audio failed: ' + (clip.name || 'audio clip'));
+            }
         }
     }
 
@@ -6145,13 +6696,18 @@
         setProjectSteps(DEFAULT_STEPS, false);
         state.barCount = DEFAULT_BAR_COUNT;
         state.loopRange = null;
+        state.activePattern = 0;
+        state.playlistTrackCount = 8;
+        state.playlistPatternClips = [];
         state.channels = [emptyProjectChannel()];
+        state.playlistAudioClips = [];
         soundfontBank.asset = null;
         useCustomSoundfont = false;
         channelOutputs.forEach(output => output.nodes.forEach(disconnectNode));
         channelOutputs.clear();
-        state.clips = { [state.channels[0].id]: Array.from({ length: DEFAULT_BAR_COUNT }, () => DISABLED_CLIP) };
+        state.clips = { [state.channels[0].id]: Array.from({ length: DEFAULT_BAR_COUNT }, () => null) };
         selectedId = state.channels[0].id;
+        setActivePattern(0);
         els.projectName.value = state.projectName;
         els.bpm.value = String(state.bpm);
         els.octave.value = String(state.octave);
@@ -6684,13 +7240,25 @@
         renderRoll();
         updateStatus('note snap set to ' + els.noteSnap.options[els.noteSnap.selectedIndex].textContent);
     });
+    if (els.octaveDown) els.octaveDown.addEventListener('click', () => transposeCurrentPatternOctave(-1));
+    if (els.octaveUp) els.octaveUp.addEventListener('click', () => transposeCurrentPatternOctave(1));
     els.pattern.addEventListener('change', () => {
-        const channel = selectedChannel();
-        channel.activePattern = Number(els.pattern.value) || 0;
-        channel.pattern = getPattern(channel);
+        if (els.pattern.value === '__new__') {
+            const emptyPattern = firstEmptyPatternIndex();
+            if (emptyPattern === null) {
+                els.pattern.value = String(activePatternIndex());
+                updateStatus('all pattern slots are full');
+                return;
+            }
+            setActivePattern(emptyPattern);
+            updateStatus('new pattern ' + (emptyPattern + 1));
+        } else {
+            setActivePattern(Number(els.pattern.value) || 0);
+        }
         renderChannels();
         renderRoll();
         renderAutomation();
+        renderPlaylist();
     });
     els.patternSteps.addEventListener('change', () => {
         setProjectSteps(els.patternSteps.value, true);
@@ -6702,9 +7270,10 @@
     });
     els.addChannel.addEventListener('click', addChannel);
     els.clearPattern.addEventListener('click', () => {
-        const channel = selectedChannel();
-        channel.patterns[channel.activePattern] = Array(stepCount()).fill(null);
-        channel.pattern = channel.patterns[channel.activePattern];
+        state.channels.forEach(channel => {
+            channel.patterns[activePatternIndex()] = Array(stepCount()).fill(null);
+            channel.pattern = channel.patterns[activePatternIndex()];
+        });
         renderChannels();
         renderRoll();
     });
@@ -6712,6 +7281,8 @@
         state.channels.forEach(channel => {
             state.clips[channel.id] = Array.from({ length: state.barCount }, () => null);
         });
+        state.playlistPatternClips = [];
+        state.playlistAudioClips = [];
         renderPlaylist();
     });
     els.rollTab.addEventListener('click', () => showView('roll'));
@@ -6721,10 +7292,7 @@
     els.waveformTab.addEventListener('click', () => showView('waveform'));
     els.synthTab.addEventListener('click', () => showView('synth'));
     els.automationPattern.addEventListener('change', () => {
-        const channel = selectedChannel();
-        channel.activePattern = normalizeAutomationPatternIndex(els.automationPattern.value);
-        channel.pattern = getPattern(channel);
-        els.pattern.value = String(channel.activePattern);
+        setActivePattern(normalizeAutomationPatternIndex(els.automationPattern.value));
         renderChannels();
         renderRoll();
         renderAutomation();
@@ -6902,7 +7470,6 @@
         }
         if (movingNote) {
             if (!movingNote.dragged) {
-                removeNoteEvent(movingNote.channel, movingNote.pattern, movingNote.step, movingNote.note, movingNote.eventIndex);
                 suppressRollClick = true;
             }
             try {

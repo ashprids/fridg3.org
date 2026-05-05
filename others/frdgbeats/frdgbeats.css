@@ -1202,7 +1202,10 @@ body.mobile-template #content:has(.frdgbeats-daw) {
 
 .fb-note-block {
     position: absolute;
-    inset: 4px auto 4px 4px;
+    top: 4px;
+    right: auto;
+    bottom: 4px;
+    left: 4px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1273,7 +1276,7 @@ body.mobile-template #content:has(.frdgbeats-daw) {
     gap: 8px;
     align-items: center;
     border: 1px solid var(--border);
-    background: var(--fb-popover);
+    background: var(--bg);
     color: var(--fg);
     border-radius: 4px;
     box-shadow: 0 10px 28px var(--fb-shadow);
@@ -1367,31 +1370,73 @@ body.mobile-template #content:has(.frdgbeats-daw) {
     color: var(--fg);
 }
 
+.fb-playlist-tools {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.fb-playlist-tool-label,
+.fb-playlist-drop-hint {
+    color: var(--subtle);
+    font-size: 11px;
+}
+
+.fb-playlist-pattern-source {
+    min-height: 28px;
+    border: 1px solid var(--fb-border-medium);
+    border-radius: 3px;
+    background: var(--fb-grid);
+    color: var(--fg);
+    font-family: "MainRegular", monospace;
+    font-size: 11px;
+    cursor: grab;
+}
+
+.fb-playlist-pattern-source.is-active {
+    border-color: var(--fb-hot);
+    color: var(--fb-hot);
+}
+
+.fb-playlist-pattern-source:active,
+.fb-playlist-clip:active {
+    cursor: grabbing;
+}
+
 .fb-playlist-wrap {
     overflow-x: auto;
 }
 
 .fb-playlist {
     display: grid;
-    grid-template-columns: var(--fb-playlist-columns, 110px repeat(1, minmax(86px, 1fr)));
+    grid-template-columns: var(--fb-playlist-columns, 118px repeat(4, minmax(72px, 1fr)) 42px);
     border-top: 1px solid var(--fb-border-strong);
     border-left: 1px solid var(--fb-border-strong);
-    min-width: var(--fb-playlist-min-width, 206px);
+    min-width: var(--fb-playlist-min-width, 456px);
+    background: var(--fb-canvas);
 }
 
 .fb-playlist-cell,
 .fb-playlist-column-button,
 .fb-playlist-delete-column,
 .fb-playlist-column-spacer {
-    min-height: 42px;
+    min-height: 54px;
     border: 0;
     border-right: 1px solid var(--fb-border-soft);
     border-bottom: 1px solid var(--fb-border-soft);
-    background: var(--fb-panel-soft);
+    background: repeating-linear-gradient(90deg, var(--fb-panel-soft) 0, var(--fb-panel-soft) calc(25% - 1px), var(--fb-border-faint) calc(25% - 1px), var(--fb-border-faint) 25%);
     color: var(--fg);
     font-family: "MainRegular", monospace;
     cursor: pointer;
     box-sizing: border-box;
+}
+
+.fb-playlist-cell {
+    position: relative;
+    overflow: visible;
+    padding: 5px;
 }
 
 .fb-playlist-column-button,
@@ -1480,7 +1525,7 @@ body.mobile-template #content:has(.frdgbeats-daw) {
 }
 
 .fb-playlist-cell.is-on {
-    background: var(--fb-note-fill);
+    background: repeating-linear-gradient(90deg, var(--fb-panel-soft) 0, var(--fb-panel-soft) calc(25% - 1px), var(--fb-border-faint) calc(25% - 1px), var(--fb-border-faint) 25%);
     color: var(--fb-note-fg);
 }
 
@@ -1490,12 +1535,10 @@ body.mobile-template #content:has(.frdgbeats-daw) {
 }
 
 .fb-playlist-cell.is-playing {
-    background: var(--fb-warm-soft);
     box-shadow: inset 3px 0 0 var(--fb-warm);
 }
 
 .fb-playlist-cell.is-playing.is-on {
-    background: var(--fb-note-fill);
     box-shadow: inset 3px 0 0 var(--fb-warm), inset -3px 0 0 var(--fb-warm);
 }
 
@@ -1516,8 +1559,49 @@ body.mobile-template #content:has(.frdgbeats-daw) {
     box-shadow: inset 0 0 0 1px var(--fb-hot-mid);
 }
 
+.fb-playlist-cell.is-drop-target {
+    outline: 2px solid var(--fb-hot);
+    outline-offset: -2px;
+    background: var(--fb-hover);
+}
+
+.fb-playlist-clip,
+.fb-playlist-muted-clip {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    min-height: 30px;
+    max-width: none;
+    padding: 0 7px;
+    border: 1px solid var(--fb-hot-strong);
+    border-radius: 3px;
+    background: var(--fb-note-fill);
+    color: var(--fb-note-fg);
+    box-shadow: 0 2px 8px var(--fb-shadow);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    cursor: grab;
+}
+
+.fb-playlist-audio-clip {
+    margin-top: 4px;
+    border-color: var(--fb-warm);
+    background: var(--fb-note-fill-slide);
+}
+
+.fb-playlist-muted-clip {
+    justify-content: center;
+    border-color: var(--fb-border-medium);
+    background: var(--fb-grid-strong);
+    color: var(--subtle);
+    box-shadow: none;
+    cursor: default;
+}
+
 .fb-playlist-track {
-    min-height: 42px;
+    min-height: 54px;
     display: flex;
     align-items: center;
     gap: 7px;
@@ -1529,6 +1613,11 @@ body.mobile-template #content:has(.frdgbeats-daw) {
     font-size: 11px;
     box-sizing: border-box;
     overflow: hidden;
+}
+
+.fb-playlist-track.is-selected {
+    color: var(--fg);
+    box-shadow: inset 3px 0 0 var(--fb-hot);
 }
 
 .fb-playlist-track-color {

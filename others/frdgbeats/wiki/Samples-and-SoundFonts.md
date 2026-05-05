@@ -49,6 +49,8 @@ Sample zones map different parts of the sample to different notes.
 
 Right-click in the lower lane of the waveform editor to create a zone. Pick a note or press a keyboard key. That note will play that slice.
 
+Zone notes act like trigger pads: they play their slice at the sample's original pitch and speed instead of transposing it to the note's pitch.
+
 This is great for break chopping and tiny homemade drum kits.
 
 ## SoundFont Channels

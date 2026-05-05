@@ -24,14 +24,16 @@ MIDI import does this:
 - Converts MIDI notes into frdgBeats note events.
 - Converts pitch bends into slide-style notes when possible.
 - Uses 32-step patterns.
-- Maps non-empty imported bars into playlist clips.
-- Leaves empty imported bars disabled as `0`.
+- Maps non-empty imported bars into global playlist pattern clips.
+- Leaves empty imported bars blank.
 
 ## Export `.frdgbeats`
 
 Project export downloads the full project as JSON with the `.frdgbeats` extension.
 
 Use this for backups and sharing.
+
+Dropped playlist audio clips are embedded so the project stays portable.
 
 ## Export MIDI
 
@@ -57,6 +59,7 @@ It includes:
 - Synth channels.
 - Sample channels.
 - SoundFont channels.
+- Dropped playlist audio clips.
 - Velocity.
 - Note length.
 - Slides where the render path supports them.

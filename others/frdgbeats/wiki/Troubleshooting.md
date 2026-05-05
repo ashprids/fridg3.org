@@ -14,7 +14,7 @@ Try this:
 4. Make sure the channel is not muted.
 5. Check whether another channel is soloed.
 6. Confirm the pattern has notes.
-7. If you are in playlist view, confirm playlist cells are not empty or `0`.
+7. If you are in playlist view, confirm the lane has a pattern or audio clip and is not marked `0`.
 8. Try stop once to panic-stop hanging audio, then play again.
 
 ## SoundFont Is Silent
@@ -64,7 +64,7 @@ After import:
 - Check SoundFont bank.
 - Rename channels.
 - Delete empty or noisy channels.
-- Fix playlist rows.
+- Fix playlist clips.
 - Adjust velocity or volume.
 
 ## Automation Did Not Affect The Pattern

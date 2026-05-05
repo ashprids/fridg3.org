@@ -54,13 +54,16 @@ For clean results:
 
 - Space: play or pause when focus is not inside a form control.
 - Click empty piano roll cell: add note.
-- Click note block: remove note.
+- Right-click note block: remove note.
+- Middle-click note block: edit velocity.
 - Drag note block sideways: move note timing.
 - Drag note block vertically: change note pitch.
 - Drag resize handle: change note length.
-- Right-click note block: edit velocity.
-- Click playlist cell: cycle forward.
-- Right-click playlist cell: cycle backward.
+- Pick non-empty pattern from playlist dropdown, then drag pattern chip to lane: place pattern.
+- Drag playlist clip: move clip.
+- Right-click pattern clip: delete pattern clip.
+- Drop audio file on playlist lane: add audio clip.
+- Right-click audio clip: delete audio clip.
 - Right-click waveform zone lane: create sample zone.
 - Right-click automation cell: clear automation value.
 - Shift-click automation cell: clear automation value.

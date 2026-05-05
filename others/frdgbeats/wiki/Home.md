@@ -9,8 +9,8 @@ This wiki is the beginner-friendly manual. If you have never used a sequencer be
 ## What frdgBeats Can Do
 
 - Build patterns with 16 or 32 steps.
-- Use up to 128 patterns per channel.
-- Arrange patterns into playlist rows.
+- Use up to 128 global patterns that can contain multiple instruments.
+- Arrange patterns and dropped audio clips on playlist lanes.
 - Play synth, sample, and SoundFont channels in the same project.
 - Import custom audio samples.
 - Use bundled samples and bundled `.sf2` SoundFont banks.

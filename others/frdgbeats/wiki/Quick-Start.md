@@ -31,25 +31,24 @@ That gives you a basic kick pattern in 16-step mode. Is it basic? yes. Does it w
 
 1. Select your synth channel.
 2. Open the piano roll tab.
-3. Pick a pattern number. Pattern `1` is a solid starting point.
+3. Pick a pattern with notes, or choose `+ new pattern`.
 4. Click grid cells to place notes.
 5. Drag note blocks horizontally to move them.
 6. Drag the small resize handle on a note to change its length.
 7. Drag a note vertically while placing or moving to change pitch.
 
-Right-click a note block to open velocity. Lower velocity makes the note quieter. Higher velocity makes it hit harder.
+Middle-click a note block to open velocity. Lower velocity makes the note quieter. Higher velocity makes it hit harder.
 
 ## Arrange It
 
-The piano roll edits one pattern. The playlist decides which patterns play in order.
+The piano roll edits the selected channel's part inside one global pattern. The playlist decides where those global patterns play.
 
 1. Open the playlist tab.
-2. Each row is a bar.
-3. Each column is a channel.
-4. Click a cell to cycle which pattern plays there.
-5. `0` means that channel is intentionally silent on that row.
-6. Empty means no clip is set.
-7. Use the plus button at the bottom to add more rows.
+2. Tracks run down the left, bars run across the top.
+3. Pick a non-empty pattern from the playlist dropdown and drag its pattern chip onto a lane.
+4. Drop an audio file onto a lane if you want an audio clip.
+5. Click a bar number to start playback there.
+6. Use the plus button at the end of the header to add more bars.
 
 ## Save It Properly
 
@@ -68,8 +67,8 @@ Try this exact path:
 2. Make a sample kick on steps `1`, `5`, `9`, `13`.
 3. Add a synth bass on steps `1`, `7`, `9`, `15`.
 4. Add a SoundFont piano channel and place a few chords.
-5. Put the kick on every playlist row.
-6. Put the bass on rows `1`, `2`, and `4`.
+5. Drag pattern `1` across the playlist bars you want.
+6. Use pattern `2` for a variation on bar `4`.
 7. Add delay or reverb to the piano in the mixer.
 8. Export WAV.
 
