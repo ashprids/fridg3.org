@@ -249,6 +249,9 @@ if (!$template_path) {
     die('page template not found. report this issue to me@fridg3.org.');
 }
 $template = file_get_contents($template_path);
+if (function_exists('apply_preferred_theme_stylesheet')) {
+    $template = apply_preferred_theme_stylesheet($template, __DIR__);
+}
 
 $content_path = find_template_file('content.html');
 if (!$content_path) {

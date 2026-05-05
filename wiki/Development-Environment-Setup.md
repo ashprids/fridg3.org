@@ -157,6 +157,7 @@ example:
       "discordUserId": "",
       "allowedPages": ["feed", "journal", "comments"],
       "bookmarks": [],
+      "theme": "default",
       "glowIntensity": "medium",
       "mobileFriendlyView": false,
       "colors": {

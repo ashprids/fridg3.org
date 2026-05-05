@@ -30,6 +30,7 @@ expected top-level shape:
       "discordUserId": "optional discord snowflake string",
       "allowedPages": ["feed", "journal", "comments"],
       "bookmarks": ["2026-01-01_12-00-00", "journal:12", "newsletter:2026-01-01"],
+      "theme": "default|custom|theme-id",
       "glowIntensity": "none|low|medium|high",
       "mobileFriendlyView": true,
       "colors": {
@@ -49,9 +50,31 @@ notes:
 - extra unknown keys can exist and are preserved by `account/admin/edit`
 - bookmarks are the current source of truth for logged-in users
 - bookmark ids currently use raw feed ids, `journal:{id}`, and `newsletter:{id}`
+- `theme: default` uses the standard template and `/style.css`; `theme: custom` enables saved `colors`; any other valid value refers to a `/themes/{theme-id}.json` file
 - `mustResetPassword` is used by the shared session bootstrap to force first-login password changes
 - `discordUserId` links a site account to a Discord member for bot DMs and notifications
 - `allowedPages` currently includes functional grants like `feed`, `journal`, and `comments`
+
+## `/themes/`
+
+theme metadata lives as JSON files directly under `/themes`.
+
+```json
+{
+  "name": "Theme Name",
+  "html": "template-file.html",
+  "css": "stylesheet-file.css"
+}
+```
+
+notes:
+
+- the metadata filename is the saved theme id, for example `/themes/cool.json` becomes `cool`
+- `name` is the label shown in `/settings`
+- `html` and `css` must be relative paths in `/themes/lib`, for example `aero/aero.html` and `aero/aero.css`
+- theme asset paths cannot be absolute, contain `..`, or use characters outside letters, numbers, `.`, `_`, `-`, and `/`
+- desktop rendering uses both themed HTML and CSS
+- mobile rendering keeps `template_mobile.html` and only swaps the CSS
 
 ### `login_attempts.json`
 

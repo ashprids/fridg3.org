@@ -106,6 +106,7 @@ admin-only account creation flow that writes to `data/accounts/accounts.json`.
 - can grant `comments` permission
 - newly created accounts are flagged with `mustResetPassword`
 - if a Discord id is provided, it asks the local toast bot to DM the invite credentials
+- if that DM fails, the account is still created and the UI now shows the bot's concrete failure reason instead of a generic HTTP 500
 
 ### `/account/change-password` and `/account/password`
 
@@ -184,6 +185,8 @@ Subroutes:
 - `/others/off-topic-archive`
 - `/others/toast-discord-bot`
 - `/others/fridge-builds-websites`
+- `/others/frdgbeats`
+- `/others/frdgbeats/wiki`
 
 ### `/others/mdpaste`
 
@@ -214,6 +217,40 @@ UI shell for toast bot status, controls, and stream playback.
 ### `/others/fridge-builds-websites`
 
 wrapper/marketing page for custom website work. this exists in code even though the older docs mostly ignored it.
+
+### `/others/frdgbeats`
+
+browser-based mini DAW inspired by simplified FL Studio workflows.
+
+- Web Audio transport with BPM, play/stop, idle-stop panic, record arm, global master volume, waveform scope, and a small level meter
+- editable project names
+- new project menu can start a blank `Untitled` project or load starter `.frdgbeats` presets from `/others/frdgbeats/presets/`, including essential genre templates for house, hip-hop, pop songwriting, synthwave, orchestral sketching, and game loops
+- load demos menu lists `.frdgbeats` files from `/others/frdgbeats/demos/`
+- channel rack with rename, recolor, mute/solo/remove, up to 128 global pattern slots per instrument with project-wide selectable 16/32-column grids, volume/pan, and add-channel support
+- piano roll edits the selected instrument's part inside the selected global pattern, places notes on pointer-down with whole/half/quarter snap starts, lets newly placed notes follow vertical pointer movement until release, lets existing notes drag horizontally between snapped positions, previews newly placed notes until pointer release, shows two octaves per octave-page selector, supports octave up/down buttons for the selected global pattern, supports chromatic piano-key rows, and stores multiple note events plus configurable snapped hold length, vertical-drag slide notes from resize handles, right-click note deletion, and middle-click velocity per note
+- keyboard-to-piano input follows the FL-style `Z/S/X/D/C...` and `Q/2/W/3/E...` layout with extra British QWERTY keys for a wider playable range; held keys sustain until released and preview the selected instrument without starting transport, while `Space` toggles play/pause outside text fields
+- piano roll playback previews only the selected instrument and active pattern, while playlist playback follows the full arrangement
+- playlist view uses FL-style generic track lanes with bars across the top, starts at 4 bars, can grow to 128 bars, has per-bar delete buttons, uses a non-empty-pattern dropdown plus one draggable pattern chip, places global pattern clips that trigger all instrument parts for that pattern, accepts dropped external audio files as embedded audio clips, supports right-click pattern/audio clip deletion, bar numbers start playback from that bar, and per-bar loop toggles can define a highlighted loop range
+- mixer view adds modular per-channel Web Audio effects loaded from `/others/frdgbeats/effects/`; effect definitions register their own params, presets, node chains, optional custom GUIs, and injected CSS, with minimizable effect cards plus custom delay, reverb, distortion with cabinet voicing, bitcrush, compressor, limiter, flanger, phaser, chorus, instrument pitch shift, sample-only speed/tempo sync, and draggable graph EQ examples with optional precision sliders
+- automate view adds per-channel, per-pattern automation lanes for channel volume/pan plus numeric synth and effect params; lanes are saved in `.frdgbeats` files, can be enabled/cleared/removed, and support stepped or smooth values drawn across the selected pattern's 16/32-step grid
+- each channel can use a modular synth from `/others/frdgbeats/synths/`, a sample instrument, or a parsed SoundFont preset bank
+- synth instruments register VST-style Web Audio voices with saved params, injected CSS, fixed 4:3 graphical synth-tab interfaces, tagged preset banks (`[BA]`, `[FX]`, `[LD]`, `[PD]`, `[PL]`, `[SY]`, and `[SQ]` where supported), and bundled Wave Oscillator, Analog Mono, Chip Stack, Glass FM, and Nebula Table wavetable examples with vertical drag controls
+- sample instruments can use bundled files from `/others/frdgbeats/samples/` or a custom upload with a loading popup, one-shot/loop/reverse playback, and a keep-duration toggle for pitch-shifted sample notes; keep-duration renders high-quality Rubber Band pitch buffers in a worker when available and falls back to the classic shifter if wasm cannot load, plus a zoomable, horizontally scrollable waveform tab for graphical start/end trimming, playback tracking, and right-click per-note sample zones
+- default SoundFont playback loads from `/others/frdgbeats/soundfonts/Roland_SC-55.sf2` when no user file is selected; SoundFont channels include independent bank dropdowns populated from `/others/frdgbeats/soundfonts/`, and imported `.sf2` files are parsed client-side into preset/sample zones for playback, including a toolbar menu to set all SoundFont channels to a bundled bank or a custom upload
+- `.frdgbeats` project files remain JSON and can embed imported sample files, dropped playlist audio clips, plus the active imported SoundFont bank as base64 assets for portable demos/projects
+- imports `.mid`/`.midi` as full project replacements with 32-column global pattern clips, SoundFont channels mapped from MIDI programs, and pitch-bend slides converted to slide notes; imports `.frdgbeats` project files into the full app state; project/MIDI imports show modal status with a percentage readout
+- exports `.frdgbeats`, `.mid`, and rendered `.wav` files client-side with modal status and percentage readouts; WAV renders process each channel through its enabled mixer effect chain before encoding
+- import/export actions are grouped into popover menus with short descriptions
+- save/load uses browser localStorage and preserves embedded project assets plus bundled sample/SoundFont URLs where present
+
+### `/others/frdgbeats/wiki`
+
+user-facing frdgBeats documentation rendered from Markdown files in `/others/frdgbeats/wiki/`.
+
+- uses a local wiki renderer with ordered sidebar links from `_Sidebar.md`
+- internal wiki links stay scoped to `/others/frdgbeats/wiki/?page=...`
+- markdown image placeholders render as screenshot callout boxes, using alt text to describe the screenshots that still need to be captured
+- includes beginner docs for quick start, interface layout, projects/files, channel rack, piano roll, playlist, instruments, samples/SoundFonts, mixer effects, automation, import/export, keyboard shortcuts, troubleshooting, glossary, and `.frdgbeats` data contracts
 
 ## Formatting / Examples / Errors
 

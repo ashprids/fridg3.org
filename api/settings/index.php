@@ -7,6 +7,11 @@ while (!file_exists($sessionBootstrapDir . "/lib/session.php") && dirname($sessi
 require_once $sessionBootstrapDir . "/lib/session.php";
 fridg3_start_session();
 
+$renderHelperPath = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'lib' . DIRECTORY_SEPARATOR . 'render.php';
+if (is_file($renderHelperPath)) {
+    require_once $renderHelperPath;
+}
+
 header('Content-Type: application/json');
 
 // Helper to load accounts data
@@ -75,6 +80,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $result = [
         'ok' => true,
         'settings' => [
+            'theme' => 'default',
             'glowIntensity' => null,
             'colors' => null,
             'mobileFriendlyView' => null,
@@ -84,6 +90,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         if (isset($account['username']) && (string)$account['username'] === $username) {
             if (isset($account['glowIntensity'])) {
                 $result['settings']['glowIntensity'] = $account['glowIntensity'];
+            }
+            if (isset($account['theme'])) {
+                $result['settings']['theme'] = function_exists('fridg3_normalize_theme_id')
+                    ? fridg3_normalize_theme_id($account['theme'])
+                    : ($account['theme'] === 'custom' ? 'custom' : 'default');
             }
             if (isset($account['colors']) && is_array($account['colors'])) {
                 $result['settings']['colors'] = $account['colors'];
@@ -116,6 +127,9 @@ $isAdmin = isset($_SESSION['user']['isAdmin']) && $_SESSION['user']['isAdmin'] =
 $intensityProvided = array_key_exists('glowIntensity', $_POST);
 $intensity = $intensityProvided ? (string)$_POST['glowIntensity'] : null;
 
+$themeProvided = array_key_exists('theme', $_POST);
+$theme = $themeProvided ? (string)$_POST['theme'] : null;
+
 $maintenanceProvided = array_key_exists('maintenanceMode', $_POST);
 $maintenanceRaw = $maintenanceProvided ? (string)$_POST['maintenanceMode'] : null;
 
@@ -123,6 +137,8 @@ $mobileViewProvided = array_key_exists('mobileFriendlyView', $_POST);
 $mobileViewRaw = $mobileViewProvided ? (string)$_POST['mobileFriendlyView'] : null;
 
 $allowedIntensity = ['none', 'low', 'medium', 'high'];
+$availableThemes = function_exists('fridg3_list_themes') ? fridg3_list_themes(dirname(__DIR__, 2)) : [];
+$allowedThemes = array_merge(['default', 'custom'], array_keys($availableThemes));
 $colorFields = ['bg', 'fg', 'border', 'subtle', 'links'];
 
 $errors = [];
@@ -154,6 +170,48 @@ if ($mobileViewProvided) {
     foreach ($data['accounts'] as &$account) {
         if (isset($account['username']) && (string)$account['username'] === $username) {
             $account['mobileFriendlyView'] = $mobileEnabled;
+            $updated = true;
+            break;
+        }
+    }
+    unset($account);
+
+    if ($updated) {
+        if (!save_accounts_data($accountsPath, $data)) {
+            http_response_code(500);
+            echo json_encode(['ok' => false, 'error' => 'write_failed']);
+            exit;
+        }
+        $didWork = true;
+    }
+}
+
+// Handle theme update (per-user)
+if ($themeProvided) {
+    $theme = function_exists('fridg3_normalize_theme_id') ? fridg3_normalize_theme_id($theme) : (string)$theme;
+    if (!in_array($theme, $allowedThemes, true)) {
+        http_response_code(400);
+        echo json_encode(['ok' => false, 'error' => 'invalid_theme']);
+        exit;
+    }
+
+    if (function_exists('fridg3_get_theme_cookie_options')) {
+        setcookie('theme_pref', $theme, fridg3_get_theme_cookie_options());
+        $_COOKIE['theme_pref'] = $theme;
+    }
+
+    $accountsPath = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'data' . DIRECTORY_SEPARATOR . 'accounts' . DIRECTORY_SEPARATOR . 'accounts.json';
+    $data = load_accounts_data($accountsPath);
+    if ($data === null) {
+        http_response_code(500);
+        echo json_encode(['ok' => false, 'error' => 'accounts_invalid']);
+        exit;
+    }
+
+    $updated = false;
+    foreach ($data['accounts'] as &$account) {
+        if (isset($account['username']) && (string)$account['username'] === $username) {
+            $account['theme'] = $theme;
             $updated = true;
             break;
         }
@@ -294,7 +352,7 @@ if ($maintenanceProvided) {
     $didWork = true;
 }
 
-if ($intensityProvided || $maintenanceProvided || $mobileViewProvided) {
+if ($didWork || $intensityProvided || $themeProvided || $maintenanceProvided || $mobileViewProvided) {
     echo json_encode(['ok' => true]);
     exit;
 }

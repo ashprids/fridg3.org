@@ -39,6 +39,9 @@ if (!$template_path) {
 }
 
 $template = file_get_contents($template_path);
+if (function_exists('apply_preferred_theme_stylesheet')) {
+    $template = apply_preferred_theme_stylesheet($template, __DIR__);
+}
 
 // Generate user greeting if logged in
 $user_greeting = '';

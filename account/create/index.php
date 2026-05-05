@@ -127,6 +127,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if ($formDiscordUserId !== '') {
                     $inviteBotError = null;
                     $inviteResponseRaw = null;
+                    $inviteResponse = null;
 
                     if (function_exists('curl_init')) {
                         $ch = curl_init('http://127.0.0.1:8765/send-account-invite');
@@ -145,10 +146,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         }
                         $httpCode = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
                         curl_close($ch);
+                        $inviteResponse = json_decode((string)$inviteResponseRaw, true);
                         if ($inviteBotError === null && $httpCode >= 400) {
-                            $inviteBotError = 'bot returned http ' . $httpCode;
+                            $inviteBotError = is_array($inviteResponse) && !empty($inviteResponse['error'])
+                                ? (string)$inviteResponse['error']
+                                : 'bot returned http ' . $httpCode;
                         }
                     } else {
+                        $http_response_header = [];
                         $context = stream_context_create([
                             'http' => [
                                 'method' => 'POST',
@@ -162,17 +167,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             ],
                         ]);
                         $inviteResponseRaw = @file_get_contents('http://127.0.0.1:8765/send-account-invite', false, $context);
+                        $inviteResponse = json_decode((string)$inviteResponseRaw, true);
                         if ($inviteResponseRaw === false) {
-                            $inviteBotError = 'could not contact discord bot';
+                            $statusLine = $http_response_header[0] ?? '';
+                            $httpCode = preg_match('/\s(\d{3})\s/', $statusLine, $matches) ? (int)$matches[1] : 0;
+                            $inviteBotError = is_array($inviteResponse) && !empty($inviteResponse['error'])
+                                ? (string)$inviteResponse['error']
+                                : ($httpCode >= 400 ? 'bot returned http ' . $httpCode : 'could not contact discord bot');
                         }
                     }
 
                     if ($inviteBotError !== null) {
                         $errorMessage = 'account created, but the discord invite dm failed: ' . $inviteBotError;
                     } else {
-                        $inviteResponse = json_decode((string)$inviteResponseRaw, true);
                         if (!is_array($inviteResponse) || empty($inviteResponse['ok'])) {
-                            $errorMessage = 'account created, but the discord invite dm failed.';
+                            $inviteBotError = is_array($inviteResponse) && !empty($inviteResponse['error'])
+                                ? (string)$inviteResponse['error']
+                                : 'unknown bot response';
+                            $errorMessage = 'account created, but the discord invite dm failed: ' . $inviteBotError;
                         }
                     }
                 }
@@ -229,6 +241,9 @@ if (!$template_path) {
 }
 
 $template = file_get_contents($template_path);
+if (function_exists('apply_preferred_theme_stylesheet')) {
+    $template = apply_preferred_theme_stylesheet($template, __DIR__);
+}
 
 $content_path = find_template_file('content.html');
 if (!$content_path) {

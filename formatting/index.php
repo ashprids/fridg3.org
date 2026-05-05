@@ -43,6 +43,9 @@ if (!$template_path) {
 }
 
 $template = file_get_contents($template_path);
+if (function_exists('apply_preferred_theme_stylesheet')) {
+    $template = apply_preferred_theme_stylesheet($template, __DIR__);
+}
 
 // Always show a greeting; personalize if logged in
 $user_greeting = '<div id="user-greeting">Hello, [name]!</div>';
