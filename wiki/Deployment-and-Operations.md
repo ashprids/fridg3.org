@@ -46,6 +46,21 @@ from `README.md`:
 - files should be `644`
 - `/data` and `sitemap.xml` need `http:http` ownership for webserver writes
 
+## Nginx Clean URLs
+
+production nginx needs explicit rewrites for PHP routes that accept path-style ids. without these, nginx falls through to the root `/index.php` fallback before the route can parse the URL.
+
+mdpaste share links use `/others/mdpaste/s/{id}` and need this block before the generic `location /` fallback. keep the regexes quoted, because nginx treats unquoted `{16}` like cursed config syntax.
+
+```nginx
+# mdpaste clean URLs
+location ~ "^/others/mdpaste/s/[a-fA-F0-9]{16}/?$" {
+    rewrite "^/others/mdpaste/s/([a-fA-F0-9]{16})/?$" /others/mdpaste/s/index.php?id=$1 last;
+}
+location /others/mdpaste/s/ { try_files $uri $uri/ /others/mdpaste/s/index.php?$args; }
+location /others/mdpaste/   { try_files $uri $uri/ /others/mdpaste/index.php?$args; }
+```
+
 ## Backup Workflow
 
 `/.github/workflows/backup-data.yml`

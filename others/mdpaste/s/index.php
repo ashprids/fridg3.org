@@ -8,7 +8,9 @@ $paste = null;
 $markdown = null;
 $error = '';
 
-if ($id !== '' && isset($_GET['id']) && $_SERVER['REQUEST_METHOD'] === 'GET') {
+$requestPath = parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH);
+$alreadyCleanUrl = is_string($requestPath) && preg_match('#^/others/mdpaste/s/[a-fA-F0-9]{16}/?$#', $requestPath);
+if ($id !== '' && isset($_GET['id']) && !$alreadyCleanUrl && $_SERVER['REQUEST_METHOD'] === 'GET') {
 	header('Location: /others/mdpaste/s/' . rawurlencode($id), true, 301);
 	exit;
 }
