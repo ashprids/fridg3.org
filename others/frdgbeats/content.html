@@ -1,0 +1,225 @@
+<div class="frdgbeats-daw" id="frdgbeats-daw">
+    <div class="fb-toolbar fb-panel">
+        <button class="fb-app-title" id="fb-open-credits" type="button" data-tooltip="credits">frdgBeats</button>
+
+        <div class="fb-transport" aria-label="transport controls">
+            <button class="fb-button" id="fb-play" type="button" data-tooltip="play / pause"><i class="fa-solid fa-play"></i></button>
+            <button class="fb-button" id="fb-stop" type="button" data-tooltip="stop"><i class="fa-solid fa-stop"></i></button>
+            <button class="fb-button" id="fb-record" type="button" data-tooltip="record notes from keyboard"><i class="fa-solid fa-circle"></i></button>
+        </div>
+
+        <label class="fb-tempo">
+            <span>bpm</span>
+            <input id="fb-bpm" type="number" min="60" max="200" step="1" value="128">
+        </label>
+
+        <label class="fb-tempo">
+            <span>beats</span>
+            <select class="fb-select" id="fb-pattern-steps">
+                <option value="16" selected>16</option>
+                <option value="32">32</option>
+            </select>
+        </label>
+
+        <button class="fb-button" id="fb-open-wiki" type="button" data-tooltip="open wiki"><i class="fa-solid fa-book-open"></i></button>
+
+        <div class="fb-title-strip">
+            <input class="fb-project-name" id="fb-project-name" type="text" value="Untitled" aria-label="project name">
+            <div class="fb-status" id="fb-status">audio engine idle</div>
+        </div>
+
+        <div class="fb-master-strip">
+            <label class="fb-master-volume">
+                <span>master</span>
+                <input class="fb-range" id="fb-master-volume" type="range" min="0" max="1" step="0.01" value="0.82">
+            </label>
+            <canvas class="fb-waveform" id="fb-waveform" width="150" height="30" aria-hidden="true"></canvas>
+            <div class="fb-meter-shell" aria-hidden="true">
+                <div class="fb-meter"><div class="fb-meter-fill" id="fb-meter-l"></div></div>
+                <div class="fb-meter"><div class="fb-meter-fill" id="fb-meter-r"></div></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="fb-main">
+        <section class="fb-panel" aria-label="channel rack">
+            <div class="fb-section-title">
+                <span>channel rack</span>
+                <button class="fb-button fb-mini-button" id="fb-add-channel" type="button" data-tooltip="add channel"><i class="fa-solid fa-plus"></i></button>
+            </div>
+            <div class="fb-channel-list" id="fb-channel-list"></div>
+        </section>
+
+        <section class="fb-panel fb-editor" aria-label="pattern editor">
+            <div class="fb-section-title">
+                <div class="fb-tabs">
+                    <button class="fb-tab is-active" id="fb-roll-tab" type="button">piano roll</button>
+                    <button class="fb-tab" id="fb-playlist-tab" type="button">playlist</button>
+                    <button class="fb-tab" id="fb-mixer-tab" type="button">mixer</button>
+                    <button class="fb-tab" id="fb-automation-tab" type="button">automate</button>
+                    <button class="fb-tab" id="fb-waveform-tab" type="button" disabled>waveform</button>
+                    <button class="fb-tab" id="fb-synth-tab" type="button" disabled>synth</button>
+                </div>
+                <div class="fb-action-row">
+                    <button class="fb-button" id="fb-save" type="button" data-tooltip="save browser project"><i class="fa-solid fa-floppy-disk"></i></button>
+                    <button class="fb-button" id="fb-load" type="button" data-tooltip="load browser project"><i class="fa-solid fa-folder-open"></i></button>
+                    <div class="fb-menu-wrap">
+                        <button class="fb-button" id="fb-new-project" type="button" data-tooltip="new project"><i class="fa-solid fa-file"></i></button>
+                        <div class="fb-menu fb-hidden" id="fb-presets-menu">
+                            <button class="fb-menu-option" type="button" disabled>
+                                <i class="fa-solid fa-spinner"></i>
+                                <span><span class="fb-menu-title">loading presets</span><span class="fb-menu-desc">checking /others/frdgbeats/presets</span></span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="fb-menu-wrap">
+                        <button class="fb-button" id="fb-demos-menu-button" type="button" data-tooltip="load demos"><i class="fa-solid fa-list"></i></button>
+                        <div class="fb-menu fb-hidden" id="fb-demos-menu">
+                            <button class="fb-menu-option" type="button" disabled>
+                                <i class="fa-solid fa-spinner"></i>
+                                <span><span class="fb-menu-title">loading demos</span><span class="fb-menu-desc">checking /others/frdgbeats/demos</span></span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="fb-menu-wrap">
+                        <button class="fb-button" id="fb-global-soundfont" type="button" data-tooltip="set all SoundFont channels"><i class="fa-solid fa-keyboard"></i></button>
+                        <div class="fb-menu fb-hidden" id="fb-soundfont-menu">
+                            <button class="fb-menu-option" type="button" disabled>
+                                <i class="fa-solid fa-spinner"></i>
+                                <span><span class="fb-menu-title">loading soundfonts</span><span class="fb-menu-desc">checking /others/frdgbeats/soundfonts</span></span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="fb-menu-wrap">
+                        <button class="fb-button" id="fb-import-menu-button" type="button" data-tooltip="import options"><i class="fa-solid fa-file-import"></i></button>
+                        <div class="fb-menu fb-hidden" id="fb-import-menu">
+                            <button class="fb-menu-option" id="fb-import-project" type="button">
+                                <i class="fa-solid fa-file-code"></i>
+                                <span><span class="fb-menu-title">frdgBeats project</span><span class="fb-menu-desc">replace the current project with a saved frdgBeats file</span></span>
+                            </button>
+                            <button class="fb-menu-option" id="fb-import-midi" type="button">
+                                <i class="fa-solid fa-music"></i>
+                                <span><span class="fb-menu-title">MIDI file</span><span class="fb-menu-desc">replace the project with MIDI channels and playlist clips</span></span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="fb-menu-wrap">
+                        <button class="fb-button" id="fb-export-menu-button" type="button" data-tooltip="export options"><i class="fa-solid fa-file-export"></i></button>
+                        <div class="fb-menu fb-hidden" id="fb-export-menu">
+                            <button class="fb-menu-option" id="fb-export-project" type="button">
+                                <i class="fa-solid fa-file-code"></i>
+                                <span><span class="fb-menu-title">frdgBeats project</span><span class="fb-menu-desc">save patterns, playlist clips, and instrument settings</span></span>
+                            </button>
+                            <button class="fb-menu-option" id="fb-export-midi" type="button">
+                                <i class="fa-solid fa-file-audio"></i>
+                                <span><span class="fb-menu-title">MIDI file</span><span class="fb-menu-desc">export arranged note data for another DAW</span></span>
+                            </button>
+                            <button class="fb-menu-option" id="fb-export-wav" type="button">
+                                <i class="fa-solid fa-wave-square"></i>
+                                <span><span class="fb-menu-title">WAV render</span><span class="fb-menu-desc">render the current arrangement to a stereo audio file</span></span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <input class="fb-hidden" id="fb-project-file" type="file" accept=".frdgbeats,application/json">
+                <input class="fb-hidden" id="fb-midi-file" type="file" accept=".mid,.midi,audio/midi,audio/x-midi">
+                <input class="fb-hidden" id="fb-global-soundfont-file" type="file" accept=".sf2,audio/x-soundfont">
+            </div>
+
+            <div class="fb-editor-body" id="fb-roll-view">
+                <div class="fb-roll-meta">
+                    <div class="fb-selected-label" id="fb-selected-label">selected: drums</div>
+                    <div class="fb-field-row">
+                        <label class="fb-field">
+                            <span>pattern</span>
+                            <select class="fb-select" id="fb-pattern"></select>
+                        </label>
+                        <label class="fb-field">
+                            <span>octave</span>
+                            <select class="fb-select" id="fb-octave">
+                                <option value="1">1</option>
+                                <option value="2" selected>2</option>
+                                <option value="3">3</option>
+                            </select>
+                        </label>
+                        <label class="fb-field">
+                            <span>snap</span>
+                            <select class="fb-select" id="fb-note-snap">
+                                <option value="1">1</option>
+                                <option value="0.5" selected>1/2</option>
+                                <option value="0.25">1/4</option>
+                            </select>
+                        </label>
+                        <button class="fb-button" id="fb-octave-down" type="button" data-tooltip="move pattern notes down one octave"><i class="fa-solid fa-arrow-down"></i></button>
+                        <button class="fb-button" id="fb-octave-up" type="button" data-tooltip="move pattern notes up one octave"><i class="fa-solid fa-arrow-up"></i></button>
+                        <button class="fb-button" id="fb-clear-pattern" type="button" data-tooltip="clear selected pattern"><i class="fa-solid fa-eraser"></i></button>
+                    </div>
+                </div>
+                <div class="fb-piano-roll" id="fb-piano-roll"></div>
+            </div>
+
+            <div class="fb-editor-body fb-hidden" id="fb-playlist-view">
+                <div class="fb-roll-meta">
+                    <div class="fb-selected-label">arrangement</div>
+                    <button class="fb-button" id="fb-clear-playlist" type="button" data-tooltip="clear arrangement"><i class="fa-solid fa-eraser"></i></button>
+                </div>
+                <div class="fb-playlist-tools" id="fb-playlist-tools"></div>
+                <div class="fb-playlist-wrap">
+                    <div class="fb-playlist" id="fb-playlist"></div>
+                </div>
+            </div>
+
+            <div class="fb-editor-body fb-hidden" id="fb-mixer-view">
+                <div class="fb-roll-meta">
+                    <div class="fb-selected-label" id="fb-mixer-label">mixer</div>
+                    <div class="fb-field-row">
+                        <select class="fb-select" id="fb-effect-picker" aria-label="effect type"></select>
+                        <button class="fb-button" id="fb-add-effect" type="button" data-tooltip="add effect"><i class="fa-solid fa-plus"></i></button>
+                    </div>
+                </div>
+                <div class="fb-mixer" id="fb-mixer"></div>
+            </div>
+
+            <div class="fb-editor-body fb-hidden" id="fb-automation-view">
+                <div class="fb-roll-meta">
+                    <div class="fb-selected-label" id="fb-automation-label">automation</div>
+                    <div class="fb-field-row">
+                        <label class="fb-field">
+                            <span>pattern</span>
+                            <select class="fb-select" id="fb-automation-pattern" aria-label="automation pattern"></select>
+                        </label>
+                        <select class="fb-select" id="fb-automation-target" aria-label="automation target"></select>
+                        <button class="fb-button" id="fb-add-automation" type="button" data-tooltip="add automation lane"><i class="fa-solid fa-plus"></i></button>
+                    </div>
+                </div>
+                <div class="fb-automation" id="fb-automation"></div>
+            </div>
+
+            <div class="fb-editor-body fb-hidden" id="fb-waveform-view">
+                <div class="fb-roll-meta">
+                    <div class="fb-selected-label" id="fb-waveform-label">waveform</div>
+                    <div class="fb-field-row">
+                        <button class="fb-button" id="fb-sample-zoom-out" type="button" data-tooltip="zoom out"><i class="fa-solid fa-magnifying-glass-minus"></i></button>
+                        <button class="fb-button" id="fb-sample-zoom-reset" type="button" data-tooltip="reset zoom"><i class="fa-solid fa-expand"></i></button>
+                        <button class="fb-button" id="fb-sample-zoom-in" type="button" data-tooltip="zoom in"><i class="fa-solid fa-magnifying-glass-plus"></i></button>
+                        <button class="fb-button" id="fb-remove-sample-zone" type="button" data-tooltip="remove selected note zone"><i class="fa-solid fa-trash"></i></button>
+                    </div>
+                </div>
+                <div class="fb-sample-editor">
+                    <canvas class="fb-sample-canvas" id="fb-sample-canvas" width="900" height="300" aria-label="sample waveform editor"></canvas>
+                    <input class="fb-range fb-sample-scroll" id="fb-sample-scroll" type="range" min="0" max="1" step="0.001" value="0" aria-label="waveform horizontal scroll">
+                    <div class="fb-sample-editor-status" id="fb-sample-editor-status">drag the top handles to trim, drag the lower lane to map notes</div>
+                </div>
+            </div>
+
+            <div class="fb-editor-body fb-hidden" id="fb-synth-view">
+                <div class="fb-roll-meta">
+                    <div class="fb-selected-label" id="fb-synth-label">synth</div>
+                </div>
+                <div class="fb-synth-editor" id="fb-synth-editor"></div>
+            </div>
+        </section>
+    </div>
+</div>
+
+<script src="/others/frdgbeats/frdgbeats.js"></script>

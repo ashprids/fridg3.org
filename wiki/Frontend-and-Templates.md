@@ -57,6 +57,8 @@ translation: if you change shared ids, buttons, or route transitions, test more 
 
 themes are declared by `/themes/*.json` and assets live in `/themes/lib`. desktop theme selection can use themed HTML and CSS; mobile view keeps the mobile template and appends theme CSS after mobile-specific inline styles.
 
+frdgBeats is theme-aware. its base stylesheet keeps the original default DAW colors, while selected theme stylesheets override `.frdgbeats-daw` `--fb-*` variables derived from `--bg`, `--fg`, `--border`, `--subtle`, and `--links`. body-mounted popups copy those variables from the app wrapper so their dialogs stay opaque and themed. synth and effect custom editors keep their own unique styling across every theme. the frdgBeats route also forces the app content area to full width after theme CSS loads.
+
 fonts and icons come from:
 
 - local font files in `resources/`
