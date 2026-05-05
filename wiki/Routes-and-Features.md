@@ -181,11 +181,25 @@ misc landing page for routes that do not fit elsewhere.
 
 Subroutes:
 
+- `/others/mdpaste`
 - `/others/off-topic-archive`
 - `/others/toast-discord-bot`
 - `/others/fridge-builds-websites`
 - `/others/frdgbeats`
 - `/others/frdgbeats/wiki`
+
+### `/others/mdpaste`
+
+standalone markdown paste service for sharing notes without exposing a whole vault.
+
+- accepts pasted markdown or client-loaded `.md` / `.txt` files
+- live previews markdown before publishing
+- supports normal markdown images plus Obsidian-style `![[image.png]]` embeds that point at `/data/images`
+- optional hard-break mode keeps single line breaks in formatted paragraphs
+- `POST /others/mdpaste/` writes temporary paste JSON under `data/mdpaste`
+- optional password mode encrypts the markdown with AES-256-GCM before storage
+- shared links render from `/others/mdpaste/s/{pasteId}`
+- pastes expire after 30 days
 
 ### `/others/off-topic-archive`
 

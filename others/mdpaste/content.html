@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>mdpaste | fridg3.org</title>
+	<meta
+		name="description"
+		content="quickly paste markdown content and share with others."
+	>
+	<meta name="robots" content="noindex,nofollow">
+	<link rel="stylesheet" href="/others/mdpaste/style.css">
+
+    <!-- favicons + app formatting -->
+    <link rel="icon" type="image/png" href="/resources/favicon-96x96.png" sizes="96x96" />
+    <link rel="icon" type="image/svg+xml" href="/resources/favicon.svg" />
+    <link rel="shortcut icon" href="/resources/favicon.ico" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/resources/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-title" content="fridg3.org" />
+    <link rel="manifest" href="/resources/site.webmanifest" />
+</head>
+
+<body>
+	<main class="page">
+		<header class="service-header" aria-labelledby="page-title">
+			<a class="home-link" href="/others/">fridg3.org / others</a>
+			<h1 id="page-title">mdpaste</h1>
+			<p>paste markdown, preview it, then ship a share link.<br>encrypted pastes are locked before they're stored on disk.</p>
+		</header>
+
+		<section class="workspace" aria-label="Markdown paste editor">
+			<form class="editor-panel" id="mdpaste-form">
+				<div class="panel-header">
+					<h2>write</h2>
+					<label for="markdown-file" class="btn btn-secondary" id="upload-trigger">upload file</label>
+					<input id="markdown-file" type="file" accept=".md,.txt,text/markdown,text/plain" aria-label="Upload markdown or text file">
+				</div>
+
+				<label class="field-label" for="markdown-input">markdown text</label>
+				<textarea
+					id="markdown-input"
+					class="markdown-input"
+					placeholder="# Title&#10;&#10;Write markdown here or upload a .md file..."
+				></textarea>
+
+				<div class="password-row">
+					<label class="password-wrap" for="password-input">
+						<span class="field-label">password (optional)</span>
+						<input
+							id="password-input"
+							type="password"
+							class="password-input"
+							placeholder="leave blank for public"
+							autocomplete="new-password"
+						>
+					</label>
+					<button type="submit" class="btn" id="create-link-btn">create link</button>
+				</div>
+
+				<label class="checkbox-option" for="hard-breaks-input">
+					<input id="hard-breaks-input" type="checkbox">
+					<span>keep single line breaks</span>
+				</label>
+
+				<p class="status-line" id="status-line" role="status" aria-live="polite">stored for 30 days. max size: 512 KiB.</p>
+				<div class="result-box" id="result-box" hidden>
+					<label class="field-label" for="share-link">share link</label>
+					<div class="share-row">
+						<input id="share-link" class="share-link" type="url" readonly>
+						<button type="button" class="btn btn-secondary" id="copy-link-btn">copy</button>
+					</div>
+				</div>
+			</form>
+
+			<section class="preview-panel" aria-labelledby="preview-title">
+				<div class="panel-header">
+					<h2 id="preview-title">preview</h2>
+				</div>
+				<article id="markdown-preview-body" class="markdown-body">
+					<p>your formatted markdown will appear here automatically.</p>
+				</article>
+			</section>
+		</section>
+	</main>
+	<script src="/others/mdpaste/main.js" defer></script>
+</body>
+</html>
