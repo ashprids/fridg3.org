@@ -68,6 +68,7 @@ main stores:
 - `data/feed/replies/*.json`
 - `data/journal/*.txt`
 - `data/journal/drafts/*.txt`
+- `data/chat/*.json`
 - `data/guestbook/*.txt`
 - `data/newsletter/*.html`
 - `data/etc/*.json`

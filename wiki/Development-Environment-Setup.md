@@ -155,7 +155,7 @@ example:
       "isAdmin": true,
       "mustResetPassword": false,
       "discordUserId": "",
-      "allowedPages": ["feed", "journal", "comments"],
+      "allowedPages": ["feed", "journal", "comments", "chat"],
       "bookmarks": [],
       "theme": "default",
       "glowIntensity": "medium",

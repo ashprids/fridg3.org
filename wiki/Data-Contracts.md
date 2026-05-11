@@ -28,7 +28,7 @@ expected top-level shape:
       "isAdmin": true,
       "mustResetPassword": false,
       "discordUserId": "optional discord snowflake string",
-      "allowedPages": ["feed", "journal", "comments"],
+      "allowedPages": ["feed", "journal", "comments", "chat"],
       "bookmarks": ["2026-01-01_12-00-00", "journal:12", "newsletter:2026-01-01"],
       "theme": "default|custom|theme-id",
       "glowIntensity": "none|low|medium|high",
@@ -53,7 +53,36 @@ notes:
 - `theme: default` uses the standard template and `/style.css`; `theme: custom` enables saved `colors`; any other valid value refers to a `/themes/{theme-id}.json` file
 - `mustResetPassword` is used by the shared session bootstrap to force first-login password changes
 - `discordUserId` links a site account to a Discord member for bot DMs and notifications
-- `allowedPages` currently includes functional grants like `feed`, `journal`, and `comments`
+- `allowedPages` currently includes functional grants like `feed`, `journal`, `comments`, and `chat`
+
+## `data/chat/`
+
+one-time private conversations live as individual encrypted JSON envelopes:
+
+```json
+{
+  "version": 1,
+  "cipher": "aes-256-gcm",
+  "nonce": "base64",
+  "tag": "base64",
+  "ciphertext": "base64"
+}
+```
+
+notes:
+
+- each file is named `{conversationId}.json`; new chat ids are 9 lowercase letters/numbers
+- legacy 32-character lowercase hex ids are still accepted so older active links do not break
+- decrypted payloads contain conversation metadata, the recipient label in `name`, the recipient cookie hash, and message records
+- messages may include an `attachment` object with encrypted blob metadata: `id`, `name`, `mime`, and `size`
+- recipient cookies are HttpOnly and scoped to `/chat`
+- the first non-manager browser to open `/chat/{conversationId}` claims the recipient slot
+- admins and accounts with `allowedPages` containing `chat` can create, view, and delete conversations without claiming the recipient slot
+- deleting a conversation unlinks the encrypted JSON file immediately
+- encryption uses `FRIDG3_CHAT_KEY` when set; otherwise the app creates `data/chat/.chat_key`
+- lightweight online indicators use sidecar timestamp files under `data/chat/.presence/{conversationId}.json`
+- attachments are encrypted AES-256-GCM envelopes under `data/chat/.attachments/{conversationId}/`; they are served only through the authorized chat route and are deleted with the conversation
+- attachment uploads are capped at 8 MB
 
 ## `/themes/`
 
