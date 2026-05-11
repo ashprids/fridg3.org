@@ -527,7 +527,7 @@ function chat_set_participant_cookie(string $id, string $secret): void {
         'path' => '/chat',
         'secure' => isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on',
         'httponly' => true,
-        'samesite' => 'Strict',
+        'samesite' => 'Lax',
     ]);
     $_COOKIE[chat_cookie_name($id)] = $secret;
 }
@@ -836,19 +836,33 @@ if ($conversationId !== '') {
     if (!$canManage) {
         $participantHash = (string)($conversation['participantHash'] ?? '');
         if ($participantHash === '') {
-            $secret = bin2hex(random_bytes(32));
-            $conversation['participantHash'] = hash('sha256', $secret);
-            $conversation['claimedAt'] = time();
-            chat_write_conversation($chatDataDir, $chatKeyPath, $conversation);
-            chat_set_participant_cookie($conversationId, $secret);
-            $authUrl = '/chat/' . rawurlencode($conversationId);
-            chat_render_page('authenticating', 'private chat authentication.', '<h1>authenticating...</h1><h2>locking this chat to your browser.</h2><br><script>setTimeout(function(){ window.location.href = ' . json_encode($authUrl) . '; }, 900);</script><p><a href="' . chat_h($authUrl) . '">continue</a></p>');
-            exit;
-        }
+            $pendingHash = (string)($conversation['pendingParticipantHash'] ?? '');
+            $pendingAt = (int)($conversation['pendingParticipantAt'] ?? 0);
+            $cookieHash = $cookieSecret === '' ? '' : hash('sha256', $cookieSecret);
 
-        $cookieHash = $cookieSecret === '' ? '' : hash('sha256', $cookieSecret);
-        if ($cookieHash === '' || !hash_equals($participantHash, $cookieHash)) {
-            chat_render_error('chat access denied', 'this one-time link has already been claimed by another browser.', 403);
+            if ($pendingHash !== '' && $cookieHash !== '' && hash_equals($pendingHash, $cookieHash)) {
+                $conversation['participantHash'] = $pendingHash;
+                $conversation['claimedAt'] = time();
+                unset($conversation['pendingParticipantHash'], $conversation['pendingParticipantAt']);
+                chat_write_conversation($chatDataDir, $chatKeyPath, $conversation);
+            } else {
+                if ($pendingHash === '' || $pendingAt < time() - 300) {
+                    $secret = bin2hex(random_bytes(32));
+                    $conversation['pendingParticipantHash'] = hash('sha256', $secret);
+                    $conversation['pendingParticipantAt'] = time();
+                    chat_write_conversation($chatDataDir, $chatKeyPath, $conversation);
+                    chat_set_participant_cookie($conversationId, $secret);
+                }
+
+                $authUrl = '/chat/' . rawurlencode($conversationId);
+                chat_render_page('authenticating', 'private chat authentication.', '<h1>authenticating...</h1><h2>locking this chat to your browser.</h2><br><script>setTimeout(function(){ window.location.href = ' . json_encode($authUrl) . '; }, 900);</script><p><a href="' . chat_h($authUrl) . '">continue</a></p>');
+                exit;
+            }
+        } else {
+            $cookieHash = $cookieSecret === '' ? '' : hash('sha256', $cookieSecret);
+            if ($cookieHash === '' || !hash_equals($participantHash, $cookieHash)) {
+                chat_render_error('chat access denied', 'this link has already been claimed by another browser.', 403);
+            }
         }
     }
 
