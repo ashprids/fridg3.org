@@ -846,13 +846,11 @@ if ($conversationId !== '') {
                 unset($conversation['pendingParticipantHash'], $conversation['pendingParticipantAt']);
                 chat_write_conversation($chatDataDir, $chatKeyPath, $conversation);
             } else {
-                if ($pendingHash === '' || $pendingAt < time() - 300) {
-                    $secret = bin2hex(random_bytes(32));
-                    $conversation['pendingParticipantHash'] = hash('sha256', $secret);
-                    $conversation['pendingParticipantAt'] = time();
-                    chat_write_conversation($chatDataDir, $chatKeyPath, $conversation);
-                    chat_set_participant_cookie($conversationId, $secret);
-                }
+                $secret = bin2hex(random_bytes(32));
+                $conversation['pendingParticipantHash'] = hash('sha256', $secret);
+                $conversation['pendingParticipantAt'] = time();
+                chat_write_conversation($chatDataDir, $chatKeyPath, $conversation);
+                chat_set_participant_cookie($conversationId, $secret);
 
                 $authUrl = '/chat/' . rawurlencode($conversationId);
                 chat_render_page('authenticating', 'private chat authentication.', '<h1>authenticating...</h1><h2>locking this chat to your browser.</h2><br><script>setTimeout(function(){ window.location.href = ' . json_encode($authUrl) . '; }, 900);</script><p><a href="' . chat_h($authUrl) . '">continue</a></p>');
