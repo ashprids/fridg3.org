@@ -103,7 +103,7 @@ destroys session and auth cookies, then redirects back to login.
 admin-only account creation flow that writes to `data/accounts/accounts.json`.
 
 - can seed `discordUserId`
-- can grant `comments` permission
+- can grant `comments` and `chat` permissions
 - newly created accounts are flagged with `mustResetPassword`
 - if a Discord id is provided, it asks the local toast bot to DM the invite credentials
 - if that DM fails, the account is still created and the UI now shows the bot's concrete failure reason instead of a generic HTTP 500
@@ -134,10 +134,38 @@ not covered in the older references, but very real.
 - supports rename, display-name change, permission changes, reset password, and delete
 - preserves unknown extra account fields through an editable JSON object field
 - blocks deleting the currently logged-in account
-- includes `comments` as a grantable `allowedPages` permission
+- includes `comments` and `chat` as grantable `allowedPages` permissions
 - password resets now preserve the account and flip `mustResetPassword` back on
 
 Helpers live in `account/admin/helpers.php`.
+
+## Private Chat Routes
+
+### `/chat`
+
+one-time private conversation manager.
+
+- requires admin or `allowedPages` containing `chat`
+- creates conversations with a recipient label
+- lists active conversation files from `data/chat/*.json`
+- shows share links shaped like `/chat/{conversationId}`
+- can end a conversation, which deletes the encrypted JSON file immediately
+
+### `/chat/{conversationId}`
+
+one-to-one conversation view.
+
+- managers can open without claiming recipient access
+- the first non-manager visitor sees an authenticating page and receives an HttpOnly recipient cookie
+- later visits from that browser are allowed through
+- other browsers without the matching cookie get a custom access-denied page
+- if the backing file is deleted, returning recipients see the ended-conversation page
+- messages are stored inside the encrypted per-conversation JSON envelope under `data/chat`
+- image/file attachments up to 8 MB are stored as encrypted per-chat blobs and served only after chat access checks
+- selecting an attachment shows an attached-file indicator before send; image attachments use the site image viewer
+- both sides send visible-tab presence heartbeats, and the page shows whether the other side is currently online
+- message sends update the current page immediately, and open chat pages poll for new messages
+- message timestamps show time only, with a date divider inserted at the first message for each day
 
 ## Email / Newsletter Routes
 

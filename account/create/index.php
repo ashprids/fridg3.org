@@ -47,6 +47,7 @@ $formIsAdmin = false;
 $formAllowFeed = false;
 $formAllowJournal = false;
 $formAllowComments = false;
+$formAllowChat = false;
 
 function generate_random_password(int $length = 15): string {
     $chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
@@ -66,6 +67,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $formAllowFeed = isset($_POST['allowFeed']);
     $formAllowJournal = isset($_POST['allowJournal']);
     $formAllowComments = isset($_POST['allowComments']);
+    $formAllowChat = isset($_POST['allowChat']);
 
     if ($formUsername === '' || $formName === '') {
         $errorMessage = 'username and name are required.';
@@ -104,6 +106,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             if ($formAllowComments) {
                 $allowedPages[] = 'comments';
+            }
+            if ($formAllowChat) {
+                $allowedPages[] = 'chat';
             }
 
             $newAccount = [
@@ -199,6 +204,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $formAllowFeed = false;
                 $formAllowJournal = false;
                 $formAllowComments = false;
+                $formAllowChat = false;
             }
         }
     }
@@ -264,6 +270,7 @@ $content = str_replace([
     '{allow_feed_checked}',
     '{allow_journal_checked}',
     '{allow_comments_checked}',
+    '{allow_chat_checked}',
 ], [
     $errorMessage === '' ? 'display:none;' : '',
     htmlspecialchars($errorMessage, ENT_QUOTES, 'UTF-8'),
@@ -277,6 +284,7 @@ $content = str_replace([
     $formAllowFeed ? 'checked' : '',
     $formAllowJournal ? 'checked' : '',
     $formAllowComments ? 'checked' : '',
+    $formAllowChat ? 'checked' : '',
 ], $content);
 $html = str_replace('{content}', $content, $template);
 $html = str_replace('{title}', $title, $html);
