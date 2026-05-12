@@ -2015,13 +2015,17 @@ hr {
     color: var(--chat-muted);
 }
 
+.chat-messages-wrap {
+    position: relative;
+}
+
 .chat-typing-indicator {
     display: none;
     position: absolute;
-    left: 14px;
-    bottom: 66px;
+    left: 15px;
+    bottom: 15px;
     z-index: 4;
-    max-width: calc(100% - 28px);
+    max-width: calc(100% - 30px);
     padding: 3px 8px;
     border: 1px solid var(--chat-border);
     background: var(--chat-bg);
@@ -2041,7 +2045,7 @@ hr {
     min-height: 380px;
     max-height: min(62vh, 680px);
     overflow-y: auto;
-    padding: 14px;
+    padding: 14px 14px 34px;
     border: 1px solid var(--chat-border);
     background: var(--chat-bg);
     color: var(--chat-fg);

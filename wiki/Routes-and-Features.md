@@ -157,7 +157,7 @@ one-to-one conversation view.
 
 - managers can open without claiming recipient access
 - the first non-manager visitor sees a concise chat invite/auth page and receives an HttpOnly recipient cookie
-- the recipient's first full chat view shows an in-site security/help popup explaining browser lock, encrypted storage, replies, and reactions
+- the recipient's first full chat view shows an in-site security/help popup explaining browser/account locking, encrypted storage, replies, and reactions
 - later visits from that browser are allowed through
 - if the recipient is logged into an account when they open an unclaimed invite, the chat links to that account instead of a browser cookie
 - logged-in recipients with an active linked chat get a sidebar button above the mini-player/sidebar footer and can delete that chat themselves
@@ -168,7 +168,7 @@ one-to-one conversation view.
 - selecting an attachment shows an attached-file indicator before send; image attachments use the site image viewer
 - messages can visually reply to a previous message, and clicking/tapping a message opens reply/react actions
 - reactions are emoji-based, searchable from the message context menu or the desktop-only emoji button beside the composer; the picker loads Twemoji-compatible Emojibase data from jsDelivr and falls back to a tiny local set if unavailable
-- both sides send active/away presence heartbeats plus short-lived typing state, and the page live-polls whether the other side is online, away, or offline while showing a non-layout-shifting typing indicator above the composer
+- both sides send active/away presence heartbeats plus short-lived typing state, and the page live-polls whether the other side is online, away, or offline while showing a non-layout-shifting typing indicator inside the message box
 - message sends update the current page immediately, and open chat pages poll for new messages
 - message timestamps show time only, with a date divider inserted at the first message for each day
 

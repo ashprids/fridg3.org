@@ -76,7 +76,7 @@ notes:
 - decrypted payloads contain conversation metadata, the recipient label in `name`, the recipient cookie hash, and message records
 - messages may include an `attachment` object with encrypted blob metadata: `id`, `name`, `mime`, and `size`
 - messages may include `replyTo` with another message id, plus `reactions` keyed by emoji with active viewer roles such as `manager` or `participant`
-- conversations may include `participantUsername` when a logged-in account claims the invite, or `participantHash` when an anonymous browser cookie claims it
+- conversations may include `participantUsername` when a logged-in account claims the invite, or `participantHash` when an anonymous browser cookie claims it; the first-open popup copy changes based on that claim type
 - conversations may include `recipientIntroSeenAt` once the recipient has seen the first-open security/help popup
 - recipient cookies are HttpOnly and scoped to `/chat`
 - the first non-manager account or anonymous browser to open `/chat/{conversationId}` claims the recipient slot
