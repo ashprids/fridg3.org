@@ -53,7 +53,7 @@ body {
 #title,
 .mobile-collapsed-title {
     color: #ff2fa8;
-    font-family: "MainBold", monospace;
+    font-family: "MainBold", var(--emoji-font), monospace;
     font-size: 23px;
     text-shadow: 2px 2px 0 #ffe85c;
 }
@@ -95,7 +95,7 @@ body {
     box-shadow: 3px 3px 0 var(--border);
     display: flex;
     align-items: center;
-    font-family: "MainBold", monospace;
+    font-family: "MainBold", var(--emoji-font), monospace;
     line-height: 1.1;
 }
 

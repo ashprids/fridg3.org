@@ -75,12 +75,16 @@ notes:
 - legacy 32-character lowercase hex ids are still accepted so older active links do not break
 - decrypted payloads contain conversation metadata, the recipient label in `name`, the recipient cookie hash, and message records
 - messages may include an `attachment` object with encrypted blob metadata: `id`, `name`, `mime`, and `size`
+- messages may include `replyTo` with another message id, plus `reactions` keyed by emoji with active viewer roles such as `manager` or `participant`
+- conversations may include `participantUsername` when a logged-in account claims the invite, or `participantHash` when an anonymous browser cookie claims it
+- conversations may include `recipientIntroSeenAt` once the recipient has seen the first-open security/help popup
 - recipient cookies are HttpOnly and scoped to `/chat`
-- the first non-manager browser to open `/chat/{conversationId}` claims the recipient slot
+- the first non-manager account or anonymous browser to open `/chat/{conversationId}` claims the recipient slot
+- account-linked recipients can delete their own active chat; anonymous cookie-linked recipients cannot
 - admins and accounts with `allowedPages` containing `chat` can create, view, and delete conversations without claiming the recipient slot
 - deleting a conversation unlinks the encrypted JSON file immediately
 - encryption uses `FRIDG3_CHAT_KEY` when set; otherwise the app creates `data/chat/.chat_key`
-- lightweight online indicators use sidecar timestamp files under `data/chat/.presence/{conversationId}.json`
+- lightweight presence indicators use sidecar files under `data/chat/.presence/{conversationId}.json`; current entries store `lastSeen`, `active`, and a short-lived `typingUntil`, while older timestamp-only entries are still readable
 - attachments are encrypted AES-256-GCM envelopes under `data/chat/.attachments/{conversationId}/`; they are served only through the authorized chat route and are deleted with the conversation
 - attachment uploads are capped at 8 MB
 

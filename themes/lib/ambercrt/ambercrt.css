@@ -45,7 +45,7 @@ body {
 #title,
 .mobile-collapsed-title {
     color: var(--fg);
-    font-family: "MainBold", monospace;
+    font-family: "MainBold", var(--emoji-font), monospace;
     text-shadow:
         0 0 8px rgba(255, 184, 77, 0.72),
         0 0 22px rgba(255, 111, 0, 0.42);
@@ -220,7 +220,7 @@ button:hover,
     max-width: 100%;
     overflow: hidden;
     color: var(--links);
-    font-family: "MainItalic", monospace;
+    font-family: "MainItalic", var(--emoji-font), monospace;
     font-size: 11px;
     text-overflow: ellipsis;
     white-space: nowrap;

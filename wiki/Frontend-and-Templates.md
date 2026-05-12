@@ -62,6 +62,7 @@ frdgBeats is theme-aware. its base stylesheet keeps the original default DAW col
 fonts and icons come from:
 
 - local font files in `resources/`
+- Twemoji COLR from jsDelivr as the global emoji font fallback
 - Font Awesome CDN
 - Highlight.js CDN
 

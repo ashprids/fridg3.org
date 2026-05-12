@@ -100,7 +100,7 @@ body {
 #title,
 .mobile-collapsed-title {
     color: #6f261f;
-    font-family: "MainBold", monospace;
+    font-family: "MainBold", var(--emoji-font), monospace;
     font-size: 22px;
     text-shadow: 1px 1px 0 #f8efd9;
 }

@@ -5,6 +5,7 @@
     --subtle: rgb(145, 125, 170);
     --links: rgb(65, 95, 173);
     --chat-own-fg: #ffffff;
+    --emoji-font: "Twemoji COLR", "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji";
 }
 
 #spa-loading {
@@ -17,7 +18,7 @@
     color: #f0f0f0;
     border: 1px solid rgba(255, 255, 255, 0.12);
     border-radius: 6px;
-    font-family: 'MainRegular', monospace;
+    font-family: 'MainRegular', var(--emoji-font), monospace;
     font-size: 12px;
     letter-spacing: 0.5px;
     z-index: 9999;
@@ -64,6 +65,12 @@
     }
 }
 @font-face {
+    font-family: "Twemoji COLR";
+    src: url("https://cdn.jsdelivr.net/npm/twemoji-colr-font@15.0.3/twemoji.woff2") format("woff2");
+    font-display: swap;
+}
+
+@font-face {
     font-family: 'MainRegular';
     src: url('resources/IosevkaFixedSS03-Regular.woff2');
 }
@@ -90,7 +97,7 @@
 
 #ascii,
 #ascii-time {
-    font-family: 'IBM_VGA', monospace;
+    font-family: 'IBM_VGA', var(--emoji-font), monospace;
     font-size: clamp(8px, 4vw, 12px);
     white-space: pre;
     overflow-wrap: normal;
@@ -134,7 +141,7 @@ body.mobile-template .usage-card {
 }
 
 .usage-ascii {
-    font-family: 'IBM_VGA', monospace;
+    font-family: 'IBM_VGA', var(--emoji-font), monospace;
     font-size: 11px;
     white-space: pre;
     color: #a6a6a6;
@@ -146,7 +153,7 @@ body.mobile-template .usage-card {
     margin-top: 6px;
     font-size: 12px;
     color: #777;
-    font-family: 'MainRegular', monospace;
+    font-family: 'MainRegular', var(--emoji-font), monospace;
 }
 
 body.mobile-template .usage-ascii {
@@ -201,7 +208,7 @@ body.mobile-template .usage-ascii {
 body {
     background-color: var(--bg);
     color: var(--fg);
-    font-family: 'MainRegular', monospace;
+    font-family: 'MainRegular', var(--emoji-font), monospace;
     font-size: 15px;
     margin: 0;
     width: 100vw;
@@ -273,7 +280,7 @@ body {
 }
 
 #title {
-    font-family: "MainBoldItalic", monospace;
+    font-family: "MainBoldItalic", var(--emoji-font), monospace;
     cursor: default;
     background-image: linear-gradient(0deg, #977eb6, #86d3cf);
     background-clip: text;
@@ -282,7 +289,7 @@ body {
 }
 
 #subtitle {
-    font-family: "MainItalic", monospace;
+    font-family: "MainItalic", var(--emoji-font), monospace;
     font-size: 11px;
     color: var(--subtle);
     margin-top: 4px;
@@ -356,7 +363,7 @@ button[data-tooltip] {
 }
 
 #tab {
-    font-family: "MainRegular", monospace;
+    font-family: "MainRegular", var(--emoji-font), monospace;
     padding: 8px;
     border-bottom: 1px solid var(--border);
     color: var(--fg);
@@ -375,7 +382,7 @@ button[data-tooltip] {
 }
 
 #user-greeting {
-    font-family: "MainItalic", monospace;
+    font-family: "MainItalic", var(--emoji-font), monospace;
     font-size: 12px;
     color: var(--subtle);
     padding: 8px;
@@ -389,6 +396,39 @@ button[data-tooltip] {
 
 #sidebar-spacer {
     margin-top: auto;
+}
+
+#sidebar > a#sidebar-active-chat {
+    display: flex !important;
+    align-items: center;
+    gap: 7px;
+    width: calc(100% - 16px) !important;
+    margin: 8px !important;
+    padding: 7px 8px !important;
+    border: 1px solid var(--border);
+    box-sizing: border-box;
+    color: var(--fg);
+    background: var(--bg);
+    font-family: "MainRegular", var(--emoji-font), monospace;
+    font-size: 12px;
+    line-height: 1.2;
+    overflow: hidden;
+}
+
+#sidebar > a#sidebar-active-chat:hover {
+    background: rgb(30, 30, 30);
+}
+
+#sidebar > a#sidebar-active-chat i {
+    flex: 0 0 auto;
+    color: var(--subtle);
+}
+
+#sidebar > a#sidebar-active-chat span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 #sidebar-footer {
@@ -414,7 +454,7 @@ button[data-tooltip] {
 
 .mini-track {
     font-size: 11px;
-    font-family: "MainRegular", monospace;
+    font-family: "MainRegular", var(--emoji-font), monospace;
     color: rgba(200, 200, 200, 0.9);
     cursor: pointer;
     white-space: nowrap;
@@ -428,7 +468,7 @@ button[data-tooltip] {
 
 .mini-track.active {
     color: var(--fg);
-    font-family: "MainBold", monospace;
+    font-family: "MainBold", var(--emoji-font), monospace;
 }
 
 #mini-player {
@@ -509,7 +549,7 @@ button[data-tooltip] {
 #mini-player-title-inner {
     display: inline-block;
     font-size: 11px;
-    font-family: "MainItalic", monospace;
+    font-family: "MainItalic", var(--emoji-font), monospace;
     color: var(--subtle);
     white-space: nowrap;
     text-overflow: ellipsis;
@@ -647,7 +687,7 @@ button[data-tooltip] {
 
 #footer-text {
     font-size: 12px;
-    font-family: "MainItalic", monospace;
+    font-family: "MainItalic", var(--emoji-font), monospace;
     color: var(--subtle);
     display: block;
     text-align: center;
@@ -667,7 +707,7 @@ button[data-tooltip] {
 
 #content-footer-views {
     font-size: 12px;
-    font-family: "MainItalic", monospace;
+    font-family: "MainItalic", var(--emoji-font), monospace;
     color: #67676754;
 }
 
@@ -710,7 +750,7 @@ button[data-tooltip] {
 }
 
 #footer-button {
-    font-family: "MainRegular", monospace;
+    font-family: "MainRegular", var(--emoji-font), monospace;
     font-size: 12px;
     color: var(--fg);
     background-color: var(--bg);
@@ -811,7 +851,7 @@ body.mobile-template #footer-buttons > a.mobile-footer-link > #footer-button.mob
 }
 
 .checkbox-label span {
-    font-family: 'MainRegular', monospace;
+    font-family: 'MainRegular', var(--emoji-font), monospace;
     font-size: 15px;
     color: var(--fg);
 }
@@ -852,7 +892,7 @@ body.mobile-template #footer-buttons > a.mobile-footer-link > #footer-button.mob
 }
 
 .radio-label span {
-    font-family: 'MainRegular', monospace;
+    font-family: 'MainRegular', var(--emoji-font), monospace;
     font-size: 15px;
     color: var(--fg);
 }
@@ -875,7 +915,7 @@ body.mobile-template #footer-buttons > a.mobile-footer-link > #footer-button.mob
     align-items: center;
     justify-content: space-between;
     gap: 12px;
-    font-family: 'MainRegular', monospace;
+    font-family: 'MainRegular', var(--emoji-font), monospace;
     font-size: 14px;
     color: var(--fg);
 }
@@ -920,7 +960,7 @@ body.mobile-template #footer-buttons > a.mobile-footer-link > #footer-button.mob
 }
 
 .dropdown {
-    font-family: 'MainRegular', monospace;
+    font-family: 'MainRegular', var(--emoji-font), monospace;
     font-size: 14px;
     color: var(--fg);
     background-color: var(--bg);
@@ -951,7 +991,7 @@ body.mobile-template #footer-buttons > a.mobile-footer-link > #footer-button.mob
 .dropdown option {
     background-color: var(--bg);
     color: var(--fg);
-    font-family: 'MainRegular', monospace;
+    font-family: 'MainRegular', var(--emoji-font), monospace;
     font-size: 14px;
 }
 
@@ -989,7 +1029,7 @@ body.mobile-template #footer-buttons > a.mobile-footer-link > #footer-button.mob
 }
 
 .grid-caption {
-    font-family: 'MainBold', monospace;
+    font-family: 'MainBold', var(--emoji-font), monospace;
     font-size: 14px;
     color: var(--fg);
     margin: 0;
@@ -998,7 +1038,7 @@ body.mobile-template #footer-buttons > a.mobile-footer-link > #footer-button.mob
 }
 
 .grid-subcaption {
-    font-family: 'MainRegular', monospace;
+    font-family: 'MainRegular', var(--emoji-font), monospace;
     font-size: 12px;
     color: #aaa;
     margin: 0;
@@ -1018,7 +1058,7 @@ body.mobile-template #footer-buttons > a.mobile-footer-link > #footer-button.mob
     border: 1px solid #8a3a3a;
     background-color: #231111;
     color: #f5dede;
-    font-family: 'MainBold', monospace;
+    font-family: 'MainBold', var(--emoji-font), monospace;
     font-size: 12px;
     cursor: pointer;
     transition: background-color 0.15s ease, border-color 0.15s ease;
@@ -1040,14 +1080,14 @@ body.mobile-template #footer-buttons > a.mobile-footer-link > #footer-button.mob
 }
 
 h1 {
-    font-family: "MainBold", monospace;
+    font-family: "MainBold", var(--emoji-font), monospace;
     font-size: 20px;
     margin-top: 0;
     margin-bottom: 8px;
 }
 
 h2 {
-    font-family: "MainRegular", monospace;
+    font-family: "MainRegular", var(--emoji-font), monospace;
     font-size: 14px;
     margin-top: 0;
     margin-bottom: 16px;
@@ -1055,21 +1095,21 @@ h2 {
 }
 
 h3 {
-    font-family: "MainBold", monospace;
+    font-family: "MainBold", var(--emoji-font), monospace;
     font-size: 16px;
     margin-top: 24px;
     margin-bottom: 8px;
 }
 
 h4 {
-    font-family: "MainBold", monospace;
+    font-family: "MainBold", var(--emoji-font), monospace;
     font-size: 15px;
     margin-top: 20px;
     margin-bottom: 6px;
 }
 
 h5 {
-    font-family: "MainItalic", monospace;
+    font-family: "MainItalic", var(--emoji-font), monospace;
     font-size: 13px;
     margin-top: 6px;
     margin-bottom: 4px;
@@ -1139,7 +1179,7 @@ hr {
 }
 
 #post-date {
-    font-family: "MainItalic", monospace;
+    font-family: "MainItalic", var(--emoji-font), monospace;
     font-size: 12px;
     color: var(--subtle);
 }
@@ -1154,19 +1194,19 @@ hr {
 }
 
 #post-title {
-    font-family: "MainBold", monospace;
+    font-family: "MainBold", var(--emoji-font), monospace;
     font-size: 16px;
     color: var(--fg);
 }
 
 #post-description {
-    font-family: "MainRegular", monospace;
+    font-family: "MainRegular", var(--emoji-font), monospace;
     font-size: 13px;
     color: var(--subtle);
 }
 
 #post-username {
-    font-family: "MainBold", monospace;
+    font-family: "MainBold", var(--emoji-font), monospace;
     font-size: 14px;
 }
 
@@ -1180,7 +1220,7 @@ hr {
 }
 
 #post-date-feed {
-    font-family: "MainItalic", monospace;
+    font-family: "MainItalic", var(--emoji-font), monospace;
     font-size: 12px;
     color: var(--subtle);
 }
@@ -1261,7 +1301,7 @@ hr {
     border: 1px solid var(--border);
     padding: 4px 10px;
     border-radius: 6px;
-    font-family: "MainRegular", monospace;
+    font-family: "MainRegular", var(--emoji-font), monospace;
     font-size: 12px;
     display: inline-flex;
     align-items: center;
@@ -1290,7 +1330,7 @@ hr {
 }
 
 #post-content {
-    font-family: "MainRegular", monospace;
+    font-family: "MainRegular", var(--emoji-font), monospace;
     font-size: 14px;
     color: var(--fg);
     line-height: 1.4;
@@ -1355,12 +1395,12 @@ hr {
 }
 
 .feed-reply-username {
-    font-family: "MainBold", monospace;
+    font-family: "MainBold", var(--emoji-font), monospace;
     font-size: 13px;
 }
 
 .feed-reply-date {
-    font-family: "MainItalic", monospace;
+    font-family: "MainItalic", var(--emoji-font), monospace;
     font-size: 12px;
     color: var(--subtle);
     display: inline-flex;
@@ -1369,7 +1409,7 @@ hr {
 }
 
 .feed-reply-body {
-    font-family: "MainRegular", monospace;
+    font-family: "MainRegular", var(--emoji-font), monospace;
     font-size: 14px;
     line-height: 1.4;
 }
@@ -1379,7 +1419,7 @@ hr {
     min-height: 110px;
     resize: vertical;
     margin-bottom: 12px;
-    font-family: "MainRegular", monospace;
+    font-family: "MainRegular", var(--emoji-font), monospace;
     font-size: 14px;
     color: var(--fg);
     background: var(--bg);
@@ -1391,7 +1431,7 @@ hr {
 
 .feed-reply-notice {
     margin-bottom: 12px;
-    font-family: "MainRegular", monospace;
+    font-family: "MainRegular", var(--emoji-font), monospace;
     font-size: 13px;
 }
 
@@ -1405,7 +1445,7 @@ hr {
 
 .feed-reply-empty,
 .feed-reply-login {
-    font-family: "MainItalic", monospace;
+    font-family: "MainItalic", var(--emoji-font), monospace;
     font-size: 13px;
     color: var(--subtle);
     margin-bottom: 12px;
@@ -1473,7 +1513,7 @@ hr {
 }
 
 .image-modal-filename {
-    font-family: "MainRegular", monospace;
+    font-family: "MainRegular", var(--emoji-font), monospace;
     font-size: 12px;
     color: rgb(200, 200, 200);
 }
@@ -1485,7 +1525,7 @@ hr {
 }
 
 .image-modal-expand {
-    font-family: "MainRegular", monospace;
+    font-family: "MainRegular", var(--emoji-font), monospace;
     font-size: 12px;
     color: rgb(48, 90, 173);
     text-decoration: none;
@@ -1496,6 +1536,85 @@ hr {
 .image-modal-expand:hover {
     background-color: rgb(48, 90, 173);
     color: var(--bg);
+}
+
+.site-popup-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 18px;
+    background: rgba(0, 0, 0, 0.72);
+    backdrop-filter: brightness(0.62);
+}
+
+.site-popup-overlay.is-closing {
+    opacity: 0;
+    transition: opacity 150ms ease;
+}
+
+.site-popup-dialog {
+    width: min(360px, 100%);
+    display: grid;
+    gap: 12px;
+    padding: 13px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: var(--bg);
+    background: color-mix(in srgb, var(--bg) 94%, var(--fg) 6%);
+    color: var(--fg);
+    box-shadow: 0 14px 36px rgba(0, 0, 0, 0.58);
+    font-family: "MainRegular", var(--emoji-font), monospace;
+}
+
+.site-popup-title {
+    color: var(--fg);
+    font-family: "MainBold", var(--emoji-font), monospace;
+    font-size: 14px;
+}
+
+.site-popup-detail {
+    color: var(--subtle);
+    font-size: 12px;
+    line-height: 1.45;
+}
+
+.site-popup-detail p {
+    margin: 0;
+}
+
+.site-popup-detail p + p {
+    margin-top: 8px;
+}
+
+.site-popup-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+.site-popup-button {
+    margin: 0;
+    padding: 7px 10px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: transparent;
+    color: var(--fg);
+    font-family: "MainRegular", var(--emoji-font), monospace;
+    cursor: pointer;
+}
+
+.site-popup-button:hover,
+.site-popup-button:focus {
+    border-color: var(--fg);
+    color: var(--fg);
+}
+
+.site-popup-ok {
+    border-color: var(--border);
+    color: var(--fg);
 }
 
 .bbcode-editor {
@@ -1529,7 +1648,7 @@ hr {
     padding: 6px 10px;
     cursor: pointer;
     font-size: 14px;
-    font-family: "MainRegular", monospace;
+    font-family: "MainRegular", var(--emoji-font), monospace;
     transition: background-color 0.2s;
 }
 
@@ -1554,7 +1673,7 @@ hr {
     border: 1px solid var(--border);
     background-color: var(--bg);
     color: var(--fg);
-    font-family: "MainRegular", monospace;
+    font-family: "MainRegular", var(--emoji-font), monospace;
     font-size: 14px;
     cursor: pointer;
     transition: background-color 0.2s;
@@ -1586,7 +1705,7 @@ hr {
     border: 1px solid var(--border);
     background-color: var(--bg);
     color: var(--fg);
-    font-family: "MainRegular", monospace;
+    font-family: "MainRegular", var(--emoji-font), monospace;
     font-size: 14px;
     resize: vertical;
     box-sizing: border-box;
@@ -1605,7 +1724,7 @@ hr {
     border: 1px solid var(--border);
     background-color: var(--bg);
     color: var(--fg);
-    font-family: "MainRegular", monospace;
+    font-family: "MainRegular", var(--emoji-font), monospace;
     font-size: 14px;
     box-sizing: border-box;
     white-space: normal;
@@ -1621,7 +1740,7 @@ hr {
 .text-input {
     width: 100%;
     height: 32px;
-    font-family: "MainRegular", monospace;
+    font-family: "MainRegular", var(--emoji-font), monospace;
     font-size: 14px;
     padding: 8px;
     box-sizing: border-box;
@@ -1657,7 +1776,7 @@ hr {
 
 .form-card h2 {
     margin: 0 0 6px 0;
-    font-family: "MainBold", monospace;
+    font-family: "MainBold", var(--emoji-font), monospace;
     font-size: 18px;
 }
 
@@ -1684,7 +1803,7 @@ hr {
 #chat-create-form input[type="text"] {
     width: 100%;
     height: 32px;
-    font-family: "MainRegular", monospace;
+    font-family: "MainRegular", var(--emoji-font), monospace;
     font-size: 14px;
     padding: 8px;
     box-sizing: border-box;
@@ -1703,7 +1822,7 @@ hr {
 #admin-account-form input[type="text"],
 #admin-account-form textarea {
     width: 100%;
-    font-family: "MainRegular", monospace;
+    font-family: "MainRegular", var(--emoji-font), monospace;
     font-size: 14px;
     padding: 8px;
     box-sizing: border-box;
@@ -1776,6 +1895,31 @@ hr {
     margin-top: 4px;
 }
 
+.chat-copy-link {
+    display: block;
+    width: 100%;
+    margin: 6px 0 0;
+    padding: 6px 8px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.04);
+    color: var(--links);
+    font: inherit;
+    text-align: left;
+    overflow-wrap: anywhere;
+    cursor: copy;
+}
+
+.chat-copy-link:hover,
+.chat-copy-link.copied {
+    border-color: rgb(77, 118, 201);
+    background: rgba(77, 118, 201, 0.12);
+}
+
+.chat-created-link {
+    max-width: 100%;
+}
+
 .chat-card-actions {
     display: grid;
     gap: 8px;
@@ -1823,6 +1967,7 @@ hr {
     max-width: 760px;
     margin: 0 auto;
     color: var(--chat-fg);
+    position: relative;
 }
 
 .chat-header-row {
@@ -1860,9 +2005,33 @@ hr {
     color: var(--chat-fg);
 }
 
+.chat-presence-away {
+    border-color: var(--chat-border);
+    color: var(--chat-muted);
+}
+
 .chat-presence-offline {
     border-color: var(--chat-border);
     color: var(--chat-muted);
+}
+
+.chat-typing-indicator {
+    display: none;
+    position: absolute;
+    left: 14px;
+    bottom: 66px;
+    z-index: 4;
+    max-width: calc(100% - 28px);
+    padding: 3px 8px;
+    border: 1px solid var(--chat-border);
+    background: var(--chat-bg);
+    color: var(--chat-muted);
+    font-size: 12px;
+    box-sizing: border-box;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    pointer-events: none;
 }
 
 .chat-messages {
@@ -1893,6 +2062,16 @@ hr {
     background: var(--chat-other-bg);
     color: var(--chat-other-fg);
     box-sizing: border-box;
+}
+
+.chat-message-has-image {
+    width: fit-content;
+    max-width: min(74%, 284px);
+}
+
+.chat-message-highlight {
+    outline: 2px solid var(--chat-fg);
+    outline-offset: 2px;
 }
 
 .chat-message-own {
@@ -1949,6 +2128,40 @@ hr {
     opacity: 0.82;
 }
 
+.chat-reply-reference {
+    display: grid;
+    gap: 2px;
+    width: 100%;
+    margin: 0 0 6px;
+    padding: 6px 8px;
+    border: 0;
+    border-left: 3px solid currentColor;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.14);
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    opacity: 0.88;
+}
+
+.chat-reply-reference strong,
+.chat-reply-reference span {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.chat-reply-reference strong {
+    font-size: 11px;
+}
+
+.chat-reply-reference span {
+    font-size: 12px;
+    opacity: 0.82;
+}
+
 .chat-message-body {
     line-height: 1.5;
     white-space: normal;
@@ -1987,15 +2200,81 @@ hr {
     opacity: 0.72;
 }
 
+.chat-reactions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 6px;
+}
+
+.chat-reaction {
+    width: 34px;
+    height: 24px;
+    margin: 0;
+    padding: 0;
+    border: 1px solid currentColor;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.12);
+    color: inherit;
+    font-family: var(--emoji-font), "MainRegular", monospace;
+    font-size: 15px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.chat-reaction.reacted {
+    background: rgba(255, 255, 255, 0.28);
+}
+
 .chat-send-form {
     display: grid;
-    grid-template-columns: 42px minmax(0, 1fr) auto;
+    grid-template-columns: 42px minmax(0, 1fr) 42px auto;
     gap: 8px;
     align-items: center;
     padding: 0;
     border: 0;
     background: transparent;
     box-sizing: border-box;
+}
+
+.chat-reply-compose {
+    display: none;
+    grid-column: 1 / -1;
+    grid-template-columns: minmax(0, 1fr) 30px;
+    gap: 8px;
+    align-items: center;
+    padding: 8px 10px;
+    border: 1px solid var(--chat-border);
+    border-left: 4px solid var(--chat-own-bg);
+    border-radius: 8px;
+    background: var(--chat-bg);
+    color: var(--chat-fg);
+}
+
+.chat-reply-compose strong,
+.chat-reply-compose span {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.chat-reply-compose span {
+    margin-top: 2px;
+    color: var(--chat-muted);
+    font-size: 12px;
+}
+
+.chat-reply-compose button {
+    width: 30px;
+    height: 30px;
+    margin: 0;
+    padding: 0;
+    border: 1px solid var(--chat-border);
+    border-radius: 4px;
+    background: transparent;
+    color: var(--chat-fg);
+    cursor: pointer;
 }
 
 .chat-file-indicator {
@@ -2034,12 +2313,17 @@ hr {
     display: none;
 }
 
+.chat-emoji-button,
+.chat-send-form textarea {
+    min-width: 0;
+}
+
 .chat-send-form textarea {
     width: 100%;
     height: 42px;
     min-height: 42px;
     max-height: 92px;
-    font-family: "MainRegular", monospace;
+    font-family: "MainRegular", var(--emoji-font), monospace;
     font-size: 14px;
     line-height: 20px;
     padding: 10px 12px;
@@ -2057,6 +2341,26 @@ hr {
     border-color: var(--chat-fg);
 }
 
+.chat-emoji-button {
+    width: 42px;
+    height: 42px;
+    margin: 0;
+    padding: 0;
+    border: 1px solid var(--chat-border);
+    border-radius: 4px;
+    background: var(--chat-bg);
+    color: var(--chat-fg);
+    font-family: var(--emoji-font), "MainRegular", monospace;
+    font-size: 18px;
+    cursor: pointer;
+}
+
+.chat-emoji-button:hover {
+    background: var(--chat-own-bg);
+    color: var(--chat-own-fg);
+    border-color: var(--chat-own-bg);
+}
+
 .chat-send-button {
     width: auto;
     min-width: 64px;
@@ -2067,7 +2371,7 @@ hr {
     background: var(--chat-bg);
     color: var(--chat-fg);
     border: 1px solid var(--chat-border);
-    font-family: "MainRegular", monospace;
+    font-family: "MainRegular", var(--emoji-font), monospace;
     font-size: 14px;
     cursor: pointer;
     box-sizing: border-box;
@@ -2083,6 +2387,81 @@ hr {
 .chat-send-button:disabled {
     cursor: wait;
     opacity: 0.65;
+}
+
+.chat-context-menu,
+.chat-emoji-picker {
+    display: none;
+    position: absolute;
+    z-index: 1200;
+    border: 1px solid var(--chat-border, var(--border));
+    border-radius: 8px;
+    background: var(--chat-bg, var(--bg));
+    color: var(--chat-fg, var(--fg));
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.32);
+}
+
+.chat-context-menu {
+    min-width: 130px;
+    padding: 6px;
+}
+
+.chat-context-menu button {
+    display: block;
+    width: 100%;
+    margin: 0;
+    padding: 8px 10px;
+    border: 0;
+    border-radius: 5px;
+    background: transparent;
+    color: inherit;
+    text-align: left;
+    font: inherit;
+    cursor: pointer;
+}
+
+.chat-context-menu button:hover {
+    background: var(--chat-own-bg, var(--links));
+    color: var(--chat-own-fg, var(--bg));
+}
+
+.chat-emoji-picker {
+    width: min(340px, calc(100% - 16px));
+    padding: 10px;
+}
+
+.chat-emoji-search {
+    width: 100%;
+    margin: 0 0 8px;
+    box-sizing: border-box;
+}
+
+.chat-emoji-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(34px, 1fr));
+    gap: 4px;
+    max-height: 260px;
+    overflow-y: auto;
+}
+
+.chat-emoji-grid button {
+    width: 100%;
+    height: 34px;
+    margin: 0;
+    padding: 0;
+    border: 1px solid transparent;
+    border-radius: 5px;
+    background: transparent;
+    color: inherit;
+    font-family: var(--emoji-font), "MainRegular", sans-serif;
+    font-size: 20px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.chat-emoji-grid button:hover {
+    border-color: var(--chat-border, var(--border));
+    background: rgba(255, 255, 255, 0.1);
 }
 
 @media (max-width: 720px) {
@@ -2124,9 +2503,17 @@ hr {
         max-width: 86%;
     }
 
+    .chat-message-has-image {
+        max-width: min(86%, 284px);
+    }
+
     body.mobile-template .chat-send-form {
         grid-template-columns: 42px minmax(0, 1fr) 64px;
         gap: 6px;
+    }
+
+    body.mobile-template .chat-emoji-button {
+        display: none;
     }
 
     body.mobile-template .chat-send-form textarea {
@@ -2156,7 +2543,7 @@ hr {
     border: 1px solid #8f3434;
     background-color: rgba(143, 52, 52, 0.12);
     color: #ffb3b3;
-    font-family: "MainRegular", monospace;
+    font-family: "MainRegular", var(--emoji-font), monospace;
     font-size: 14px;
     cursor: pointer;
     box-sizing: border-box;
@@ -2188,7 +2575,7 @@ pre code.hljs {
     color: var(--fg);
     border: 1px solid var(--border);
     padding: 12px;
-    font-family: "MainRegular", monospace;
+    font-family: "MainRegular", var(--emoji-font), monospace;
     font-size: 14px;
     border-radius: 3px;
 }
@@ -2206,7 +2593,7 @@ pre code.hljs {
     padding: 1px 6px;
     border: 1px solid var(--border);
     background-color: rgba(255, 255, 255, 0.06);
-    font-family: "MainRegular", monospace;
+    font-family: "MainRegular", var(--emoji-font), monospace;
     font-size: 0.95em;
     line-height: 1.2;
     vertical-align: baseline;
@@ -2220,7 +2607,7 @@ pre code.hljs {
     border: 1px solid var(--border);
     background-color: var(--bg);
     color: var(--fg);
-    font-family: "MainRegular", monospace;
+    font-family: "MainRegular", var(--emoji-font), monospace;
     font-size: 14px;
     cursor: pointer;
     transition: background-color 0.2s;
@@ -2240,7 +2627,7 @@ pre code.hljs {
     border: 1px solid var(--border);
     background-color: var(--bg);
     color: var(--fg);
-    font-family: "MainRegular", monospace;
+    font-family: "MainRegular", var(--emoji-font), monospace;
     font-size: 14px;
     cursor: pointer;
     transition: background-color 0.2s;
@@ -2256,7 +2643,7 @@ pre code.hljs {
     border: 1px solid var(--border);
     background-color: var(--bg);
     color: var(--fg);
-    font-family: "MainRegular", monospace;
+    font-family: "MainRegular", var(--emoji-font), monospace;
     font-size: 14px;
     cursor: pointer;
     transition: background-color 0.2s;
@@ -2311,7 +2698,7 @@ pre code.hljs {
 }
 
 #error {
-    font-family: "MainBoldItalic", monospace;
+    font-family: "MainBoldItalic", var(--emoji-font), monospace;
     font-size: 14px;
     color: rgb(228, 51, 51);
     margin-bottom: 16px;
@@ -2326,7 +2713,7 @@ pre code.hljs {
 #search-box {
     flex: 1;
     height: 32px;
-    font-family: "MainRegular", monospace;
+    font-family: "MainRegular", var(--emoji-font), monospace;
     font-size: 14px;
     padding: 8px;
     box-sizing: border-box;
@@ -2350,7 +2737,7 @@ pre code.hljs {
     border: 1px solid var(--border);
     background-color: var(--bg);
     color: var(--fg);
-    font-family: "MainRegular", monospace;
+    font-family: "MainRegular", var(--emoji-font), monospace;
     font-size: 14px;
     cursor: pointer;
     transition: background-color 0.2s;

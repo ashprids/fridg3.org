@@ -59,7 +59,7 @@ pre code.hljs,
 #title,
 .mobile-collapsed-title {
     color: #ffffff;
-    font-family: "MainBold", monospace;
+    font-family: "MainBold", var(--emoji-font), monospace;
     text-shadow:
         2px 2px 0 #ff4fd8,
         -2px -2px 0 #36f7ff;

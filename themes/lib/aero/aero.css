@@ -284,13 +284,13 @@ input[type="range"] {
     padding: 24px 8px 8px 8px;
     gap: 8px;
     overflow-x: hidden;
-    font-family: "AeroTahoma", Tahoma, Geneva, sans-serif;
+    font-family: "AeroTahoma", Tahoma, Geneva, var(--emoji-font), sans-serif;
 }
 
 #mini-player-tracks,
 #mini-player *:not(.fa):not(.fa-solid):not(.fa-regular):not(.fa-brands):not([class^="fa-"]):not([class*=" fa-"]),
 #mini-player-tracks *:not(.fa):not(.fa-solid):not(.fa-regular):not(.fa-brands):not([class^="fa-"]):not([class*=" fa-"]) {
-    font-family: "AeroTahoma", Tahoma, Geneva, sans-serif !important;
+    font-family: "AeroTahoma", Tahoma, Geneva, var(--emoji-font), sans-serif !important;
 }
 
 #mini-player::before {
@@ -303,7 +303,7 @@ input[type="range"] {
     padding: 1px 7px;
     box-sizing: border-box;
     color: #f7ffff;
-    font-family: "AeroTahoma", Tahoma, Geneva, sans-serif;
+    font-family: "AeroTahoma", Tahoma, Geneva, var(--emoji-font), sans-serif;
     font-weight: 700;
     font-size: 10px;
     line-height: 1.2;
@@ -408,7 +408,7 @@ input[type="range"] {
 #mini-player-title-inner,
 .mini-track {
     color: #7dff8b;
-    font-family: "AeroTahoma", Tahoma, Geneva, sans-serif;
+    font-family: "AeroTahoma", Tahoma, Geneva, var(--emoji-font), sans-serif;
     font-size: 10px;
     letter-spacing: 0;
     text-shadow: 0 0 5px rgba(125, 255, 139, 0.55);

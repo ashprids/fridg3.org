@@ -2,6 +2,76 @@
 let workInProgress = false;
 let hostRedirectInProgress = false;
 
+function showSitePopup(options) {
+    const config = options || {};
+    return new Promise(resolve => {
+        const overlay = document.createElement('div');
+        overlay.className = 'site-popup-overlay';
+        overlay.setAttribute('role', 'dialog');
+        overlay.setAttribute('aria-modal', 'true');
+
+        const dialog = document.createElement('div');
+        dialog.className = 'site-popup-dialog';
+
+        const title = document.createElement('div');
+        title.className = 'site-popup-title';
+        title.textContent = config.title || 'notice';
+
+        const detail = document.createElement('div');
+        detail.className = 'site-popup-detail';
+        if (config.html) {
+            detail.innerHTML = config.html;
+        } else {
+            detail.textContent = config.detail || '';
+        }
+
+        const actions = document.createElement('div');
+        actions.className = 'site-popup-actions';
+
+        const cancelText = config.cancelText || '';
+        let cancel = null;
+        if (cancelText) {
+            cancel = document.createElement('button');
+            cancel.className = 'site-popup-button site-popup-cancel';
+            cancel.type = 'button';
+            cancel.textContent = cancelText;
+            actions.append(cancel);
+        }
+
+        const ok = document.createElement('button');
+        ok.className = 'site-popup-button site-popup-ok';
+        ok.type = 'button';
+        ok.textContent = config.okText || 'ok';
+        actions.append(ok);
+
+        dialog.append(title, detail, actions);
+        overlay.append(dialog);
+
+        const close = (value) => {
+            document.removeEventListener('keydown', onKeydown);
+            overlay.classList.add('is-closing');
+            window.setTimeout(() => overlay.remove(), 160);
+            resolve(value);
+        };
+
+        const onKeydown = (event) => {
+            if (event.key === 'Escape') close(false);
+            if (event.key === 'Enter') close(true);
+        };
+
+        if (cancel) cancel.addEventListener('click', () => close(false));
+        ok.addEventListener('click', () => close(true));
+        overlay.addEventListener('click', event => {
+            if (event.target === overlay) close(false);
+        });
+        document.addEventListener('keydown', onKeydown);
+        document.body.append(overlay);
+        ok.focus();
+    });
+}
+
+window.showSitePopup = showSitePopup;
+
 function hasAdminCookie() {
     try {
         return document.cookie.split(';').some((cookie) => cookie.trim().startsWith('is_admin=1'));
@@ -872,6 +942,7 @@ function loadPageIntoContent(url, addToHistory = true) {
                 } catch (_) { /* no-op */ }
 
                 syncAccountFooterButton();
+                syncActiveChatSidebarButton();
 
                 if (addToHistory && window.history && window.history.pushState) {
                     window.history.pushState({ spa: true, url: url }, '', url);
@@ -952,6 +1023,32 @@ window.addEventListener('DOMContentLoaded', function() { updatePageViewFooter(wi
 window.addEventListener('load', updateContentFooterSpacing);
 window.addEventListener('resize', updateContentFooterSpacing);
 
+document.addEventListener('submit', function(e) {
+    const form = e.target && e.target.closest ? e.target.closest('.chat-delete-form') : null;
+    if (!form || form.dataset.confirmed === '1') return;
+    e.preventDefault();
+    if (typeof showSitePopup !== 'function') {
+        form.dataset.confirmed = '1';
+        form.submit();
+        return;
+    }
+
+    showSitePopup({
+        title: 'end chat?',
+        html: '<p>this deletes the encrypted conversation file and its attachments from the server immediately.</p><p>there is no undo button hiding in the couch.</p>',
+        okText: form.getAttribute('data-confirm-text') || 'end chat',
+        cancelText: 'keep chat'
+    }).then(function(confirmed) {
+        if (!confirmed) return;
+        form.dataset.confirmed = '1';
+        if (form.requestSubmit) {
+            form.requestSubmit();
+        } else {
+            form.submit();
+        }
+    });
+});
+
 // Dedicated handler for feed edit icons so clicking the pencil goes
 // to the edit view without breaking SPA navigation or bubbling to the
 // outer feed-post link.
@@ -967,6 +1064,33 @@ document.addEventListener('click', function(e) {
     } else {
         window.location.href = href;
     }
+});
+
+document.addEventListener('click', function(e) {
+    const copyEl = e.target.closest('.chat-copy-link[data-copy-url]');
+    if (!copyEl) return;
+
+    e.preventDefault();
+    const url = copyEl.getAttribute('data-copy-url') || copyEl.textContent.trim();
+    const originalText = copyEl.textContent;
+
+    const markCopied = function() {
+        copyEl.textContent = 'copied';
+        copyEl.classList.add('copied');
+        window.setTimeout(function() {
+            copyEl.textContent = originalText;
+            copyEl.classList.remove('copied');
+        }, 1400);
+    };
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(url).then(markCopied).catch(function() {
+            window.prompt('copy chat link', url);
+        });
+        return;
+    }
+
+    window.prompt('copy chat link', url);
 });
 
 // Intercept specific forms (login, create post) and submit via fetch
@@ -1067,6 +1191,7 @@ function bindSpaForm(form) {
                 } catch (_) { /* no-op */ }
 
                 syncAccountFooterButton();
+                syncActiveChatSidebarButton();
 
                 if (window.history && window.history.pushState) {
                     window.history.pushState({ spa: true, url: finalUrl }, '', finalUrl);
@@ -3207,6 +3332,57 @@ function syncAccountFooterButton() {
 }
 
 window.addEventListener('DOMContentLoaded', syncAccountFooterButton);
+
+function syncActiveChatSidebarButton() {
+    try {
+        const sidebarEl = document.getElementById('sidebar');
+        if (!sidebarEl || !window.fetch) return;
+
+        const existing = document.getElementById('sidebar-active-chat');
+        const isLoggedInNow = !!document.getElementById('user-greeting');
+        if (!isLoggedInNow) {
+            if (existing) existing.remove();
+            return;
+        }
+
+        fetch('/chat?action=active-account-chat', {
+            cache: 'no-store',
+            credentials: 'same-origin',
+            headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+        })
+            .then(resp => {
+                if (!resp.ok) throw new Error('active chat unavailable');
+                return resp.json();
+            })
+            .then(data => {
+                const chat = data && data.ok ? data.chat : null;
+                const current = document.getElementById('sidebar-active-chat');
+                if (!chat || !chat.url) {
+                    if (current) current.remove();
+                    return;
+                }
+
+                const link = current || document.createElement('a');
+                link.id = 'sidebar-active-chat';
+                link.href = chat.url;
+                link.setAttribute('data-tooltip', 'open your active private chat');
+                link.innerHTML = '<i class="fa-solid fa-comment-dots"></i><span>active chat</span>';
+
+                if (!current) {
+                    const tracks = document.getElementById('mini-player-tracks');
+                    const miniPlayer = document.getElementById('mini-player');
+                    const footer = document.getElementById('sidebar-footer');
+                    sidebarEl.insertBefore(link, tracks || miniPlayer || footer || null);
+                }
+            })
+            .catch(() => {
+                const current = document.getElementById('sidebar-active-chat');
+                if (current) current.remove();
+            });
+    } catch (_) { /* no-op */ }
+}
+
+window.addEventListener('DOMContentLoaded', syncActiveChatSidebarButton);
 
 // Footer active state based on current path
 function initFooterActiveState() {

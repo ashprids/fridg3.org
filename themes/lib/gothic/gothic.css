@@ -80,7 +80,7 @@ body {
     right: 10px;
     bottom: 7px;
     color: var(--links);
-    font-family: "MainBold", monospace;
+    font-family: "MainBold", var(--emoji-font), monospace;
     font-size: 11px;
     text-shadow: 0 0 8px rgba(217, 79, 114, 0.62);
 }
@@ -88,7 +88,7 @@ body {
 #title,
 .mobile-collapsed-title {
     color: #f8edf5;
-    font-family: "MainBold", monospace;
+    font-family: "MainBold", var(--emoji-font), monospace;
     font-size: 22px;
     text-transform: uppercase;
     text-shadow:
@@ -155,7 +155,7 @@ body {
 #tab:hover,
 #tab.active {
     background:
-        linear-gradient(90deg, #f2a7ba, #d94f72 46%, #160b18 47%);
+        linear-gradient(90deg, #f2a7ba, #d94f72 100%);
     color: #fff7fb;
     border-color: #d94f72;
     transform: translate(3px, -1px);

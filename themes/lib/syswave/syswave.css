@@ -90,7 +90,7 @@ pre code.hljs {
 
 #title,
 .mobile-collapsed-title {
-    font-family: "MainBold", monospace;
+    font-family: "MainBold", var(--emoji-font), monospace;
     font-size: 21px;
     color: #ffffff;
     background-image: none;
@@ -126,7 +126,7 @@ pre code.hljs {
     display: flex;
     align-items: flex-end;
     box-sizing: border-box;
-    font-family: "MainRegular", monospace;
+    font-family: "MainRegular", var(--emoji-font), monospace;
     transition: transform 0.16s ease, background 0.16s ease, border-color 0.16s ease;
 }
 

@@ -4,7 +4,6 @@
     --border: #3f6f63;
     --subtle: #9ca889;
     --links: #b9d36b;
-    --chat-own-fg: #07100d;
     --occult-deep: #0b1411;
     --occult-panel: #101b16;
     --occult-ink: #16231d;
@@ -89,7 +88,7 @@ body::after {
     right: 10px;
     bottom: 8px;
     color: var(--occult-brass);
-    font-family: "MainBold", monospace;
+    font-family: "MainBold", var(--emoji-font), monospace;
     font-size: 10px;
     letter-spacing: 0;
 }
@@ -97,7 +96,7 @@ body::after {
 #title,
 .mobile-collapsed-title {
     color: var(--links);
-    font-family: "MainBold", monospace;
+    font-family: "MainBold", var(--emoji-font), monospace;
     font-size: 21px;
     text-transform: lowercase;
     text-shadow:
@@ -165,7 +164,7 @@ a:hover,
     left: 10px;
     width: 26px;
     color: var(--occult-brass);
-    font-family: "MainBold", monospace;
+    font-family: "MainBold", var(--emoji-font), monospace;
     font-size: 10px;
     text-align: center;
     border-right: 1px solid rgba(209, 170, 87, 0.45);
@@ -185,7 +184,7 @@ a:hover,
 #tab:hover,
 #tab.active {
     background:
-        linear-gradient(90deg, var(--links), var(--border) 48%, var(--occult-panel) 49%);
+        linear-gradient(90deg, var(--links), var(--border) 100%);
     color: #03100b;
     border-color: var(--links);
     transform: translateX(4px);
@@ -241,7 +240,7 @@ a:hover,
     display: block;
     margin-top: 16px;
     color: rgba(209, 170, 87, 0.62);
-    font-family: "MainBold", monospace;
+    font-family: "MainBold", var(--emoji-font), monospace;
     font-size: 11px;
     text-align: right;
 }
@@ -783,6 +782,20 @@ body.mobile-template #footer-buttons > a.mobile-footer-link > #footer-button.mob
 body.mobile-template #footer-buttons > a.mobile-footer-link > #footer-button.mobile-footer-button.active,
 body.mobile-template #footer-buttons > a.mobile-footer-link > #footer-button.mobile-footer-button.active:hover {
     color: #03100b !important;
+}
+
+.chat-view {
+    --chat-own-bg: #263f31;
+    --chat-own-fg: #efe6cf;
+}
+
+.chat-message-own {
+    border-color: #557359;
+}
+
+.chat-message-own .chat-reply-reference,
+.chat-message-own .chat-reaction.reacted {
+    background: rgba(239, 230, 207, 0.12);
 }
 
 /* frdgBeats app theme support */

@@ -54,7 +54,7 @@ body {
 #title,
 .mobile-collapsed-title {
     color: var(--fg);
-    font-family: "MainBold", monospace;
+    font-family: "MainBold", var(--emoji-font), monospace;
     font-size: 24px;
     letter-spacing: 0;
     text-transform: uppercase;
