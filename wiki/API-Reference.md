@@ -44,7 +44,7 @@ all API routes live under `/api/*` and are handled by PHP.
 - supports single toggle via `postId`
 - supports full replacement via `bookmarks`
 - writes normalized bookmark ids back to `accounts.json`
-- bookmark ids currently include raw feed ids, `journal:{id}`, and `newsletter:{id}`
+- bookmark ids currently include raw feed ids and `journal:{id}`; legacy `newsletter:{id}` values may exist but are ignored
 - anonymous bookmarking is handled client-side in localStorage instead
 
 ## Content / Media
@@ -69,11 +69,6 @@ all API routes live under `/api/*` and are handled by PHP.
 
 - admin-only image deletion from `data/images`
 - validates filename/path and allowed image extensions
-
-### `/api/newsletter/publish`
-
-- writes newsletter HTML to `data/newsletter/{id}.html`
-- this is the real publish endpoint, not an `/email/*` route
 
 ### `/api/sitemap`
 
@@ -129,4 +124,5 @@ all API routes live under `/api/*` and are handled by PHP.
 - most endpoints return JSON and perform direct file IO
 - write-heavy endpoints should be treated carefully because there is no database transaction safety blanket here
 - `/api/page-view` already uses file locking, which is the sane move
-- some account and toast integrations also talk to a localhost-only bot HTTP service on `127.0.0.1:8765`, but those are not public `/api/*` routes
+- some account, contact, and toast integrations also talk to a localhost-only bot HTTP service on `127.0.0.1:8765`, but those are not public `/api/*` routes
+- contact submissions call `POST /contact/notify` on that local toast service after successful storage so toast can notify the configured Discord channel

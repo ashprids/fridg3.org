@@ -64,7 +64,6 @@ wrapper routes are mostly just shell + static content:
 - `discord/`
 - `merch/`
 - parts of `others/`
-- many email status pages
 
 data-backed routes do real work:
 
@@ -72,6 +71,7 @@ data-backed routes do real work:
 - `journal/`
 - `guestbook/`
 - `bookmarks/`
+- `contact/`
 - `music/`
 - `gallery/`
 - `account/*`

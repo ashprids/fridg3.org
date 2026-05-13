@@ -29,7 +29,7 @@ expected top-level shape:
       "mustResetPassword": false,
       "discordUserId": "optional discord snowflake string",
       "allowedPages": ["feed", "journal", "comments", "chat"],
-      "bookmarks": ["2026-01-01_12-00-00", "journal:12", "newsletter:2026-01-01"],
+      "bookmarks": ["2026-01-01_12-00-00", "journal:12"],
       "theme": "default|custom|theme-id",
       "glowIntensity": "none|low|medium|high",
       "mobileFriendlyView": true,
@@ -49,7 +49,7 @@ notes:
 
 - extra unknown keys can exist and are preserved by `account/admin/edit`
 - bookmarks are the current source of truth for logged-in users
-- bookmark ids currently use raw feed ids, `journal:{id}`, and `newsletter:{id}`
+- bookmark ids currently use raw feed ids and `journal:{id}`; legacy `newsletter:{id}` values can exist but are ignored
 - `theme: default` uses the standard template and `/style.css`; `theme: custom` enables saved `colors`; any other valid value refers to a `/themes/{theme-id}.json` file
 - `mustResetPassword` is used by the shared session bootstrap to force first-login password changes
 - `discordUserId` links a site account to a Discord member for bot DMs and notifications
@@ -182,7 +182,7 @@ plus:
 
 ## `data/images/`
 
-- uploaded images used across feed, journal, gallery, and newsletter content
+- uploaded images used across feed, journal, and gallery content
 - expected web path is `/data/images/<filename>`
 
 ## `data/music/`
@@ -215,10 +215,12 @@ album JSON shape:
 - track files referenced by music metadata
 - also used by shared playback features
 
-## `data/newsletter/`
+## `data/contact/`
 
-- published newsletter bodies as `{id}.html`
-- commonly date-shaped ids like `YYYY-MM-DD`
+- private contact submissions as `{YYYYMMDDHHMMSS}_{random}.json`
+- each submission stores `id`, `createdAt`, hashed IP, user agent, name, email, message, notification channel id, and optional `notifyError`
+- `rate_limits.json` stores hashed client IP keys mapped to recent submission timestamps for throttling
+- nginx blocks direct web access to this directory; submissions are only shown through the admin-only `/contact?dashboard=1` route
 
 ## `data/mdpaste/`
 
@@ -271,6 +273,12 @@ expected shape:
 
 - tracked inbound/outbound DM threads used by `/others/toast-discord-bot/messages`
 - stores per-user profile snapshot data plus message history
+
+### contact notification endpoint
+
+- the toast bot exposes localhost-only `POST /contact/notify` on `127.0.0.1:8765`
+- `/contact` calls it after saving a submission
+- toast sends the alert to Discord channel `1503931489560301609`
 
 ### `off-topic-archive.json`
 

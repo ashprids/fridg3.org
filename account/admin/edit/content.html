@@ -12,7 +12,11 @@ window.addEventListener('DOMContentLoaded', function () {
 
     var message = errorEl.getAttribute('data-alert-message') || '';
     if (message !== '') {
-        alert(message);
+        if (window.showSiteNotice) {
+            window.showSiteNotice('account edit failed', message);
+        } else if (window.showSitePopup) {
+            window.showSitePopup({title: 'account edit failed', detail: message, okText: 'ok'});
+        }
     }
 });
 </script>
@@ -60,7 +64,7 @@ window.addEventListener('DOMContentLoaded', function () {
     <button id="form-button" type="submit">apply changes</button>
 </form>
 
-<form id="admin-account-delete-form" method="post" action="/account/admin/edit/index.php?username={original_username}" data-no-spa="1" novalidate onsubmit="return confirm('delete this account? this cannot be undone.')">
+<form id="admin-account-delete-form" method="post" action="/account/admin/edit/index.php?username={original_username}" data-no-spa="1" data-site-confirm="1" data-confirm-title="delete account?" data-confirm-detail="this cannot be undone." data-confirm-text="delete" data-cancel-text="cancel" novalidate>
     <input type="hidden" name="csrf_token" value="{csrf_token}">
     <input type="hidden" name="original_username" value="{original_username}">
     <input type="hidden" name="account_action" value="delete">

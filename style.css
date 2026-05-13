@@ -1579,6 +1579,7 @@ hr {
     color: var(--subtle);
     font-size: 12px;
     line-height: 1.45;
+    overflow-wrap: anywhere;
 }
 
 .site-popup-detail p {
@@ -1587,6 +1588,23 @@ hr {
 
 .site-popup-detail p + p {
     margin-top: 8px;
+}
+
+.site-popup-input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: "MainRegular", var(--emoji-font), monospace;
+    font-size: 13px;
+}
+
+.site-popup-input:focus {
+    outline: none;
+    border-color: var(--fg);
 }
 
 .site-popup-actions {
@@ -1930,6 +1948,82 @@ hr {
     margin: 0;
     text-align: center;
     text-decoration: none;
+}
+
+.contact-admin-card {
+    display: block;
+    position: relative;
+    padding: 16px;
+}
+
+.contact-admin-copy {
+    min-width: 0;
+}
+
+.contact-admin-header {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 8px 12px;
+    padding-right: 150px;
+}
+
+.contact-admin-title {
+    font-size: 18px;
+    line-height: 1.25;
+}
+
+.contact-admin-email {
+    color: var(--links);
+    overflow-wrap: anywhere;
+}
+
+.contact-admin-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 10px;
+    margin-top: 8px;
+    padding-right: 150px;
+    color: var(--subtle);
+    font-size: 12px;
+}
+
+.contact-admin-meta span {
+    margin-top: 0;
+}
+
+.contact-admin-message {
+    margin-top: 14px;
+    padding: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 4px;
+    background: rgba(0, 0, 0, 0.16);
+    line-height: 1.5;
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
+.contact-admin-alert {
+    display: inline-block;
+    margin-top: 12px;
+    padding: 6px 8px;
+    border: 1px solid rgba(255, 83, 83, 0.45);
+    border-radius: 4px;
+    color: #ff6b6b;
+    background: rgba(255, 83, 83, 0.08);
+}
+
+.contact-admin-actions {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    margin: 0;
+    width: 128px;
+}
+
+.contact-admin-actions .danger-button {
+    width: 100%;
+    margin: 0;
 }
 
 .account-admin-meta {
@@ -2509,6 +2603,17 @@ hr {
         grid-template-columns: 1fr;
     }
 
+    .contact-admin-header,
+    .contact-admin-meta {
+        padding-right: 0;
+    }
+
+    .contact-admin-actions {
+        position: static;
+        width: 100%;
+        margin-top: 12px;
+    }
+
     body.mobile-template .chat-header-row {
         gap: 8px;
     }
@@ -2665,6 +2770,8 @@ pre code.hljs {
     color: var(--fg);
     font-family: "MainRegular", var(--emoji-font), monospace;
     font-size: 14px;
+    text-align: center;
+    text-decoration: none;
     cursor: pointer;
     transition: background-color 0.2s;
     box-sizing: border-box;

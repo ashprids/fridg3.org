@@ -46,9 +46,21 @@ from `README.md`:
 - files should be `644`
 - `/data` and `sitemap.xml` need `http:http` ownership for webserver writes
 
+## Nginx Config Source
+
+the repo-tracked files in `.nginx/` are the source for the production nginx config.
+
+- `.nginx/nginx.conf` corresponds to `/etc/nginx/nginx.conf`
+- `.nginx/fridg3.org` corresponds to `/etc/nginx/sites-enabled/fridg3.org`
+- production uses these through symlinks, so edits here are real server config edits, not examples
+
+when adding routes, APIs, uploads, redirects, or private data folders, check `.nginx/fridg3.org` as part of the feature. a correct PHP route can still fail if nginx redirects POSTs, misses a clean-url rewrite, or accidentally exposes/blocklists the wrong `/data` path.
+
 ## Nginx Clean URLs
 
 production nginx needs explicit rewrites for PHP routes that accept path-style ids. without these, nginx falls through to the root `/index.php` fallback before the route can parse the URL.
+
+the contact route is configured POST-safe at `/contact`, old `/email` paths redirect to `/contact`, and `/data/contact/` is blocked from direct web access.
 
 mdpaste share links use `/others/mdpaste/s/{id}` and need this block before the generic `location /` fallback. keep the regexes quoted, because nginx treats unquoted `{16}` like cursed config syntax.
 
