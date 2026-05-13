@@ -984,12 +984,72 @@ async def send_message_handler(request):
         'message_id': str(sent_message.id),
     })
 
+async def contact_notify_handler(request):
+    if request.remote not in ('127.0.0.1', '::1'):
+        return web.json_response({'ok': False, 'error': 'forbidden'}, status=403)
+
+    try:
+        payload = await request.json()
+    except Exception:
+        return web.json_response({'ok': False, 'error': 'invalid json'}, status=400)
+
+    channel_id = str(payload.get('channel_id', '')).strip()
+    submission_id = str(payload.get('id', '')).strip()
+    sender_name = str(payload.get('name', '')).strip()
+    sender_email = str(payload.get('email', '')).strip()
+    message_preview = str(payload.get('message_preview', '')).strip()
+    dashboard_url = str(payload.get('dashboard_url', 'https://fridg3.org/contact?dashboard=1')).strip()
+
+    if not re.fullmatch(r'\d{17,20}', channel_id):
+        return web.json_response({'ok': False, 'error': 'invalid channel id'}, status=400)
+    if submission_id == '':
+        return web.json_response({'ok': False, 'error': 'missing submission id'}, status=400)
+
+    channel = bot.get_channel(int(channel_id))
+    if channel is None:
+        try:
+            channel = await bot.fetch_channel(int(channel_id))
+        except Exception as e:
+            logger.warning(f"Failed to fetch contact notification channel {channel_id}: {e}")
+            return web.json_response({'ok': False, 'error': 'could not fetch channel'}, status=404)
+
+    if not hasattr(channel, 'send'):
+        return web.json_response({'ok': False, 'error': 'channel cannot receive messages'}, status=400)
+
+    sender = sender_name or 'unknown sender'
+    if sender_email:
+        sender = f"{sender} <{sender_email}>"
+
+    message = (
+        "## new fridg3.org contact submission\n"
+        f"**from:** {sender}\n"
+        f"**id:** `{submission_id}`\n"
+        f"**dashboard:** {dashboard_url}\n\n"
+        f"> {message_preview or 'no preview'}"
+    )
+
+    if len(message) > 1900:
+        message = message[:1897] + '...'
+
+    try:
+        sent_message = await channel.send(message, allowed_mentions=discord.AllowedMentions.none())
+    except Exception as e:
+        logger.warning(f"Failed to send contact notification {submission_id} to {channel_id}: {e}")
+        return web.json_response({'ok': False, 'error': 'failed to send channel message'}, status=500)
+
+    return web.json_response({
+        'ok': True,
+        'channel_id': str(channel_id),
+        'message_id': str(sent_message.id),
+    })
+
 
 async def start_status_server():
     status_app.router.add_get('/status', status_handler)
     status_app.router.add_post('/link-discord', link_discord_handler)
     status_app.router.add_post('/send-account-invite', send_account_invite_handler)
     status_app.router.add_post('/messages/send', send_message_handler)
+    status_app.router.add_post('/contact/notify', contact_notify_handler)
     runner = web.AppRunner(status_app)
     await runner.setup()
     site = web.TCPSite(runner, '127.0.0.1', 8765)

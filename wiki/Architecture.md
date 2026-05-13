@@ -69,8 +69,8 @@ main stores:
 - `data/journal/*.txt`
 - `data/journal/drafts/*.txt`
 - `data/chat/*.json`
+- `data/contact/*.json`
 - `data/guestbook/*.txt`
-- `data/newsletter/*.html`
 - `data/etc/*.json`
 
 ## Important Couplings
@@ -78,6 +78,6 @@ main stores:
 - many routes still do literal string replacement on the footer account button to swap login/logout
 - `main.js` assumes certain DOM ids exist across templates
 - bookmarks are stored in `accounts.json`, but some old code paths still reference a legacy `/data/users` pattern
-- newsletter releases are HTML files in `data/newsletter/*.html`, and bookmark metadata for them is derived from that rendered HTML rather than a sidecar JSON index
-- toast’s Discord bot is not just a stream bot anymore; it also maintains local DM history plus feed notification state under `data/etc/`
+- contact submissions are private runtime JSON under `data/contact/` and must never be web-served directly
+- toast’s Discord bot is not just a stream bot anymore; it also maintains local DM history plus feed notification state under `data/etc/` and receives contact notification requests from PHP over `127.0.0.1:8765`
 - page views are updated from shared frontend flow, so nav changes can silently break view counts

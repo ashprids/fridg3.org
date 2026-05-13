@@ -67,7 +67,7 @@ Related:
 
 - server-rendered bookmark listing for logged-in users
 - client-side localStorage enhancement for anonymous users
-- supports feed, journal, and newsletter bookmark ids
+- supports feed and journal bookmark ids; legacy `newsletter:*` ids are ignored
 
 ### `/settings`
 
@@ -172,31 +172,25 @@ one-to-one conversation view.
 - message sends update the current page immediately, and open chat pages poll for new messages; unfocused/hidden chat tabs play `/chat/alert.ogg` and prefix the page title with an unread count when the other side sends new messages
 - message timestamps show time only, with a date divider inserted at the first message for each day
 
-## Email / Newsletter Routes
+## Contact Route
 
-### `/email`
+### `/contact`
 
-contact page wrapper.
+- public contact form with name, email, message, and server-side anti-spam checks
+- replies are sent manually from `me@fridg3.org`
+- accepted submissions are stored under `data/contact/*.json`
+- after storage, PHP asks the local toast service to send a Discord channel notification
 
-### `/email/newsletter`
+### `/contact?dashboard=1`
 
-archive page for published newsletter HTML files in `data/newsletter/*.html`.
+- admin-only contact submission dashboard
+- lists submissions newest-first
+- supports permanent delete
 
-- newsletter cards can be bookmarked like feed/journal entries
+Retired legacy paths:
 
-Related:
-
-- `/email/newsletter/create`
-- `/email/newsletter/create/preview`
-- `/email/newsletter/preview`
-- `/email/newsletter/release/{id}`
-
-Mailing-list status wrappers:
-
-- `/email/mailinglist/subscribe`
-- `/email/mailinglist/unsubscribe`
-- `/email/mailinglist/invalid`
-- `/email/mailinglist/error`
+- `/email` and `/email/*` redirect to `/contact` in nginx
+- newsletter and mailing-list routes have been removed
 
 ## Other Public Routes
 
@@ -241,6 +235,8 @@ frontend archive viewer backed by `data/etc/off-topic-archive.json`.
 ### `/others/toast-discord-bot`
 
 UI shell for toast bot status, controls, and stream playback.
+
+The bot also exposes localhost-only service endpoints on `127.0.0.1:8765`, including contact submission notifications to Discord channel `1503931489560301609`.
 
 ### `/others/toast-discord-bot/messages`
 

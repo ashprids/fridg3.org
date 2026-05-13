@@ -1,0 +1,152 @@
+server {
+    listen 443 ssl; # managed by Certbot
+    server_name fridg3.org www.fridg3.org m.fridg3.org;
+
+    root /var/www/fridg3.org;
+    index index.html index.php;
+    client_max_body_size 20M;
+
+    location ~ \.php$ {
+        root /var/www/fridg3.org;
+        fastcgi_pass unix:/run/php-fpm/php-fpm.sock;  # adjust if your PHP-FPM socket differs
+        fastcgi_index index.php;
+        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+        include fastcgi_params;
+    }
+	
+	# Allow public access to the off-topic archive JSON
+    location = /data/etc/off-topic-archive.json {
+        try_files $uri =404;
+    }
+
+    # Only block other JSON files in /data/
+    location ~* ^/data/.*\.json$ { return 403; }
+
+    # Never serve contact submissions or rate-limit data directly
+    location ^~ /data/contact/ {
+        return 403;
+    }
+
+    # Feed clean URLs
+    location ~ ^/feed/posts/[^/]+$ {
+        rewrite ^/feed/posts/(.+)$ /feed/posts/index.php?post=$1 last;
+    }
+    location /feed/posts/ { try_files $uri $uri/ /feed/posts/index.php?$args; }
+    location /feed/       { try_files $uri $uri/ /feed/index.php?$args; }
+
+    # Avoid trailing-slash redirects on edit/create that drop POST bodies
+    location = /feed/edit   { rewrite ^ /feed/edit/index.php?$args last; }
+    location = /feed/create { rewrite ^ /feed/create/index.php?$args last; }
+
+    # Journal clean URLs
+    location ~ ^/journal/posts/[^/]+$ {
+        rewrite ^/journal/posts/(.+)$ /journal/posts/index.php?post=$1 last;
+    }
+    location /journal/    { try_files $uri $uri/ /journal/index.php?$args; }
+
+    location = /journal/create { rewrite ^ /journal/create/index.php?$args last; }
+	
+    # Retired email/newsletter routes
+    location = /email {
+        return 301 /contact;
+    }
+
+    location ^~ /email/ {
+        return 301 /contact;
+    }
+
+    # Contact route: avoid trailing-slash redirects on POST
+    location = /contact {
+        rewrite ^ /contact/index.php?$args last;
+    }
+
+    location /contact/ {
+        try_files $uri $uri/ /contact/index.php?$args;
+    }
+	
+	# Guestbook clean URLs
+    location ~ ^/guestbook/posts/[^/]+$ {
+        rewrite ^/guestbook/posts/(.+)$ /guestbook/posts/index.php?post=$1 last;
+    }
+    location /guestbook/    { try_files $uri $uri/ /guestbook/index.php?$args; }
+
+    # Avoid trailing-slash redirects on edit/create that drop POST bodies
+    location = /guestbook/edit   { rewrite ^ /guestbook/edit/index.php?$args last; }
+    location = /guestbook/create { rewrite ^ /guestbook/create/index.php?$args last; }
+
+    # API endpoints: rewrite to index.php to prevent 301 slash redirects on POST
+    location ~ ^/api/(bookmark|feed-post|settings)/?$ {
+        rewrite ^/api/(bookmark|feed-post|settings)/?$ /api/$1/index.php?$args last;
+    }
+    location ~ ^/api/account/is-admin/?$ {
+        rewrite ^/api/account/is-admin/?$ /api/account/is-admin/index.php?$args last;
+    }
+
+    # mdpaste clean URLs
+    location ~ "^/others/mdpaste/s/[a-fA-F0-9]{16}/?$" {
+        rewrite "^/others/mdpaste/s/([a-fA-F0-9]{16})/?$" /others/mdpaste/s/index.php?id=$1 last;
+    }
+
+    location /others/mdpaste/s/ {
+        try_files $uri $uri/ /others/mdpaste/s/index.php?$args;
+    }
+
+    location /others/mdpaste/ {
+        try_files $uri $uri/ /others/mdpaste/index.php?$args;
+    }
+
+    # Chat clean URLs + POST-safe dashboard route
+    location = /chat {
+        rewrite ^ /chat/index.php?$args last;
+    }
+
+    location ~ "^/chat/([a-z0-9]{9}|[a-fA-F0-9]{32})/?$" {
+        rewrite "^/chat/([a-z0-9]{9}|[a-fA-F0-9]{32})/?$" /chat/index.php?id=$1 last;
+    }
+
+    location /chat/ {
+        try_files $uri $uri/ /chat/index.php?$args;
+    }
+
+    # Never serve encrypted chat data, keys, or attachments directly
+    location ^~ /data/chat/ {
+        return 403;
+    }
+
+
+    # Fallback
+    location / { try_files $uri $uri/ /index.php?$args; }
+
+    # Custom error redirects
+    error_page 403 /error/403;
+    error_page 404 /error/404;
+    error_page 500 502 503 504 /error/50x;
+
+    location = /error/403 { root /var/www/fridg3.org; }
+    location = /error/404 { root /var/www/fridg3.org; }
+    location = /error/50x { root /var/www/fridg3.org; }
+    ssl_certificate /etc/letsencrypt/live/fridg3.org/fullchain.pem; # managed by Certbot
+   # Certbot
+    ssl_certificate_key /etc/letsencrypt/live/fridg3.org/privkey.pem; # managed by Certbot
+ # Certbot
+    include /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+
+
+
+
+
+}
+
+server {
+    if ($host = m.fridg3.org) {
+        return 301 https://$host$request_uri;
+    } # managed by Certbot
+
+
+    listen 80;
+    server_name fridg3.org www.fridg3.org m.fridg3.org;
+    if ($host = www.fridg3.org) { return 301 https://$host$request_uri; }
+    if ($host = fridg3.org)     { return 301 https://$host$request_uri; }
+    return 404; # managed by Certbot
+}

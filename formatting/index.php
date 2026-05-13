@@ -7,7 +7,7 @@ require_once $sessionBootstrapDir . "/lib/session.php";
 fridg3_start_session();
 
 $title = 'formatting';
-$description = 'the all-in-one page for theme customization.';
+$description = 'the all-in-one page for theme testing and customization.';
 
 
 function find_template_file($filename) {

@@ -2,6 +2,15 @@
 let workInProgress = false;
 let hostRedirectInProgress = false;
 
+function siteEscapeHtml(value) {
+    return String(value || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
 function showSitePopup(options) {
     const config = options || {};
     return new Promise(resolve => {
@@ -25,6 +34,16 @@ function showSitePopup(options) {
             detail.textContent = config.detail || '';
         }
 
+        let input = null;
+        if (config.input === true) {
+            input = document.createElement('input');
+            input.className = 'site-popup-input';
+            input.type = config.inputType || 'text';
+            input.value = config.inputValue || '';
+            input.placeholder = config.inputPlaceholder || '';
+            input.autocomplete = 'off';
+        }
+
         const actions = document.createElement('div');
         actions.className = 'site-popup-actions';
 
@@ -44,7 +63,9 @@ function showSitePopup(options) {
         ok.textContent = config.okText || 'ok';
         actions.append(ok);
 
-        dialog.append(title, detail, actions);
+        dialog.append(title, detail);
+        if (input) dialog.append(input);
+        dialog.append(actions);
         overlay.append(dialog);
 
         const close = (value) => {
@@ -55,22 +76,45 @@ function showSitePopup(options) {
         };
 
         const onKeydown = (event) => {
-            if (event.key === 'Escape') close(false);
-            if (event.key === 'Enter') close(true);
+            if (event.key === 'Escape') close(input ? null : false);
+            if (event.key === 'Enter') close(input ? input.value : true);
         };
 
-        if (cancel) cancel.addEventListener('click', () => close(false));
-        ok.addEventListener('click', () => close(true));
+        if (cancel) cancel.addEventListener('click', () => close(input ? null : false));
+        ok.addEventListener('click', () => close(input ? input.value : true));
         overlay.addEventListener('click', event => {
-            if (event.target === overlay) close(false);
+            if (event.target === overlay) close(input ? null : false);
         });
         document.addEventListener('keydown', onKeydown);
         document.body.append(overlay);
-        ok.focus();
+        (input || ok).focus();
+        if (input) input.select();
     });
 }
 
 window.showSitePopup = showSitePopup;
+
+function showSiteNotice(title, detail) {
+    return showSitePopup({
+        title: title || 'notice',
+        detail: detail || '',
+        okText: 'ok'
+    });
+}
+
+function showSitePrompt(title, detail, value) {
+    return showSitePopup({
+        title: title || 'input',
+        detail: detail || '',
+        input: true,
+        inputValue: value || '',
+        okText: 'ok',
+        cancelText: 'cancel'
+    });
+}
+
+window.showSiteNotice = showSiteNotice;
+window.showSitePrompt = showSitePrompt;
 
 function hasAdminCookie() {
     try {
@@ -236,8 +280,13 @@ function autoScaleAsciiFont() {
     }
     if (scaled) {
         localStorage.setItem(TOOLTIP_KEY, '1');
-        const shouldSwitch = window.confirm('screen feels cramped. switch to the mobile site?');
-        if (shouldSwitch) {
+        showSitePopup({
+            title: 'screen feels cramped',
+            detail: 'switch to the mobile site?',
+            okText: 'switch',
+            cancelText: 'stay here'
+        }).then(function(shouldSwitch) {
+            if (!shouldSwitch) return;
             try {
                 const targetUrl = new URL(window.location.href);
                 targetUrl.hostname = 'm.fridg3.org';
@@ -251,7 +300,7 @@ function autoScaleAsciiFont() {
             } catch (_) {
                 /* no-op */
             }
-        }
+        });
     } else if (tooltip) {
         tooltip.style.display = 'none';
         tooltip.style.opacity = '0';
@@ -796,6 +845,50 @@ function isSpaEligibleLink(anchor) {
     return true;
 }
 
+function isInternalWebsiteUrl(url) {
+    try {
+        const parsed = new URL(url, window.location.href);
+        const host = parsed.hostname.toLowerCase();
+        if (parsed.origin === window.location.origin) return true;
+        return host === 'fridg3.org' || host === 'www.fridg3.org' || host === 'm.fridg3.org';
+    } catch (_) {
+        return true;
+    }
+}
+
+function isExternalWebsiteLink(anchor) {
+    if (!anchor || anchor.dataset.externalConfirmed === '1') return false;
+    if (anchor.hasAttribute('data-no-external-popup')) return false;
+    const href = anchor.getAttribute('href') || '';
+    if (!href || href === '#') return false;
+    if (/^(mailto|tel|sms|javascript):/i.test(href)) return false;
+    if (href.startsWith('#')) return false;
+
+    try {
+        const parsed = new URL(href, window.location.href);
+        if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return false;
+        return !isInternalWebsiteUrl(parsed.href);
+    } catch (_) {
+        return false;
+    }
+}
+
+function openExternalWebsiteLink(anchor, event) {
+    const href = anchor.href;
+    const shouldOpenNewTab = anchor.target === '_blank' || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey;
+    anchor.dataset.externalConfirmed = '1';
+
+    if (shouldOpenNewTab) {
+        window.open(href, '_blank', 'noopener,noreferrer');
+        window.setTimeout(function() {
+            delete anchor.dataset.externalConfirmed;
+        }, 0);
+        return;
+    }
+
+    window.location.href = href;
+}
+
 function executeInlineContentScripts(rootEl) {
     try {
         if (!rootEl) return;
@@ -960,7 +1053,6 @@ function loadPageIntoContent(url, addToHistory = true) {
                 initBBCodeEditor();
                 initAsciiUsage();
                 setupSpaForms();
-                initEmailForm();
                 initOffTopicArchive();
                 initSettingsPage();
                 initAsciiTime();
@@ -997,6 +1089,20 @@ function setupSpaNavigation() {
 
         const anchor = e.target.closest('a');
         if (!anchor) return;
+        if (isExternalWebsiteLink(anchor)) {
+            e.preventDefault();
+            const url = anchor.href;
+            showSitePopup({
+                title: 'leaving fridg3.org',
+                html: '<p>this link opens an external site.</p><p>' + siteEscapeHtml(url) + '</p>',
+                okText: 'open link',
+                cancelText: 'stay here'
+            }).then(function(confirmed) {
+                if (!confirmed) return;
+                openExternalWebsiteLink(anchor, e);
+            });
+            return;
+        }
         if (!isSpaEligibleLink(anchor)) return;
         // Allow default for modifier keys (open in new tab/window)
         if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
@@ -1024,20 +1130,20 @@ window.addEventListener('load', updateContentFooterSpacing);
 window.addEventListener('resize', updateContentFooterSpacing);
 
 document.addEventListener('submit', function(e) {
-    const form = e.target && e.target.closest ? e.target.closest('.chat-delete-form') : null;
+    const form = e.target && e.target.closest ? e.target.closest('.chat-delete-form, [data-site-confirm]') : null;
     if (!form || form.dataset.confirmed === '1') return;
     e.preventDefault();
-    if (typeof showSitePopup !== 'function') {
-        form.dataset.confirmed = '1';
-        form.submit();
-        return;
-    }
 
+    const isChatDelete = form.classList.contains('chat-delete-form');
+    const html = form.getAttribute('data-confirm-html') || (isChatDelete
+        ? '<p>this deletes the encrypted conversation file and its attachments from the server immediately.</p><p>there is no undo button hiding in the couch.</p>'
+        : '');
     showSitePopup({
-        title: 'end chat?',
-        html: '<p>this deletes the encrypted conversation file and its attachments from the server immediately.</p><p>there is no undo button hiding in the couch.</p>',
-        okText: form.getAttribute('data-confirm-text') || 'end chat',
-        cancelText: 'keep chat'
+        title: form.getAttribute('data-confirm-title') || (isChatDelete ? 'end chat?' : 'are you sure?'),
+        html: html || undefined,
+        detail: html ? undefined : (form.getAttribute('data-confirm-detail') || ''),
+        okText: form.getAttribute('data-confirm-text') || (isChatDelete ? 'end chat' : 'delete'),
+        cancelText: form.getAttribute('data-cancel-text') || (isChatDelete ? 'keep chat' : 'cancel')
     }).then(function(confirmed) {
         if (!confirmed) return;
         form.dataset.confirmed = '1';
@@ -1085,12 +1191,12 @@ document.addEventListener('click', function(e) {
 
     if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(url).then(markCopied).catch(function() {
-            window.prompt('copy chat link', url);
+            showSitePrompt('copy chat link', 'clipboard access failed. grab the link below.', url);
         });
         return;
     }
 
-    window.prompt('copy chat link', url);
+    showSitePrompt('copy chat link', 'grab the link below.', url);
 });
 
 // Intercept specific forms (login, create post) and submit via fetch
@@ -1210,7 +1316,6 @@ function bindSpaForm(form) {
                 initBBCodeEditor();
                 initAsciiUsage();
                 initAsciiTime();
-                initEmailForm();
                 initOffTopicArchive();
                 rerunAsciiScalingAfterContent();
                 initTooltips();
@@ -1247,128 +1352,6 @@ function setupSpaForms() {
 }
 
 window.addEventListener('DOMContentLoaded', setupSpaForms);
-
-// Security question handling for /email form (random math and validation)
-function initEmailForm() {
-    try {
-        const rawPath = (window.location && window.location.pathname) ? window.location.pathname : '/';
-        const path = rawPath.replace(/\/+$/, '') || '/';
-        if (!path.startsWith('/email')) return;
-
-        const forms = Array.from(document.querySelectorAll('form')).filter(function(form) {
-            return form.querySelector('#security-question') && form.querySelector('input[name="security_answer"]');
-        });
-
-        forms.forEach(function(form) {
-            if (form.dataset.securityBound === '1') return;
-            form.dataset.securityBound = '1';
-
-            const questionEl = form.querySelector('#security-question');
-            const answerInput = form.querySelector('input[name="security_answer"]');
-            const errorEl = form.querySelector('#security-error');
-            const securityField = form.querySelector('[data-security-field]');
-            const subscribeRadios = Array.from(form.querySelectorAll('input[name="subscribe_r"]'));
-            if (!questionEl || !answerInput) return;
-
-            let correctAnswer = null;
-
-            function generateQuestion() {
-                const ops = ['+', '-', '*'];
-                const op = ops[Math.floor(Math.random() * ops.length)];
-
-                let a = Math.floor(Math.random() * 10);
-                let b = Math.floor(Math.random() * 10);
-
-                // Keep subtraction answers non-negative for simplicity
-                if (op === '-' && b > a) {
-                    [a, b] = [b, a];
-                }
-
-                switch (op) {
-                    case '+':
-                        correctAnswer = a + b;
-                        break;
-                    case '-':
-                        correctAnswer = a - b;
-                        break;
-                    case '*':
-                    default:
-                        correctAnswer = a * b;
-                        break;
-                }
-
-                questionEl.textContent = `what is ${a} ${op} ${b}?`;
-                if (errorEl) {
-                    errorEl.style.display = 'none';
-                }
-                answerInput.value = '';
-            }
-
-            function isSecurityRequired() {
-                if (!subscribeRadios.length) return true;
-                return subscribeRadios.some(function(radio) {
-                    return radio.checked && radio.value === 'subscribe';
-                });
-            }
-
-            function syncSecurityVisibility() {
-                const shouldShow = isSecurityRequired();
-
-                if (securityField) {
-                    securityField.style.display = shouldShow ? '' : 'none';
-                }
-
-                answerInput.style.display = shouldShow ? '' : 'none';
-                answerInput.required = shouldShow;
-
-                if (!shouldShow) {
-                    answerInput.value = '';
-                    if (errorEl) {
-                        errorEl.style.display = 'none';
-                    }
-                }
-            }
-
-            generateQuestion();
-            syncSecurityVisibility();
-
-            form.addEventListener('submit', function(e) {
-                if (e.defaultPrevented || !isSecurityRequired()) return;
-
-                const raw = (answerInput.value || '').trim();
-                const userVal = raw === '' ? NaN : parseInt(raw, 10);
-                if (!Number.isFinite(userVal) || userVal !== correctAnswer) {
-                    e.preventDefault();
-                    generateQuestion();
-                    if (errorEl) {
-                        errorEl.style.display = 'block';
-                    }
-                    return;
-                }
-                if (errorEl) {
-                    errorEl.style.display = 'none';
-                }
-            });
-
-            if (errorEl) {
-                answerInput.addEventListener('input', function() {
-                    errorEl.style.display = 'none';
-                });
-            }
-
-            subscribeRadios.forEach(function(radio) {
-                radio.addEventListener('change', function() {
-                    if (isSecurityRequired()) {
-                        generateQuestion();
-                    }
-                    syncSecurityVisibility();
-                });
-            });
-        });
-    } catch (_) { /* no-op */ }
-}
-
-window.addEventListener('DOMContentLoaded', initEmailForm);
 
 // Render the #off-topic archive in a Discord-like view
 function initOffTopicArchive() {
@@ -3692,8 +3675,7 @@ function initSidebarActiveState() {
         const routes = [
             '/feed',
             '/journal',
-            '/email/newsletter',
-            '/email',
+            '/contact',
             '/guestbook',
             '/music',
             '/gallery',
@@ -3880,7 +3862,7 @@ function attachBookmarkBehavior(bookmark) {
                             icon.classList.add('fa-regular');
                             icon.classList.remove('fa-solid');
                         }
-                        alert('Could not update bookmark.');
+                        showSiteNotice('bookmark failed', 'could not update bookmark.');
                     });
                 return; // no page reload needed
             } catch (_) {
@@ -3893,7 +3875,7 @@ function attachBookmarkBehavior(bookmark) {
                     icon.classList.add('fa-regular');
                     icon.classList.remove('fa-solid');
                 }
-                alert('Could not update bookmark.');
+                showSiteNotice('bookmark failed', 'could not update bookmark.');
                 return;
             }
         } else {
@@ -4047,7 +4029,12 @@ async function submitGalleryDelete(form) {
     const filename = filenameInput ? filenameInput.value.trim() : '';
     if (!filename) return;
 
-    const confirmed = window.confirm('Delete ' + filename + '?');
+    const confirmed = await showSitePopup({
+        title: 'delete image?',
+        detail: 'delete ' + filename + '?',
+        okText: 'delete',
+        cancelText: 'cancel'
+    });
     if (!confirmed) return;
 
     const originalLabel = deleteButton ? deleteButton.innerHTML : '';
@@ -4081,7 +4068,7 @@ async function submitGalleryDelete(form) {
             card.remove();
         }
     } catch (err) {
-        alert('Delete failed: ' + err.message);
+        showSiteNotice('delete failed', err.message || 'failed to delete image.');
     } finally {
         if (deleteButton) {
             deleteButton.disabled = false;
@@ -4497,26 +4484,27 @@ function initBBCodeEditor() {
 
     if (bbcodeImageBtn && bbcodeImageInput) {
         bbcodeImageBtn.addEventListener('click', function() {
-            const imageUrl = prompt('Enter image URL (or leave blank to select a file)', '');
-            if (imageUrl === null) return; // cancelled
-            
-            if (imageUrl.trim()) {
-                // URL provided - use [img=URL][name:filename] format
-                const start = bbcodeTextbox.selectionStart;
-                const end = bbcodeTextbox.selectionEnd;
-                const beforeText = bbcodeTextbox.value.substring(0, start);
-                const afterText = bbcodeTextbox.value.substring(end);
-                
-                const url = imageUrl.trim();
-                const fileName = url.split('/').pop() || 'image';
-                const newText = `[img=${url}][name:${fileName}]`;
-                bbcodeTextbox.value = beforeText + newText + afterText;
-                bbcodeTextbox.focus();
-                bbcodeTextbox.setSelectionRange(start + newText.length, start + newText.length);
-            } else {
-                // Open file picker
-                bbcodeImageInput.click();
-            }
+            showSitePrompt('add image', 'enter an image URL, or leave blank to select a file.', '').then(function(imageUrl) {
+                if (imageUrl === null) return;
+
+                if (imageUrl.trim()) {
+                    // URL provided - use [img=URL][name:filename] format
+                    const start = bbcodeTextbox.selectionStart;
+                    const end = bbcodeTextbox.selectionEnd;
+                    const beforeText = bbcodeTextbox.value.substring(0, start);
+                    const afterText = bbcodeTextbox.value.substring(end);
+
+                    const url = imageUrl.trim();
+                    const fileName = url.split('/').pop() || 'image';
+                    const newText = `[img=${url}][name:${fileName}]`;
+                    bbcodeTextbox.value = beforeText + newText + afterText;
+                    bbcodeTextbox.focus();
+                    bbcodeTextbox.setSelectionRange(start + newText.length, start + newText.length);
+                } else {
+                    // Open file picker
+                    bbcodeImageInput.click();
+                }
+            });
         });
         
         bbcodeImageInput.addEventListener('change', async function(e) {
@@ -4575,20 +4563,27 @@ function initBBCodeEditor() {
                     e.stopPropagation();
                     const id = this.getAttribute('data-draft-id');
                     if (!id) return;
-                    if (!window.confirm('delete this draft?')) return;
+                    showSitePopup({
+                        title: 'delete draft?',
+                        detail: 'this draft will be removed.',
+                        okText: 'delete',
+                        cancelText: 'cancel'
+                    }).then(function(confirmed) {
+                        if (!confirmed) return;
 
-                    const form = document.getElementById('create-post-form');
-                    if (!form) return;
+                        const form = document.getElementById('create-post-form');
+                        if (!form) return;
 
-                    let hidden = form.querySelector('input[name="delete_draft"]');
-                    if (!hidden) {
-                        hidden = document.createElement('input');
-                        hidden.type = 'hidden';
-                        hidden.name = 'delete_draft';
-                        form.appendChild(hidden);
-                    }
-                    hidden.value = id;
-                    form.submit();
+                        let hidden = form.querySelector('input[name="delete_draft"]');
+                        if (!hidden) {
+                            hidden = document.createElement('input');
+                            hidden.type = 'hidden';
+                            hidden.name = 'delete_draft';
+                            form.appendChild(hidden);
+                        }
+                        hidden.value = id;
+                        form.submit();
+                    });
                 });
             });
         }

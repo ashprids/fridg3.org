@@ -670,7 +670,6 @@ body.mobile-template #mini-player-tracks {
 .feed-reply-notice,
 #result,
 #error {
-    background-color: rgba(17, 20, 22, 0.94) !important;
     color: var(--fg) !important;
     border-color: var(--border) !important;
 }

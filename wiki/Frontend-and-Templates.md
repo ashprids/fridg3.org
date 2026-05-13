@@ -41,8 +41,20 @@ this is not just a tiny CSS tweak. it is a separate HTML shell, so shared struct
 - ASCII time / usage widgets
 - route-specific enhancements
 - BBCode mention highlighting for feed-style content
+- on-site popup notices, confirmations, and text prompts
 
 translation: if you change shared ids, buttons, or route transitions, test more than one page or you will summon weird bugs.
+
+## Popups And External Links
+
+use the on-site popup helpers in `main.js`, not native browser `alert()`, `confirm()`, or `prompt()`.
+
+- notices: `showSiteNotice(title, detail)`
+- confirmations: `showSitePopup({ title, detail/html, okText, cancelText })`
+- text input: `showSitePrompt(title, detail, value)`
+- form confirmations: add `data-site-confirm="1"` plus `data-confirm-*` text attributes
+
+all clicked `http(s)` links that leave `fridg3.org`, `www.fridg3.org`, or `m.fridg3.org` automatically show a safety popup before navigation. use `data-no-external-popup` only for a deliberately exempt link, and document why because bypassing safety popups is usually sus.
 
 ## Styling
 
@@ -65,6 +77,12 @@ fonts and icons come from:
 - Twemoji COLR from jsDelivr as the global emoji font fallback
 - Font Awesome CDN
 - Highlight.js CDN
+
+## Formatting Lab
+
+`/formatting` is the shared UI specimen page. it loads normal page chrome, theme CSS, route-local `content.html`, and small examples of reusable elements used around the site: typography, links, buttons, forms, status blocks, popups, tooltips, cards, grids, pagination, dashboard cards, and BBCode editor pieces.
+
+when a reusable element or shared interaction is added, changed, or restyled, add a representative sample to `formatting/content.html` too. skip route-specific systems that realistically will never appear elsewhere, like frdgBeats internals, because those should stay documented and tested with their own page.
 
 ## Frontend State
 

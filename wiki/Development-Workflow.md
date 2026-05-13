@@ -15,7 +15,9 @@
 2. edit the smallest correct surface
 3. if data shape changes, update read path, write path, and defaults
 4. if auth/admin behavior changes, enforce it in PHP, not just JS
-5. test the target page and at least one unrelated page that shares the shell
+5. if the feature adds routes, APIs, uploads, or private `/data` files, check `.nginx/fridg3.org` before assuming PHP can see or protect it
+6. if the feature adds or changes reusable UI, add a representative sample to `/formatting`
+7. test the target page and at least one unrelated page that shares the shell
 
 ## Linting
 
@@ -40,9 +42,12 @@ this setup is simple but honestly pretty smart for a repo with lots of inline ma
 - `main.js` is large and route-sensitive
 - feed and journal have different storage models
 - bookmarks have both server and localStorage behavior
-- newsletter bookmarks reuse the same bookmark flow, but their archive/release UI is rendered separately from feed/journal
 - some old code still references legacy bookmark storage patterns
 - mobile view is both a cookie and an account setting
+- `.nginx/fridg3.org` is live nginx config source via symlink, so route changes need nginx sanity checks too
+- native JS `alert()`, `confirm()`, and `prompt()` are not used; use the on-site popup helpers in `main.js`
+- external links are guarded by the shared on-site popup unless a link explicitly opts out with `data-no-external-popup`
+- reusable UI belongs on `/formatting`; if it can reasonably appear on another page, give it a specimen there
 
 ## Broad Refactors Checklist
 
@@ -52,6 +57,7 @@ before making a sweeping change, review:
 - affected route directory
 - related API endpoint
 - `lib/render.php`
+- `.nginx/fridg3.org`
 - relevant workflow or script if the change affects deploy/lint/runtime ops
 
 ## Practical Advice

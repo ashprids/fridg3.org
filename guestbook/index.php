@@ -180,7 +180,7 @@ function render_guestbook_posts(array $files, bool $isAdmin, string $clientIp, a
         if ($isAdmin || $isOwner) {
             $editUrl = '/guestbook/edit?file=' . rawurlencode($safeFile);
             $editButton = '<a class="guestbook-edit-btn" href="' . $editUrl . '" data-tooltip="edit post"><i class="fa-solid fa-pen"></i></a>';
-            $deleteButton = '<form class="guestbook-delete-form" method="POST" action="/guestbook/index.php" onsubmit="return confirm(\'delete this guestbook entry?\');">'
+            $deleteButton = '<form class="guestbook-delete-form" method="POST" action="/guestbook/index.php" data-site-confirm="1" data-confirm-title="delete guestbook entry?" data-confirm-detail="this removes the guestbook entry from the site." data-confirm-text="delete" data-cancel-text="cancel">'
                 . '<input type="hidden" name="delete_file" value="' . $safeFile . '">'
                 . '<button type="submit" id="post-edit-feed" class="guestbook-delete-btn" data-tooltip="delete post"><i class="fa-solid fa-trash"></i></button>'
                 . '</form>';

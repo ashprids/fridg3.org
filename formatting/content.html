@@ -1,231 +1,445 @@
-<h1>formatting</h1>
-<h2>all-in-one page for theme customization</h2>
-This page contains all of the different elements that can be found throughout the website, along with examples of how they look and function. Use this page as a reference for formatting when creating new content or customizing the website's appearance.
-<br><br>
-The changes you make to your custom theme will be reflected on this page whenever you refresh it, allowing you to see how your modifications affect the various elements in real-time.
-<br><br><br><hr><br><br>
+<style>
+    .formatting-lab {
+        display: grid;
+        gap: 28px;
+    }
 
-<h1>title (h1)</h1>
-<h2>sub-title (h2)</h2>
-<h3>heading (h3)</h3>
-        <span id="post-save" data-tooltip="save post"><i class="fa-regular fa-bookmark"></i></span>
-<span data-tooltip="tooltips are made with the data-tooltip attribute.\na tooltip can be added to any HTML element.">text with tooltip (hover to view)</span>
-<br><span id="error">this is an error message</span>
-<img id="post-image" src="/data/images/formatting-example.png">
+    .formatting-section {
+        display: grid;
+        gap: 12px;
+        padding-bottom: 8px;
+        border-bottom: 1px solid var(--border);
+    }
 
-<br><br>
-        <span id="post-save" data-tooltip="add to saves"><i class="fa-regular fa-bookmark"></i></span>
-<a href="https://fridg3.org" data-tooltip="https://fridg3.org">hyperlinked text</a>
+    .formatting-section:last-child {
+        border-bottom: 0;
+    }
 
-<br><br>
+    .formatting-note {
+        color: var(--subtle);
+        line-height: 1.45;
+    }
 
-<pre><code class="language-javascript">// this is an example code block
-function helloWorld() {
-    console.log("hello, world!");
-}</code></pre>
+    .formatting-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+    }
 
-<div id="posts">
-    <div id="post">
-        <span id="post-date">25/01/2025</span>
-        <span id="post-save" data-tooltip="save post"><i class="fa-regular fa-bookmark"></i></span>
-        <span id="post-title">example journal post</span>
-        <span id="post-description">this is an example post description, acting as an overview of the post's content.</span>
-    </div>
-    <div id="post">
-        <span id="post-date">14/02/2025</span>
-        <span id="post-bookmark" data-tooltip="add to bookmarks"><i class="fa-regular fa-bookmark"></i></span>
-        <span id="post-title">yet another example journal post</span>
-        <span id="post-description">this is here to show what posts look like when there's multiple of them. looks pretty good imo.</span>
-    </div>
-</div>
+    .formatting-row {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
+    }
 
-<br><br>
+    .formatting-sample {
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        padding: 12px;
+        min-width: 0;
+    }
 
-<div id="posts">
-    <div id="post">
-        <div id="post-header">
-            <span id="post-username">@fridge</span>
-            <span id="post-date-feed">2h ago • <span id="post-save-feed" data-tooltip="save post"><i class="fa-regular fa-bookmark"></i></span></span> 
+    .formatting-swatch-row {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 8px;
+    }
+
+    .formatting-swatch {
+        display: grid;
+        gap: 6px;
+        min-height: 62px;
+        padding: 8px;
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        font-size: 12px;
+    }
+
+    .formatting-swatch span {
+        display: block;
+        width: 100%;
+        height: 24px;
+        border: 1px solid var(--border);
+        border-radius: 3px;
+    }
+
+    .formatting-button-pair {
+        display: flex;
+        gap: 8px;
+    }
+
+    .formatting-button-pair #two-buttons {
+        margin-left: 0;
+    }
+
+    .formatting-button-pair #two-buttons + #two-buttons {
+        margin-left: 0;
+    }
+
+    .formatting-mini-tabs {
+        display: flex;
+        flex-wrap: wrap;
+        border: 1px solid var(--border);
+    }
+
+    .formatting-mini-tabs #tab {
+        border-bottom: 0;
+        border-right: 1px solid var(--border);
+    }
+
+    .formatting-mini-tabs #tab:last-child {
+        border-right: 0;
+    }
+
+    .formatting-form-stack {
+        display: grid;
+        gap: 12px;
+    }
+
+    .formatting-inline-result {
+        min-height: 20px;
+        color: var(--subtle);
+        font-size: 13px;
+    }
+
+    .formatting-bbcode-preview {
+        display: block !important;
+    }
+
+    .formatting-bbcode-textbox {
+        min-height: 120px !important;
+    }
+
+    .formatting-gallery #grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .formatting-image-sample {
+        display: grid;
+        place-items: center;
+        aspect-ratio: 1;
+        border: 1px solid var(--border);
+        background: rgba(255, 255, 255, 0.04);
+        color: var(--subtle);
+        font-size: 12px;
+    }
+
+    .formatting-chat-actions {
+        max-width: 220px;
+    }
+
+    @media (max-width: 700px) {
+        .formatting-grid,
+        .formatting-swatch-row,
+        .formatting-gallery #grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
+<div class="formatting-lab" id="formatting-lab">
+    <section class="formatting-section">
+        <h1>formatting lab</h1>
+        <h2>shared site elements for theme testing and reusable UI checks.</h2>
+        <p class="formatting-note">
+            this page is intentionally a specimen sheet. if a reusable element appears around the site,
+            it should have a tiny version here so every theme can be checked without spelunking through
+            the whole website.
+        </p>
+
+        <div class="formatting-swatch-row" aria-label="theme color samples">
+            <div class="formatting-swatch"><span style="background: var(--bg);"></span>--bg</div>
+            <div class="formatting-swatch"><span style="background: var(--fg);"></span>--fg</div>
+            <div class="formatting-swatch"><span style="background: var(--border);"></span>--border</div>
+            <div class="formatting-swatch"><span style="background: var(--subtle);"></span>--subtle</div>
+            <div class="formatting-swatch"><span style="background: var(--links);"></span>--links</div>
         </div>
-        <span id="post-content">this is an example feed post. feed posts are short-form posts that are designed to be quick and easy to read.
-            <br><br>feed posts are like twitter posts, but without the social media aspect. they're just for sharing quick thoughts or updates.
-        </span>
-            <span id="post-date-feed">2h ago • <span id="post-save-feed" data-tooltip="add to saves"><i class="fa-regular fa-bookmark"></i></span></span> 
-    <div id="post">
-        <div id="post-header">
-            <span id="post-username">@fridge</span>
-            <span id="post-date-feed">4d ago • <span id="post-save-feed" data-tooltip="save post"><i class="fa-regular fa-bookmark"></i></span></span> 
+    </section>
+
+    <section class="formatting-section">
+        <h3>type, links, and inline bits</h3>
+        <div class="formatting-grid">
+            <div class="formatting-sample">
+                <h1>h1 page title</h1>
+                <h2>h2 page subtitle</h2>
+                <h3>h3 section title</h3>
+                <h4>h4 bbcode-style heading</h4>
+                <h5>h5 tiny heading</h5>
+                <p>
+                    regular body copy with an <a href="/journal">internal link</a>,
+                    an <a href="https://example.com" target="_blank" rel="noopener">external link</a>,
+                    and an <span class="inline-mention">@inline mention</span>.
+                </p>
+            </div>
+
+            <div class="formatting-sample">
+                <pre><code class="language-php hljs">&lt;?php
+echo "highlighted code block";
+?&gt;</code></pre>
+                <hr>
+                <div class="formatting-mini-tabs" aria-label="tab samples">
+                    <div id="tab" class="active">active tab</div>
+                    <div id="tab">tab</div>
+                    <div id="tab">tab</div>
+                </div>
+            </div>
         </div>
-        <span id="post-content">this is yet another example feed post. just to show what multiple posts look like in a row.
-            <br><br>this post also has an image attachment. you can click on images to expand their size.
-            <img id="post-image" src="/data/images/formatting-example.png">
-            <span id="post-date-feed">4d ago • <span id="post-save-feed" data-tooltip="add to saves"><i class="fa-regular fa-bookmark"></i></span></span> 
-    </div>
-</div>
+    </section>
 
-<br><br>
+    <section class="formatting-section">
+        <h3>messages and interaction-only elements</h3>
+        <div id="result">success/result message block</div>
+        <div id="error">error message block</div>
 
-<div id="posts">
-    <div id="post">
-        <div id="post-header">
-            <span id="post-username">Anonymous</span>
-            <span id="post-date-feed">3w ago</span> 
+        <div class="formatting-grid">
+            <div class="formatting-sample">
+                <p class="formatting-note">hover this control to check tooltip styling.</p>
+                <button id="form-button" type="button" data-tooltip="tooltips are site UI, not browser title text">tooltip demo</button>
+                <div class="formatting-button-pair">
+                    <button id="two-buttons" type="button" data-formatting-action="notice">notice popup</button>
+                    <button id="two-buttons" type="button" data-formatting-action="confirm">confirm popup</button>
+                </div>
+                <button id="form-button" type="button" data-formatting-action="prompt">prompt popup</button>
+                <a id="two-buttons" href="https://example.com" target="_blank" rel="noopener">external link safety popup</a>
+                <div class="formatting-inline-result" id="formatting-popup-result" aria-live="polite"></div>
+            </div>
+
+            <div class="formatting-sample">
+                <form data-formatting-demo-form>
+                    <button id="form-button" type="submit">primary form button</button>
+                    <div class="formatting-button-pair">
+                        <button id="two-buttons" type="button">split action</button>
+                        <button id="two-buttons" type="button">split action</button>
+                    </div>
+                    <button class="danger-button" type="button">danger action</button>
+                    <button id="form-button" class="form-button-disabled" type="button" disabled>disabled button</button>
+                </form>
+            </div>
         </div>
-        <span id="post-content">this is an example of what comments will look like.<br><br>
-        comments can be left by anyone, and are intended to be used for leaving feedback or sharing thoughts on the website.</span>
-    </div>
-    <div id="post">
-        <div id="post-header">
-            <span id="post-username">Michael E</span>
-            <span id="post-date-feed">3w ago</span> 
+    </section>
+
+    <section class="formatting-section">
+        <h3>forms</h3>
+        <form class="formatting-form-stack" data-formatting-demo-form>
+            <label for="textbox">textbox input</label>
+            <input id="textbox" type="text" value="sample text">
+
+            <label for="formatting-email">email input</label>
+            <input id="formatting-email" class="text-input" type="email" value="me@fridg3.org">
+
+            <label for="formatting-textarea">textarea</label>
+            <textarea id="formatting-textarea" class="text-input large">multi-line text area content.</textarea>
+
+            <label for="formatting-dropdown">dropdown</label>
+            <select id="formatting-dropdown" class="dropdown">
+                <option>default option</option>
+                <option>another option</option>
+            </select>
+
+            <div class="checkbox-group" aria-label="checkbox samples">
+                <label class="checkbox-label"><input class="checkbox" type="checkbox" checked><span>checked checkbox</span></label>
+                <label class="checkbox-label"><input class="checkbox" type="checkbox"><span>unchecked checkbox</span></label>
+            </div>
+
+            <div class="radio-group" aria-label="radio samples">
+                <label class="radio-label"><input class="radio" name="formatting-radio" type="radio" checked><span>selected radio</span></label>
+                <label class="radio-label"><input class="radio" name="formatting-radio" type="radio"><span>unselected radio</span></label>
+            </div>
+
+            <div id="color-scheme-group">
+                <label class="color-row"><span>background</span><input class="color-input" type="color" value="#111111"></label>
+                <label class="color-row"><span>accent</span><input class="color-input" type="color" value="#4d76c9"></label>
+            </div>
+
+            <div id="search">
+                <input id="search-box" type="search" value="search box">
+                <button id="search-button" type="button">search</button>
+            </div>
+        </form>
+    </section>
+
+    <section class="formatting-section">
+        <h3>feed, guestbook, and journal cards</h3>
+        <div id="posts">
+            <article id="post">
+                <div id="post-header">
+                    <span id="post-username">fridge</span>
+                    <span id="post-date-feed">2026-05-13 <span id="post-bookmark-feed" data-tooltip="save post"><i class="fa-regular fa-bookmark"></i></span></span>
+                </div>
+                <div id="post-content">
+                    feed-style post content with a list:
+                    <ul>
+                        <li>first item</li>
+                        <li>second item</li>
+                    </ul>
+                </div>
+            </article>
+
+            <article id="post">
+                <div>
+                    <span id="post-title">journal card title</span>
+                    <span id="post-bookmark" data-tooltip="save post"><i class="fa-regular fa-bookmark"></i></span>
+                </div>
+                <span id="post-date">2026-05-13</span>
+                <span id="post-description">short description for a journal/bookmark card.</span>
+                <img id="post-image" src="/resources/icon.png" alt="formatting image sample">
+            </article>
         </div>
-        <span id="post-content">this is another example comment to showcase that users can input their own name/alias.</span>
-    </div>
+
+        <div class="guestbook-pagination" aria-label="pagination sample">
+            <a class="guestbook-page-btn" href="/formatting">prev</a>
+            <a class="guestbook-page-btn current" href="/formatting">1</a>
+            <a class="guestbook-page-btn" href="/formatting">2</a>
+            <a class="guestbook-page-btn" href="/formatting">next</a>
+        </div>
+    </section>
+
+    <section class="formatting-section">
+        <h3>bbcode editor pieces</h3>
+        <div class="bbcode-editor">
+            <div class="bbcode-toolbar">
+                <button type="button" class="bbcode-btn" data-tooltip="bold"><i class="fa-solid fa-bold"></i></button>
+                <button type="button" class="bbcode-btn" data-tooltip="italic"><i class="fa-solid fa-italic"></i></button>
+                <button type="button" class="bbcode-btn" data-tooltip="underline"><i class="fa-solid fa-underline"></i></button>
+                <button type="button" class="bbcode-btn" data-tooltip="strikethrough"><i class="fa-solid fa-strikethrough"></i></button>
+                <button type="button" class="bbcode-btn" data-tooltip="spoiler"><i class="fa-solid fa-eye-slash"></i></button>
+                <button type="button" class="bbcode-btn" data-tooltip="color"><i class="fa-solid fa-palette"></i></button>
+                <button type="button" class="bbcode-btn" data-tooltip="image"><i class="fa-solid fa-image"></i></button>
+                <button type="button" class="bbcode-btn" data-tooltip="code"><i class="fa-solid fa-code"></i></button>
+                <button type="button" class="bbcode-btn disabled" data-tooltip="disabled tool"><i class="fa-solid fa-ban"></i></button>
+                <select class="bbcode-dropdown" data-tooltip="heading">
+                    <option>normal</option>
+                    <option value="h3">heading 3</option>
+                    <option value="h4">heading 4</option>
+                </select>
+            </div>
+            <textarea id="bbcode-textbox" class="formatting-bbcode-textbox">[b]bbcode textarea[/b]</textarea>
+            <div id="bbcode-preview" class="formatting-bbcode-preview">
+                <h3>preview heading</h3>
+                <p>rendered preview area with <span data-tooltip="tooltip inside preview">hover text</span>.</p>
+            </div>
+        </div>
+    </section>
+
+    <section class="formatting-section formatting-gallery">
+        <h3>gallery grid</h3>
+        <div id="grid">
+            <div class="grid-item">
+                <div class="formatting-image-sample grid-image">grid image</div>
+                <p class="grid-caption">grid caption</p>
+                <p class="grid-subcaption">grid subcaption</p>
+                <form class="grid-delete-form" data-formatting-demo-form>
+                    <button class="grid-delete-button" type="submit"><i class="fa-solid fa-trash"></i> delete</button>
+                </form>
+            </div>
+
+            <div class="grid-item">
+                <div class="formatting-image-sample grid-image">grid image</div>
+                <p class="grid-caption">linked-looking caption</p>
+                <p class="grid-subcaption">metadata or description text</p>
+            </div>
+        </div>
+    </section>
+
+    <section class="formatting-section">
+        <h3>admin and dashboard cards</h3>
+        <div class="account-admin-list">
+            <a class="account-admin-card" href="/account/admin">
+                <strong>account card</strong>
+                <span>sample_user</span>
+                <span class="account-admin-meta">
+                    <span class="account-admin-badge">admin</span>
+                    <span class="account-admin-badge">chat</span>
+                    <span class="account-admin-badge">journal</span>
+                </span>
+            </a>
+
+            <article class="chat-admin-card">
+                <div>
+                    <strong>chat admin card</strong>
+                    <span>created 2026-05-13</span>
+                    <button class="chat-copy-link" type="button" data-tooltip="copy chat link">https://fridg3.org/chat/sample</button>
+                </div>
+                <div class="chat-card-actions formatting-chat-actions">
+                    <a id="two-buttons" href="/chat">open</a>
+                    <button class="danger-button" type="button">delete</button>
+                </div>
+            </article>
+
+            <article class="chat-admin-card contact-admin-card formatting-contact-card">
+                <div class="contact-admin-copy">
+                    <div class="contact-admin-header">
+                        <strong class="contact-admin-title">contact sender</strong>
+                        <a class="contact-admin-email" href="mailto:sender@example.com">sender@example.com</a>
+                    </div>
+                    <div class="contact-admin-meta">
+                        <span>2026-05-13 01:55</span>
+                        <span>notified discord</span>
+                    </div>
+                    <div class="contact-admin-alert">discord notify failed: sample warning</div>
+                    <div class="contact-admin-message">contact dashboard message content, wrapped in a readable box.</div>
+                </div>
+                <form class="contact-admin-actions" data-formatting-demo-form>
+                    <button class="danger-button" type="submit">delete</button>
+                </form>
+            </article>
+        </div>
+    </section>
 </div>
 
-<br><br>
+<script>
+(function () {
+    var root = document.getElementById('formatting-lab');
+    if (!root || root.dataset.formattingBound === '1') {
+        return;
+    }
 
-<input id="textbox" type="text" placeholder="small textbox">
+    root.dataset.formattingBound = '1';
 
-<br><br>
+    root.querySelectorAll('[data-formatting-demo-form]').forEach(function (form) {
+        form.addEventListener('submit', function (event) {
+            event.preventDefault();
+        });
+    });
 
-<textarea id="textbox" class="large" type="text" placeholder="this is a large textbox. it can be resized by dragging the bottom right corner."></textarea>
+    var output = document.getElementById('formatting-popup-result');
 
-<br>
+    function writeOutput(message) {
+        if (output) {
+            output.textContent = message;
+        }
+    }
 
-<div class="bbcode-editor">
-    <div class="bbcode-toolbar">
-        <button class="bbcode-btn" data-tag="b" data-tooltip="bold"><i class="fa-solid fa-bold"></i></button>
-        <button class="bbcode-btn" data-tag="i" data-tooltip="italic"><i class="fa-solid fa-italic"></i></button>
-        <button class="bbcode-btn" data-tag="u" data-tooltip="underline"><i class="fa-solid fa-underline"></i></button>
-        <button class="bbcode-btn" data-tag="s" data-tooltip="strikethrough"><i class="fa-solid fa-strikethrough"></i></button>
-        <button id="bbcode-spoiler-btn" class="bbcode-btn" data-tooltip="spoiler"><i class="fa-solid fa-eye-slash"></i></button>
-        <button id="bbcode-color-btn" class="bbcode-btn" data-tooltip="color"><i class="fa-solid fa-palette"></i></button>
-        <input id="bbcode-color-input" type="color" style="display: none;">
-        <button id="bbcode-image-btn" class="bbcode-btn" data-tooltip="attach image"><i class="fa-solid fa-image"></i></button>
-        <input id="bbcode-image-input" type="file" accept="image/*" style="display: none;">
-        <button class="bbcode-btn" data-tag="code=python" data-tooltip="code block"><i class="fa-solid fa-code"></i></button>
-        <button id="bbcode-tooltip-btn" class="bbcode-btn" data-tooltip="tooltip"><i class="fa-solid fa-comment-dots"></i></button>
-        <button id="bbcode-link-btn" class="bbcode-btn" data-tooltip="link"><i class="fa-solid fa-link"></i></button>
-        <select id="bbcode-header-dropdown" class="bbcode-dropdown" data-tooltip="heading">
-            <option value="">headings</option>
-            <option value="h3">heading</option>
-            <option value="h4">sub-heading</option>
-        </select>
-        <button id="bbcode-preview-toggle" class="bbcode-btn" data-tooltip="toggle preview"><i class="fa-solid fa-eye"></i></button>
-    </div>
-    <textarea id="bbcode-textbox">
-[h3]heading[/h3]
-[h4]subheading[/h4]
-[b]bold[/b]
-[i]italic[/i]
-[u]underline[/u]
-[s]strikethrough[/s]
-[spoiler]spoiler[/spoiler]
-[color:#1CD977]colour[/color]
-[img=https://www.robloxforum.com/media/twink-differet-png.458/full?auto=webp&fit=bounds&format=pjgp&height=1920&optimize=high&width=1920][name:you can name this whatever you'd like]
-[code=python]for i in range(1,10):
-print("current number: " + i)[/code]
-[tooltip="this is the tooltip, pretty cool right?"]this text has a tooltip attached to it[/tooltip]
-[link=https://example.com]this text is a hyperlink[/link]
-    </textarea>
-    <div id="bbcode-preview" style="display: none;"></div>
-</div>
+    root.querySelectorAll('[data-formatting-action]').forEach(function (button) {
+        button.addEventListener('click', function () {
+            var action = button.getAttribute('data-formatting-action');
 
-<br><br>
+            if (action === 'notice' && window.showSiteNotice) {
+                window.showSiteNotice('formatting notice', 'this is the standard on-site notice popup.');
+                writeOutput('notice opened');
+                return;
+            }
 
-<button id="form-button" data-tooltip="this is a button">button</button>
-<button id="two-buttons" data-tooltip="this is a button">button 1</button><button id="two-buttons" data-tooltip="this is another button">button 2</button>
+            if (action === 'confirm' && window.showSitePopup) {
+                window.showSitePopup({
+                    title: 'formatting confirmation',
+                    detail: 'confirm/cancel flows should use this popup instead of native confirm().',
+                    okText: 'confirm',
+                    cancelText: 'cancel'
+                }).then(function (confirmed) {
+                    writeOutput(confirmed ? 'confirmed' : 'cancelled');
+                });
+                return;
+            }
 
-<br><br>
-
-<div id="grid">
-    <div class="grid-item">
-        <img class="grid-image" src="" alt="Example 1">
-        <div class="grid-caption">grid item 1</div>
-        <div class="grid-subcaption">item description or metadata</div>
-    </div>
-    <div class="grid-item">
-        <img class="grid-image" src="" alt="Example 2">
-        <div class="grid-caption">grid item 2</div>
-        <div class="grid-subcaption">item description or metadata</div>
-    </div>
-    <div class="grid-item">
-        <img class="grid-image" src="" alt="Example 3">
-        <div class="grid-caption">grid item 3</div>
-        <div class="grid-subcaption">item description or metadata</div>
-    </div>
-    <div class="grid-item">
-        <img class="grid-image" src="" alt="Example 4">
-        <div class="grid-caption">grid item 4</div>
-        <div class="grid-subcaption">item description or metadata</div>
-    </div>
-    <div class="grid-item">
-        <img class="grid-image" src="" alt="Example 5">
-        <div class="grid-caption">grid item 5</div>
-        <div class="grid-subcaption">item description or metadata</div>
-    </div>
-    <div class="grid-item">
-        <img class="grid-image" src="" alt="Example 6">
-        <div class="grid-caption">grid item 6</div>
-        <div class="grid-subcaption">item description or metadata</div>
-    </div>
-</div>
-
-<br><br>
-
-<div class="checkbox-group">
-    <label class="checkbox-label">
-        <input type="checkbox" class="checkbox" checked>
-        <span>checkbox option 1</span>
-    </label>
-    <label class="checkbox-label">
-        <input type="checkbox" class="checkbox">
-        <span>checkbox option 2</span>
-    </label>
-    <label class="checkbox-label">
-        <input type="checkbox" class="checkbox" checked>
-        <span>checkbox option 3</span>
-    </label>
-    <label class="checkbox-label">
-        <input type="checkbox" class="checkbox">
-        <span>checkbox option 4</span>
-    </label>
-</div>
-
-<br><br>
-<div class="radio-group">
-    <label class="radio-label">
-        <input type="radio" class="radio" name="example-radio" checked>
-        <span>radio option 1</span>
-    </label>
-    <label class="radio-label">
-        <input type="radio" class="radio" name="example-radio">
-        <span>radio option 2</span>
-    </label>
-    <label class="radio-label">
-        <input type="radio" class="radio" name="example-radio">
-        <span>radio option 3</span>
-    </label>
-    <label class="radio-label">
-        <input type="radio" class="radio" name="example-radio">
-        <span>radio option 4</span>
-    </label>
-</div>
-
-<br><br>
-
-<select class="dropdown">
-    <option value="">select an option</option>
-    <option value="1">dropdown option 1</option>
-    <option value="2">dropdown option 2</option>
-    <option value="3">dropdown option 3</option>
-    <option value="4">dropdown option 4</option>
-</select>
-
-<br><br>
-
-<div id="search">
-    <input id="search-box" type="text" placeholder="search...">
-    <button id="search-button"><i class="fa-solid fa-magnifying-glass"></i></button>
-</div>
+            if (action === 'prompt' && window.showSitePrompt) {
+                window.showSitePrompt('formatting prompt', 'text prompts should use the on-site prompt helper.', 'sample value')
+                    .then(function (value) {
+                        writeOutput(value === null ? 'prompt cancelled' : 'prompt value: ' + value);
+                    });
+            }
+        });
+    });
+})();
+</script>
