@@ -528,6 +528,83 @@ body.mobile-template #footer-buttons > a.mobile-footer-link > #footer-button.mob
     }
 }
 
+.chat-view {
+    --chat-bg: rgba(5, 14, 22, 0.9);
+    --chat-fg: #f4fbff;
+    --chat-border: rgba(23, 184, 212, 0.44);
+    --chat-muted: #8ed7e0;
+    --chat-own-bg: #00bde8;
+    --chat-own-fg: #031017;
+    --chat-other-bg: rgba(45, 56, 66, 0.94);
+    --chat-other-fg: #f4fbff;
+}
+
+.chat-messages {
+    border-color: rgba(23, 184, 212, 0.42);
+    border-radius: 0;
+    background:
+        linear-gradient(180deg, rgba(5, 17, 27, 0.94), rgba(3, 10, 16, 0.98)),
+        rgba(3, 10, 16, 0.96);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.06),
+        0 14px 30px rgba(0, 0, 0, 0.28);
+}
+
+.chat-message {
+    border-radius: 13px;
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.18);
+}
+
+.chat-message-own {
+    background:
+        linear-gradient(135deg, #18d7ff, #00a5d8);
+    border-color: rgba(91, 231, 255, 0.5);
+    text-shadow: none;
+}
+
+.chat-message-other {
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+.chat-message-meta,
+.chat-date-divider {
+    color: #9edce4;
+}
+
+.chat-date-divider::before,
+.chat-date-divider::after {
+    background: rgba(23, 184, 212, 0.42);
+}
+
+.chat-presence,
+.chat-typing-indicator,
+.chat-reply-compose,
+.chat-attach-button,
+.chat-send-form textarea,
+.chat-emoji-button,
+.chat-send-button,
+.chat-context-menu,
+.chat-emoji-picker {
+    border-color: rgba(23, 184, 212, 0.42);
+    background:
+        linear-gradient(180deg, rgba(9, 32, 46, 0.92), rgba(4, 14, 22, 0.96));
+    color: #f4fbff;
+}
+
+.chat-view .chat-attach-button:hover,
+.chat-emoji-button:hover,
+.chat-send-button:hover,
+.chat-context-menu button:hover {
+    background: #00d8ff;
+    color: #031017;
+    border-color: #b7ff00;
+}
+
+.chat-message-deleted {
+    background: rgba(14, 26, 36, 0.9);
+    border-color: rgba(23, 184, 212, 0.22);
+}
+
 /* frdgBeats app theme support */
 .frdgbeats-daw {
     --fb-panel: color-mix(in srgb, var(--bg) 88%, var(--fg) 12%);

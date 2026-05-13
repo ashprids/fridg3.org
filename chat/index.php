@@ -591,6 +591,10 @@ function chat_message_label(array $message, string $viewerRole, string $recipien
 }
 
 function chat_message_summary(array $message): string {
+    if (!empty($message['deletedAt'])) {
+        return 'message deleted';
+    }
+
     $body = trim(preg_replace('/\s+/', ' ', (string)($message['body'] ?? '')));
     if ($body !== '') {
         if (function_exists('mb_strlen') && function_exists('mb_substr')) {
@@ -623,6 +627,14 @@ function chat_normalize_emoji(string $emoji): string {
 
 function chat_messages_revision(array $messages): string {
     return sha1((string)json_encode($messages, JSON_UNESCAPED_SLASHES));
+}
+
+function chat_last_message_payload(array $messages): array {
+    $lastMessage = end($messages);
+    return [
+        'lastMessageId' => is_array($lastMessage) ? (string)($lastMessage['id'] ?? '') : '',
+        'lastMessageSender' => is_array($lastMessage) ? (string)($lastMessage['sender'] ?? '') : '',
+    ];
 }
 
 function chat_set_participant_cookie(string $id, string $secret): void {
@@ -714,9 +726,10 @@ function chat_message_html(array $conversation, string $viewerRole): string {
 
         $sender = (string)($message['sender'] ?? 'unknown');
         $isOwn = $sender === $viewerRole;
+        $isDeleted = !empty($message['deletedAt']);
         $senderLabel = chat_message_label($message, $viewerRole, $recipientName);
         $time = date('H:i', $createdAt);
-        $body = nl2br(chat_h((string)($message['body'] ?? '')), false);
+        $body = $isDeleted ? 'message deleted' : nl2br(chat_h((string)($message['body'] ?? '')), false);
         $messageSummary = chat_message_summary($message);
         $replyHtml = '';
         $replyTo = (string)($message['replyTo'] ?? '');
@@ -729,7 +742,7 @@ function chat_message_html(array $conversation, string $viewerRole): string {
         }
         $attachmentHtml = '';
         $hasImageAttachment = false;
-        $attachment = is_array($message['attachment'] ?? null) ? $message['attachment'] : null;
+        $attachment = !$isDeleted && is_array($message['attachment'] ?? null) ? $message['attachment'] : null;
         if ($attachment !== null && isset($conversation['id'])) {
             $attachmentId = (string)($attachment['id'] ?? '');
             $attachmentName = chat_clean_filename((string)($attachment['name'] ?? 'attachment'));
@@ -746,7 +759,7 @@ function chat_message_html(array $conversation, string $viewerRole): string {
         }
 
         $reactionHtml = '';
-        $reactions = is_array($message['reactions'] ?? null) ? $message['reactions'] : [];
+        $reactions = !$isDeleted && is_array($message['reactions'] ?? null) ? $message['reactions'] : [];
         foreach ($reactions as $emoji => $roles) {
             $emoji = chat_normalize_emoji((string)$emoji);
             if ($emoji === '' || !is_array($roles)) {
@@ -779,8 +792,11 @@ function chat_message_html(array $conversation, string $viewerRole): string {
         if ($hasImageAttachment) {
             $messageClasses[] = 'chat-message-has-image';
         }
+        if ($isDeleted) {
+            $messageClasses[] = 'chat-message-deleted';
+        }
 
-        $html .= '<article class="' . chat_h(implode(' ', $messageClasses)) . '" data-message-id="' . chat_h((string)($message['id'] ?? '')) . '">'
+        $html .= '<article class="' . chat_h(implode(' ', $messageClasses)) . '" data-message-id="' . chat_h((string)($message['id'] ?? '')) . '" data-message-own="' . ($isOwn ? '1' : '0') . '" data-message-deleted="' . ($isDeleted ? '1' : '0') . '">'
             . '<div class="chat-message-meta"><strong>' . chat_h($senderLabel) . '</strong><span>' . chat_h($time) . '</span></div>'
             . '<div class="chat-message-quote-source" hidden>' . chat_h($messageSummary) . '</div>'
             . $replyHtml
@@ -862,15 +878,13 @@ if ($action === 'messages' && $conversationId !== '') {
     }
 
     $messages = (array)($conversation['messages'] ?? []);
-    $lastMessage = end($messages);
-    $lastMessageId = is_array($lastMessage) ? (string)($lastMessage['id'] ?? '') : '';
 
     chat_json_response([
         'ok' => true,
         'exists' => true,
         'html' => chat_message_html($conversation, $viewerRole),
         'count' => count($messages),
-        'lastMessageId' => $lastMessageId,
+        ...chat_last_message_payload($messages),
         'revision' => chat_messages_revision($messages),
     ]);
 }
@@ -899,6 +913,10 @@ if ($action === 'react' && $conversationId !== '') {
     foreach ($messages as &$message) {
         if (!is_array($message) || (string)($message['id'] ?? '') !== $messageId) {
             continue;
+        }
+        if (!empty($message['deletedAt'])) {
+            http_response_code(400);
+            chat_json_response(['ok' => false, 'exists' => true, 'error' => 'message deleted.']);
         }
         $reactions = is_array($message['reactions'] ?? null) ? $message['reactions'] : [];
         $roles = is_array($reactions[$emoji] ?? null) ? $reactions[$emoji] : [];
@@ -929,13 +947,71 @@ if ($action === 'react' && $conversationId !== '') {
 
     $conversation['messages'] = $messages;
     chat_write_conversation($chatDataDir, $chatKeyPath, $conversation);
-    $lastMessage = end($messages);
     chat_json_response([
         'ok' => true,
         'exists' => true,
         'html' => chat_message_html($conversation, $viewerRole),
         'count' => count($messages),
-        'lastMessageId' => is_array($lastMessage) ? (string)($lastMessage['id'] ?? '') : '',
+        ...chat_last_message_payload($messages),
+        'revision' => chat_messages_revision($messages),
+    ]);
+}
+
+if ($action === 'delete-message' && $conversationId !== '') {
+    $conversation = chat_read_conversation($chatDataDir, $chatKeyPath, $conversationId);
+    if ($conversation === null) {
+        chat_json_response(['ok' => false, 'exists' => false]);
+    }
+
+    $viewerRole = chat_get_viewer_role($conversation, $conversationId, $canManage);
+    if ($viewerRole === '') {
+        http_response_code(403);
+        chat_json_response(['ok' => false, 'exists' => true]);
+    }
+
+    $messageId = preg_replace('/[^a-f0-9]/', '', strtolower((string)($_POST['messageId'] ?? '')));
+    if ($messageId === '') {
+        http_response_code(400);
+        chat_json_response(['ok' => false, 'exists' => true, 'error' => 'invalid message.']);
+    }
+
+    $messages = (array)($conversation['messages'] ?? []);
+    $updated = false;
+    foreach ($messages as &$message) {
+        if (!is_array($message) || (string)($message['id'] ?? '') !== $messageId) {
+            continue;
+        }
+        if (!$canManage && (string)($message['sender'] ?? '') !== $viewerRole) {
+            http_response_code(403);
+            chat_json_response(['ok' => false, 'exists' => true, 'error' => 'you can only delete your own messages.']);
+        }
+        $attachment = is_array($message['attachment'] ?? null) ? $message['attachment'] : null;
+        $attachmentId = $attachment !== null ? (string)($attachment['id'] ?? '') : '';
+        if (preg_match('/^[a-f0-9]{32}$/', $attachmentId) === 1) {
+            @unlink(chat_attachment_path($chatDataDir, $conversationId, $attachmentId));
+        }
+        $message['body'] = '';
+        $message['deletedAt'] = time();
+        $message['deletedBy'] = $viewerRole;
+        unset($message['attachment'], $message['reactions']);
+        $updated = true;
+        break;
+    }
+    unset($message);
+
+    if (!$updated) {
+        http_response_code(404);
+        chat_json_response(['ok' => false, 'exists' => true, 'error' => 'message not found.']);
+    }
+
+    $conversation['messages'] = $messages;
+    chat_write_conversation($chatDataDir, $chatKeyPath, $conversation);
+    chat_json_response([
+        'ok' => true,
+        'exists' => true,
+        'html' => chat_message_html($conversation, $viewerRole),
+        'count' => count($messages),
+        ...chat_last_message_payload($messages),
         'revision' => chat_messages_revision($messages),
     ]);
 }
@@ -1077,13 +1153,12 @@ if ($conversationId !== '' && $_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if (chat_request_wants_json()) {
             $messages = (array)($conversation['messages'] ?? []);
-            $lastMessage = end($messages);
             chat_json_response([
                 'ok' => true,
                 'exists' => true,
                 'html' => chat_message_html($conversation, $viewerRole),
                 'count' => count($messages),
-                'lastMessageId' => is_array($lastMessage) ? (string)($lastMessage['id'] ?? '') : '',
+                ...chat_last_message_payload($messages),
                 'revision' => chat_messages_revision($messages),
             ]);
         }
@@ -1167,6 +1242,7 @@ function initChat(){
     if(!root||root.dataset.chatBound==="1")return;
     root.dataset.chatBound="1";
     var id=root.getAttribute("data-chat-id");
+    var canManage=root.getAttribute("data-can-manage")==="1";
     var presenceEl=document.getElementById("chat-presence");
     var typingEl=document.getElementById("chat-typing-indicator");
     var messagesEl=document.getElementById("chat-messages");
@@ -1187,8 +1263,13 @@ function initChat(){
     var emojiGrid=emojiPicker?emojiPicker.querySelector(".chat-emoji-grid"):null;
     var pickerMode="insert";
     var pickerMessageId="";
+    var viewerRole=root.getAttribute("data-viewer-role")||"";
     var lastMessageId="";
+    var lastMessageCount=0;
     var lastRevision="";
+    var alertAudio=null;
+    var unreadCount=0;
+    var originalTitle=document.title;
     var currentlyTyping=false;
     var lastTypingSentAt=0;
     var typingIdleTimer=null;
@@ -1214,8 +1295,12 @@ function initChat(){
     function label(role){return role==="manager"?"fridge":(root.getAttribute("data-recipient-name")||"recipient");}
     function scrollMessages(force){if(!messagesEl)return;var nearBottom=messagesEl.scrollHeight-messagesEl.scrollTop-messagesEl.clientHeight<110;if(force||nearBottom){messagesEl.scrollTop=messagesEl.scrollHeight;}}
     function isChatActive(){return (!document.visibilityState||document.visibilityState==="visible")&&document.hasFocus();}
+    function updateUnreadTitle(){document.title=unreadCount>0?"("+unreadCount+") "+originalTitle:originalTitle;}
+    function clearUnread(){if(unreadCount<1)return;unreadCount=0;updateUnreadTitle();}
+    function playMessageAlert(){if(isChatActive())return;if(!alertAudio){alertAudio=new Audio("/chat/alert.ogg");alertAudio.preload="auto";}try{alertAudio.currentTime=0;var playPromise=alertAudio.play();if(playPromise&&typeof playPromise.catch==="function"){playPromise.catch(function(){});}}catch(error){}}
+    function trackIncomingMessages(data,force){if(force||!data||!data.lastMessageId||!lastMessageId)return;if(data.lastMessageId!==lastMessageId&&data.lastMessageSender&&data.lastMessageSender!==viewerRole){if(!isChatActive()){unreadCount+=Math.max(1,Number(data.count||0)-lastMessageCount);updateUnreadTitle();}playMessageAlert();}}
     function renderPresence(data){if(!data||!data.ok)return;var status=data.otherStatus||(data.otherOnline?"online":(data.otherAway?"away":"offline"));if(presenceEl){presenceEl.className="chat-presence chat-presence-"+status;presenceEl.textContent=label(data.otherRole)+" is "+status;}if(typingEl){typingEl.textContent=data.otherTyping?(label(data.otherRole)+" is typing..."):"";typingEl.style.display=data.otherTyping?"block":"none";}}
-    function renderMessages(data,force){if(!messagesEl||!data||!data.ok)return;var revision=data.revision||"";if((revision&&revision!==lastRevision)||data.lastMessageId!==lastMessageId||messagesEl.innerHTML===""){messagesEl.innerHTML=data.html;lastMessageId=data.lastMessageId||"";lastRevision=revision;scrollMessages(force);}}
+    function renderMessages(data,force){if(!messagesEl||!data||!data.ok)return;var revision=data.revision||"";if((revision&&revision!==lastRevision)||data.lastMessageId!==lastMessageId||messagesEl.innerHTML===""){trackIncomingMessages(data,force);messagesEl.innerHTML=data.html;lastMessageId=data.lastMessageId||"";lastMessageCount=Number(data.count||0);lastRevision=revision;scrollMessages(force);if(isChatActive())clearUnread();}}
     function showRecipientIntro(){if(root.getAttribute("data-show-recipient-intro")!=="1"||typeof window.showSitePopup!=="function")return;root.setAttribute("data-show-recipient-intro","0");var accountLinked=root.getAttribute("data-account-linked-recipient")==="1";window.showSitePopup({title:"private chat secured",html:accountLinked?"<p>this invite is linked to your fridg3.org account, so you can reopen it while logged in without relying on a browser cookie.</p><p>messages and attachments are stored in an encrypted chat file, and ending the chat deletes that file from the server.</p><p>click or tap any message to reply to it or react with an emoji.</p>":"<p>this invite is locked to this browser after you open it. other browsers that try the same link get denied.</p><p>messages and attachments are stored in an encrypted chat file, and ending the chat deletes that file from the server.</p><p>click or tap any message to reply to it or react with an emoji.</p>",okText:"got it"});}
     function syncFileIndicator(){if(!fileIndicator||!fileInput)return;var file=fileInput.files&&fileInput.files[0]?fileInput.files[0]:null;fileIndicator.textContent=file?("attached: "+file.name):"";fileIndicator.style.display=file?"block":"none";}
     function jsonFetch(url,options){return fetch(url,options).then(function(response){return response.json().then(function(data){if(!response.ok){data.ok=false;}return data;});});}
@@ -1235,7 +1320,7 @@ function initChat(){
     function closePicker(){if(emojiPicker)emojiPicker.style.display="none";pickerMessageId="";}
     function isMobileChat(){return !!(document.body&&document.body.classList&&document.body.classList.contains("mobile-template"))||window.matchMedia("(max-width: 720px)").matches;}
     function placeBox(box,x,y){if(!box||!root)return;box.style.display="block";var rootRect=root.getBoundingClientRect();var rect=box.getBoundingClientRect();var localX=x-rootRect.left;var localY=y-rootRect.top;var maxLeft=Math.max(8,root.clientWidth-rect.width-8);var maxTop=Math.max(8,root.clientHeight-rect.height-8);box.style.left=Math.max(8,Math.min(localX,maxLeft))+"px";box.style.top=Math.max(8,Math.min(localY,maxTop))+"px";}
-    function openMenu(message,x,y){if(!menu||!message)return;menu.dataset.messageId=message.getAttribute("data-message-id")||"";placeBox(menu,x,y);}
+    function openMenu(message,x,y){if(!menu||!message)return;menu.dataset.messageId=message.getAttribute("data-message-id")||"";var deleteButton=menu.querySelector('[data-chat-action="delete"]');if(deleteButton){deleteButton.style.display=(canManage||message.getAttribute("data-message-own")==="1")?"block":"none";}placeBox(menu,x,y);}
     function emojiFromHexcode(hexcode){return String(hexcode||"").split("-").map(function(part){var code=parseInt(part,16);return code?String.fromCodePoint(code):"";}).join("");}
     function normalizeEmojiItem(item){var emoji=item&&typeof item.emoji==="string"&&item.emoji?item.emoji:emojiFromHexcode(item&&item.hexcode);var label=String(item&&item.label||"emoji");if(!emoji||emoji.indexOf("➡")!==-1||label.toLowerCase().indexOf("facing right")!==-1)return null;var tags=Array.isArray(item.tags)?item.tags:[];var shortcodes=Array.isArray(item.shortcodes)?item.shortcodes:[];return {emoji:emoji,label:label,tags:tags.concat(shortcodes),group:Number(item.group||0),order:Number(item.order||0)};}
     function loadEmojiData(){if(!window.fetch)return;fetch(EMOJI_DATA_URL,{cache:"force-cache"}).then(function(response){if(!response.ok)throw new Error("emoji data failed");return response.json();}).then(function(data){if(!Array.isArray(data))return;var loaded=data.map(normalizeEmojiItem).filter(Boolean);if(loaded.length){emojiItems=loaded;if(emojiPicker&&emojiPicker.style.display==="block"){renderEmojiList(emojiSearch?emojiSearch.value:"");}}}).catch(function(){});}
@@ -1243,20 +1328,22 @@ function initChat(){
     function renderEmojiList(query){if(!emojiGrid)return;var q=(query||"").trim().toLowerCase();emojiGrid.innerHTML="";var used={};var quick=[];quickEmojiOrder.forEach(function(emoji){var item=fallbackEmojiItems.find(function(candidate){return candidate.emoji===emoji;})||emojiItems.find(function(candidate){return candidate.emoji===emoji;});if(item)quick.push(item);});var matches=emojiItems.filter(function(item){var haystack=(item.emoji+" "+item.label+" "+item.tags.join(" ")).toLowerCase();if(!q&&isLetterEmoji(item))return false;return !q||haystack.indexOf(q)!==-1;}).sort(function(a,b){var qa=quickEmojiOrder.indexOf(a.emoji);var qb=quickEmojiOrder.indexOf(b.emoji);if(qa!==-1||qb!==-1)return (qa===-1?999:qa)-(qb===-1?999:qb);return (a.order||0)-(b.order||0);});quick.concat(matches).filter(function(item){if(used[item.emoji])return false;used[item.emoji]=true;return true;}).slice(0,500).forEach(function(item){var btn=document.createElement("button");btn.type="button";btn.textContent=item.emoji;btn.title=item.label;btn.setAttribute("data-emoji",item.emoji);emojiGrid.appendChild(btn);});}
     function openPicker(mode,messageId,x,y){if(!emojiPicker)return;pickerMode=mode;pickerMessageId=messageId||"";if(emojiSearch)emojiSearch.value="";renderEmojiList("");placeBox(emojiPicker,x,y);if(emojiSearch)emojiSearch.focus();}
     function react(messageId,emoji){var body=new URLSearchParams();body.append("action","react");body.append("messageId",messageId);body.append("emoji",emoji);jsonFetch("/chat/"+id,{method:"POST",body:body,credentials:"same-origin",headers:{Accept:"application/json","X-Requested-With":"XMLHttpRequest","Content-Type":"application/x-www-form-urlencoded"}}).then(function(data){if(data.exists===false){window.location.href="/chat/"+id;return;}if(data.ok){renderMessages(data,false);}}).catch(function(){});}
+    function confirmDeleteMessage(){if(typeof window.showSitePopup==="function"){return window.showSitePopup({title:"delete message?",detail:"this will replace the message with a deleted placeholder for everyone in the chat.",okText:"delete",cancelText:"cancel"});}return Promise.resolve(window.confirm("delete this message?"));}
+    function deleteMessage(messageId){if(!messageId)return;confirmDeleteMessage().then(function(confirmed){if(!confirmed)return;var body=new URLSearchParams();body.append("action","delete-message");body.append("messageId",messageId);jsonFetch("/chat/"+id,{method:"POST",body:body,credentials:"same-origin",headers:{Accept:"application/json","X-Requested-With":"XMLHttpRequest","Content-Type":"application/x-www-form-urlencoded"}}).then(function(data){if(data.exists===false){window.location.href="/chat/"+id;return;}if(data.ok){renderMessages(data,false);}else if(data.error){alert(data.error);}}).catch(function(){});});}
     function submitMessage(event){event.preventDefault();if(!form||!textarea)return;var body=textarea.value.trim();if(body===""&&!hasFile())return;if(hasFile()&&fileInput.files[0].size>8388608){alert("file is too big. max size is 8 MB.");return;}if(typingIdleTimer)clearTimeout(typingIdleTimer);sendTypingState(false,true);var payload=new FormData(form);textarea.disabled=true;if(fileInput)fileInput.disabled=true;if(sendButton)sendButton.disabled=true;jsonFetch(form.getAttribute("action")||("/chat/"+id),{method:"POST",body:payload,credentials:"same-origin",headers:{Accept:"application/json","X-Requested-With":"XMLHttpRequest"}}).then(function(data){if(data.exists===false){window.location.href="/chat/"+id;return;}if(data.ok){textarea.value="";if(fileInput)fileInput.value="";clearReply();syncFileIndicator();renderMessages(data,true);}else if(data.error){alert(data.error);}}).catch(function(){form.submit();}).finally(function(){textarea.disabled=false;if(fileInput)fileInput.disabled=false;if(sendButton)sendButton.disabled=false;textarea.focus();});}
     if(form&&textarea){form.addEventListener("submit",submitMessage);textarea.addEventListener("input",queueTyping);textarea.addEventListener("blur",function(){if(typingIdleTimer)clearTimeout(typingIdleTimer);sendTypingState(false,true);});textarea.addEventListener("keydown",function(event){if(event.key==="Enter"&&!event.shiftKey){event.preventDefault();if(form.requestSubmit){form.requestSubmit();}else{submitMessage(event);}}});}
     if(fileInput){fileInput.addEventListener("change",syncFileIndicator);syncFileIndicator();}
     if(replyCancel){replyCancel.addEventListener("click",clearReply);}
     if(emojiButton){emojiButton.addEventListener("click",function(event){event.preventDefault();closeMenu();var rect=emojiButton.getBoundingClientRect();openPicker("insert","",rect.left,rect.top-330);});}
-    if(messagesEl){messagesEl.addEventListener("contextmenu",function(event){var message=event.target.closest(".chat-message[data-message-id]");if(!message)return;event.preventDefault();});messagesEl.addEventListener("click",function(event){var ref=event.target.closest("[data-scroll-message]");if(ref){var target=messagesEl.querySelector('.chat-message[data-message-id="'+ref.getAttribute("data-scroll-message")+'"]');if(target){target.scrollIntoView({block:"center",behavior:"smooth"});target.classList.add("chat-message-highlight");setTimeout(function(){target.classList.remove("chat-message-highlight");},1200);}return;}var reaction=event.target.closest(".chat-reaction[data-message-id][data-emoji]");if(reaction){react(reaction.getAttribute("data-message-id"),reaction.getAttribute("data-emoji"));return;}if(event.target.closest(".chat-attachment-image"))return;var message=event.target.closest(".chat-message[data-message-id]");if(message){event.preventDefault();closePicker();var rect=message.getBoundingClientRect();openMenu(message,rect.left+12,rect.bottom+6);}});}
-    if(menu){menu.addEventListener("click",function(event){var action=event.target.closest("[data-chat-action]");if(!action)return;event.stopPropagation();var message=messagesEl?messagesEl.querySelector('.chat-message[data-message-id="'+menu.dataset.messageId+'"]'):null;if(action.getAttribute("data-chat-action")==="reply"){setReply(message);closeMenu();}else{var rect=menu.getBoundingClientRect();openPicker("react",menu.dataset.messageId,rect.left,rect.bottom+6);closeMenu();}});}
+    if(messagesEl){messagesEl.addEventListener("contextmenu",function(event){var message=event.target.closest(".chat-message[data-message-id]");if(!message)return;event.preventDefault();});messagesEl.addEventListener("click",function(event){var ref=event.target.closest("[data-scroll-message]");if(ref){var target=messagesEl.querySelector('.chat-message[data-message-id="'+ref.getAttribute("data-scroll-message")+'"]');if(target){target.scrollIntoView({block:"center",behavior:"smooth"});target.classList.add("chat-message-highlight");setTimeout(function(){target.classList.remove("chat-message-highlight");},1200);}return;}var reaction=event.target.closest(".chat-reaction[data-message-id][data-emoji]");if(reaction){react(reaction.getAttribute("data-message-id"),reaction.getAttribute("data-emoji"));return;}if(event.target.closest(".chat-attachment-image"))return;var message=event.target.closest(".chat-message[data-message-id]");if(message&&message.getAttribute("data-message-deleted")!=="1"){event.preventDefault();closePicker();var rect=message.getBoundingClientRect();openMenu(message,rect.left+12,rect.bottom+6);}});}
+    if(menu){menu.addEventListener("click",function(event){var action=event.target.closest("[data-chat-action]");if(!action)return;event.stopPropagation();var message=messagesEl?messagesEl.querySelector('.chat-message[data-message-id="'+menu.dataset.messageId+'"]'):null;if(action.getAttribute("data-chat-action")==="reply"){setReply(message);closeMenu();}else if(action.getAttribute("data-chat-action")==="delete"){deleteMessage(menu.dataset.messageId);closeMenu();}else{var rect=menu.getBoundingClientRect();openPicker("react",menu.dataset.messageId,rect.left,rect.bottom+6);closeMenu();}});}
     if(emojiSearch){emojiSearch.addEventListener("input",function(){renderEmojiList(emojiSearch.value);});}
     if(emojiGrid){emojiGrid.addEventListener("click",function(event){var btn=event.target.closest("[data-emoji]");if(!btn)return;var emoji=btn.getAttribute("data-emoji");if(pickerMode==="react"&&pickerMessageId){react(pickerMessageId,emoji);}else if(textarea){var start=textarea.selectionStart||textarea.value.length;var end=textarea.selectionEnd||start;textarea.value=textarea.value.slice(0,start)+emoji+textarea.value.slice(end);textarea.focus();textarea.setSelectionRange(start+emoji.length,start+emoji.length);}closePicker();});}
     document.addEventListener("click",function(event){if(menu&&menu.style.display==="block"&&!event.target.closest(".chat-context-menu")&&!event.target.closest(".chat-message"))closeMenu();if(emojiPicker&&emojiPicker.style.display==="block"&&!event.target.closest(".chat-emoji-picker")&&!event.target.closest(".chat-emoji-button"))closePicker();});
     document.addEventListener("keydown",function(event){if(event.key==="Escape"){closeMenu();closePicker();}});
     setInterval(function(){jsonFetch("/chat/"+id+"?action=status",{cache:"no-store"}).then(function(data){if(!data.exists){window.location.href="/chat/"+id;}}).catch(function(){});},5000);
-    document.addEventListener("visibilitychange",function(){if(!isChatActive())sendTypingState(false,true);ping();if(isChatActive())refreshMessages(false);});
-    window.addEventListener("focus",ping);
+    document.addEventListener("visibilitychange",function(){if(!isChatActive())sendTypingState(false,true);ping();if(isChatActive()){clearUnread();refreshMessages(false);}});
+    window.addEventListener("focus",function(){clearUnread();ping();refreshMessages(false);});
     window.addEventListener("blur",function(){sendTypingState(false,true);ping();});
     window.addEventListener("pagehide",function(){sendTypingState(false,true);pingAway();});
     loadEmojiData();scrollMessages(true);ping();refreshMessages(true);showRecipientIntro();setInterval(ping,5000);setInterval(refreshPresence,1000);setInterval(function(){refreshMessages(false);},2000);
@@ -1267,7 +1354,7 @@ if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded"
 HTML;
     $canDeleteConversation = chat_user_can_delete_conversation($conversation, $canManage);
     $isAccountLinkedRecipient = !$canManage && chat_is_account_participant($conversation);
-    $content = '<section class="chat-view" data-chat-id="' . chat_h($conversationId) . '" data-recipient-name="' . chat_h($recipientName) . '" data-show-recipient-intro="' . ($showRecipientIntro ? '1' : '0') . '" data-account-linked-recipient="' . ($isAccountLinkedRecipient ? '1' : '0') . '">'
+    $content = '<section class="chat-view" data-chat-id="' . chat_h($conversationId) . '" data-can-manage="' . ($canManage ? '1' : '0') . '" data-viewer-role="' . chat_h($viewerRole) . '" data-recipient-name="' . chat_h($recipientName) . '" data-show-recipient-intro="' . ($showRecipientIntro ? '1' : '0') . '" data-account-linked-recipient="' . ($isAccountLinkedRecipient ? '1' : '0') . '">'
         . '<div class="chat-header-row"><div><h1>private chat</h1><h2>recipient: ' . chat_h($recipientName) . '</h2><div class="chat-presence" id="chat-presence" aria-live="polite">checking if the other user is online...</div></div>'
         . ($canDeleteConversation ? '<form class="chat-delete-form" method="post" action="/chat/' . chat_h($conversationId) . '" data-no-spa="1" data-confirm-text="end chat"><input type="hidden" name="action" value="delete"><button class="danger-button chat-delete-button" type="submit">end chat</button></form>' : '')
         . '</div>'
@@ -1282,7 +1369,7 @@ HTML;
         . '<button class="chat-send-button" type="submit">send</button>'
         . '<div class="chat-file-indicator" aria-live="polite"></div>'
         . '</form>'
-        . '<div class="chat-context-menu" role="menu"><button type="button" data-chat-action="reply">reply</button><button type="button" data-chat-action="react">react</button></div>'
+        . '<div class="chat-context-menu" role="menu"><button type="button" data-chat-action="reply">reply</button><button type="button" data-chat-action="react">react</button><button type="button" data-chat-action="delete">delete</button></div>'
         . '<div class="chat-emoji-picker"><input class="chat-emoji-search" type="search" placeholder="search emoji" autocomplete="off"><div class="chat-emoji-grid"></div></div>'
         . ($canManage ? '<p><a href="/chat">back to chat dashboard</a></p>' : '')
         . $chatScript

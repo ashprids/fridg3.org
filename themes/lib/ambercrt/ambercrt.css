@@ -548,6 +548,82 @@ body.mobile-template #footer-buttons > a.mobile-footer-link > #footer-button.mob
     text-shadow: none !important;
 }
 
+.chat-view {
+    --chat-bg: rgba(12, 6, 2, 0.9);
+    --chat-fg: #ffd891;
+    --chat-border: rgba(255, 178, 76, 0.42);
+    --chat-muted: #c68d4d;
+    --chat-own-bg: #f2a43f;
+    --chat-own-fg: #160902;
+    --chat-other-bg: rgba(74, 42, 13, 0.88);
+    --chat-other-fg: #ffd891;
+}
+
+.chat-messages {
+    border-color: rgba(255, 176, 74, 0.34);
+    background:
+        linear-gradient(180deg, rgba(18, 9, 2, 0.92), rgba(7, 3, 1, 0.96)),
+        rgba(7, 3, 1, 0.94);
+    box-shadow:
+        inset 0 0 34px rgba(255, 112, 0, 0.08),
+        0 0 22px rgba(255, 112, 0, 0.1);
+}
+
+.chat-message {
+    border-radius: 14px;
+    box-shadow: 0 0 14px rgba(255, 112, 0, 0.08);
+}
+
+.chat-message-own {
+    background:
+        linear-gradient(180deg, #ffd27a, #e58b25);
+    border-color: rgba(255, 215, 134, 0.52);
+    text-shadow: none;
+}
+
+.chat-message-other {
+    border-color: rgba(255, 178, 76, 0.14);
+}
+
+.chat-message-meta,
+.chat-date-divider {
+    color: #c68d4d;
+}
+
+.chat-date-divider::before,
+.chat-date-divider::after {
+    background: rgba(255, 178, 76, 0.36);
+}
+
+.chat-presence,
+.chat-typing-indicator,
+.chat-reply-compose,
+.chat-attach-button,
+.chat-send-form textarea,
+.chat-emoji-button,
+.chat-send-button,
+.chat-context-menu,
+.chat-emoji-picker {
+    border-color: rgba(255, 178, 76, 0.36);
+    background: rgba(15, 7, 2, 0.94);
+    color: #ffd891;
+}
+
+.chat-view .chat-attach-button:hover,
+.chat-emoji-button:hover,
+.chat-send-button:hover,
+.chat-context-menu button:hover {
+    background: #ffd27a;
+    color: #160902;
+    border-color: #ffd27a;
+    text-shadow: none;
+}
+
+.chat-message-deleted {
+    background: rgba(28, 13, 4, 0.88);
+    border-color: rgba(184, 108, 25, 0.24);
+}
+
 /* frdgBeats app theme support */
 .frdgbeats-daw {
     --fb-panel: color-mix(in srgb, var(--bg) 88%, var(--fg) 12%);

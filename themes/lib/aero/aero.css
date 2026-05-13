@@ -955,6 +955,87 @@ body.mobile-template #footer-buttons > a.mobile-footer-link > #footer-button.mob
     color: #03242c !important;
 }
 
+.chat-view {
+    --chat-bg: rgba(7, 28, 40, 0.72);
+    --chat-fg: #eafcff;
+    --chat-border: rgba(132, 232, 245, 0.42);
+    --chat-muted: #a5d5df;
+    --chat-own-bg: #45d4c8;
+    --chat-own-fg: #06272e;
+    --chat-other-bg: rgba(47, 74, 88, 0.88);
+    --chat-other-fg: #eefcff;
+}
+
+.chat-messages {
+    border-color: rgba(88, 204, 224, 0.34);
+    border-radius: 18px;
+    background:
+        linear-gradient(180deg, rgba(6, 25, 38, 0.76), rgba(4, 18, 28, 0.88)),
+        rgba(4, 18, 28, 0.82);
+    box-shadow:
+        inset 0 1px 0 rgba(222, 255, 255, 0.12),
+        0 14px 34px rgba(0, 8, 20, 0.28);
+    backdrop-filter: blur(14px) saturate(1.18);
+}
+
+.chat-message {
+    border-radius: 16px;
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.12),
+        0 8px 18px rgba(0, 8, 18, 0.18);
+}
+
+.chat-message-own {
+    background: linear-gradient(180deg, rgba(143, 246, 226, 0.9), rgba(54, 198, 189, 0.9));
+    border-color: rgba(168, 255, 241, 0.54);
+    text-shadow: none;
+}
+
+.chat-message-other {
+    border-color: rgba(171, 224, 235, 0.1);
+}
+
+.chat-message-meta,
+.chat-date-divider {
+    color: #a9d9e2;
+}
+
+.chat-date-divider::before,
+.chat-date-divider::after {
+    background: rgba(117, 217, 235, 0.42);
+}
+
+.chat-presence,
+.chat-typing-indicator,
+.chat-reply-compose,
+.chat-attach-button,
+.chat-send-form textarea,
+.chat-emoji-button,
+.chat-send-button,
+.chat-context-menu,
+.chat-emoji-picker {
+    border-color: rgba(106, 218, 238, 0.36);
+    background:
+        linear-gradient(180deg, rgba(18, 58, 76, 0.84), rgba(5, 27, 39, 0.9)),
+        rgba(5, 27, 39, 0.88);
+    color: #eafcff;
+    box-shadow: inset 0 1px 0 rgba(222, 255, 255, 0.12);
+}
+
+.chat-view .chat-attach-button:hover,
+.chat-emoji-button:hover,
+.chat-send-button:hover,
+.chat-context-menu button:hover {
+    background: linear-gradient(180deg, rgba(151, 250, 231, 0.95), rgba(55, 199, 190, 0.95));
+    color: #06272e;
+    border-color: rgba(183, 255, 242, 0.72);
+}
+
+.chat-message-deleted {
+    background: rgba(14, 34, 45, 0.74);
+    border-color: rgba(104, 166, 180, 0.26);
+}
+
 /* frdgBeats app theme support */
 .frdgbeats-daw {
     --fb-panel: color-mix(in srgb, var(--bg) 88%, var(--fg) 12%);

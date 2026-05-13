@@ -166,10 +166,10 @@ one-to-one conversation view.
 - messages are stored inside the encrypted per-conversation JSON envelope under `data/chat`
 - image/file attachments up to 8 MB are stored as encrypted per-chat blobs and served only after chat access checks
 - selecting an attachment shows an attached-file indicator before send; image attachments use the site image viewer
-- messages can visually reply to a previous message, and clicking/tapping a message opens reply/react actions
+- messages can visually reply to a previous message, and clicking/tapping a message opens reply/react/delete actions; message deletion uses an in-site confirmation popup, and deleted messages stay in place as dimmed `message deleted` placeholders
 - reactions are emoji-based, searchable from the message context menu or the desktop-only emoji button beside the composer; the picker loads Twemoji-compatible Emojibase data from jsDelivr and falls back to a tiny local set if unavailable
 - both sides send active/away presence heartbeats plus short-lived typing state, and the page live-polls whether the other side is online, away, or offline while showing a non-layout-shifting typing indicator inside the message box
-- message sends update the current page immediately, and open chat pages poll for new messages
+- message sends update the current page immediately, and open chat pages poll for new messages; unfocused/hidden chat tabs play `/chat/alert.ogg` and prefix the page title with an unread count when the other side sends new messages
 - message timestamps show time only, with a date divider inserted at the first message for each day
 
 ## Email / Newsletter Routes

@@ -2100,6 +2100,22 @@ hr {
     border-bottom-left-radius: 5px;
 }
 
+.chat-message-deleted {
+    background: color-mix(in srgb, var(--chat-bg) 88%, #000 12%);
+    color: var(--chat-muted) !important;
+    border-color: var(--chat-border);
+    opacity: 0.78;
+}
+
+.chat-message-deleted .chat-message-meta,
+.chat-message-deleted .chat-message-body {
+    color: var(--chat-muted) !important;
+}
+
+.chat-message-deleted .chat-message-body {
+    font-style: italic;
+}
+
 .chat-date-divider {
     display: flex;
     align-items: center;
