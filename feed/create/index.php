@@ -6,6 +6,7 @@ while (!file_exists($sessionBootstrapDir . "/lib/session.php") && dirname($sessi
 }
 require_once $sessionBootstrapDir . "/lib/session.php";
 fridg3_start_session();
+require_once dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'lib' . DIRECTORY_SEPARATOR . 'feed.php';
 
 // Require logged-in user with permission to create posts
 if (!isset($_SESSION['user']) || !isset($_SESSION['user']['username'])) {
@@ -25,6 +26,7 @@ if (!$canCreatePost) {
 
 $title = 'create feed post';
 $description = 'create a new post for the feed.';
+$error = trim((string)($_GET['error'] ?? ''));
 
 // Compress to JPEG under the provided byte limit; always flattens transparency to white
 function save_jpeg_under_limit(string $srcPath, string $mime, string $destPath, int $maxBytes = 1000000): bool {
@@ -99,86 +101,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // Prepare directories
     $postsDir = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'data' . DIRECTORY_SEPARATOR . 'feed'; // /data/feed
-    $imagesDir = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'data' . DIRECTORY_SEPARATOR . 'images'; // /data/images
     if (!is_dir($postsDir)) {
         @mkdir($postsDir, 0777, true);
-    }
-    if (!is_dir($imagesDir)) {
-        @mkdir($imagesDir, 0777, true);
     }
 
     // Timestamp for filename and display
     $timestampFilename = date('Y-m-d_H-i-s');
     $displayDateTime = date('Y-m-d H:i:s');
 
-    // Save uploaded images (support multiple) with compression
-    $imageMap = [];
-    if (isset($_FILES['images']) && isset($_FILES['images']['name']) && is_array($_FILES['images']['name'])) {
-        $count = count($_FILES['images']['name']);
-        $allowed = [
-            'image/png' => 'png',
-            'image/jpeg' => 'jpg',
-            'image/gif' => 'gif',
-            'image/webp' => 'webp'
-        ];
-
-        for ($i = 0; $i < $count; $i++) {
-            $error = $_FILES['images']['error'][$i] ?? UPLOAD_ERR_NO_FILE;
-            if ($error !== UPLOAD_ERR_OK) continue;
-
-            $tmpPath = $_FILES['images']['tmp_name'][$i];
-            $origName = $_FILES['images']['name'][$i] ?? ('image_' . $i);
-            $imageInfo = @getimagesize($tmpPath);
-            $mime = is_array($imageInfo) && isset($imageInfo['mime']) ? $imageInfo['mime'] : '';
-            if (!isset($allowed[$mime])) continue;
-
-            $ext = $allowed[$mime];
-            $sizeBytes = @filesize($tmpPath) ?: 0;
-            $mustJpeg = ($mime === 'image/png');
-            $mustCompress = $mustJpeg || ($sizeBytes > 1000000);
-            $randomBase = bin2hex(random_bytes(8));
-            $destExt = $mustCompress ? 'jpg' : $ext;
-            $destName = $randomBase . '.' . $destExt;
-            $destPath = $imagesDir . DIRECTORY_SEPARATOR . $destName;
-
-            $saved = false;
-            if ($mustCompress) {
-                $saved = save_jpeg_under_limit($tmpPath, $mime, $destPath, 1000000);
-            } else {
-                $saved = @move_uploaded_file($tmpPath, $destPath);
-            }
-
-            // Fallback: try compressing to JPEG if initial move failed or size still too large
-            $finalSize = $saved ? (@filesize($destPath) ?: 0) : 0;
-            if (!$saved || $finalSize > 1000000) {
-                @unlink($destPath);
-                $destExt = 'jpg';
-                $destName = $randomBase . '.jpg';
-                $destPath = $imagesDir . DIRECTORY_SEPARATOR . $destName;
-                $saved = save_jpeg_under_limit($tmpPath, $mime, $destPath, 1000000);
-            }
-
-            if ($saved) {
-                $imageMap[$i] = [
-                    'url' => '/data/images/' . $destName,
-                    'name' => $origName ?: $destName,
-                ];
-            }
-        }
-    }
+    $imageMap = isset($_FILES['images']) && is_array($_FILES['images'])
+        ? fridg3_feed_process_uploaded_images($_FILES['images'])
+        : [];
+    $voiceMap = isset($_FILES['voice_notes']) && is_array($_FILES['voice_notes'])
+        ? fridg3_feed_process_uploaded_voice_notes($_FILES['voice_notes'])
+        : [];
 
     // Build post file content
     $safeContent = $content; // store raw; renderer can sanitize/format later
-    // Replace client-side image placeholders [img:index][name:...] with saved server paths
-    if (!empty($imageMap)) {
-        $safeContent = preg_replace_callback('/\[img:(\d+)\](?:\[name:([^\]]*)\])?/i', function($m) use ($imageMap) {
-            $idx = (int)$m[1];
-            if (!isset($imageMap[$idx])) {
-                return $m[0];
-            }
-            $name = isset($m[2]) && strlen(trim($m[2])) ? trim($m[2]) : ($imageMap[$idx]['name'] ?? 'image');
-            return '[img=' . $imageMap[$idx]['url'] . '][name:' . $name . ']';
-        }, $safeContent);
+    $safeContent = fridg3_feed_replace_image_placeholders($safeContent, $imageMap);
+    $safeContent = fridg3_feed_replace_voice_placeholders($safeContent, $voiceMap);
+    if (preg_match('/\[voice:\d+\]/i', $safeContent) === 1) {
+        foreach ($voiceMap as $voice) {
+            fridg3_feed_delete_voice_files_from_content('[audio=' . ($voice['url'] ?? '') . ']');
+        }
+        header('Location: /feed/create?error=' . rawurlencode('voice note failed. keep it under 2 minutes and try again.'));
+        exit;
     }
     $text = '@' . $username . PHP_EOL . $displayDateTime . PHP_EOL . $safeContent . PHP_EOL;
     $postFile = $postsDir . DIRECTORY_SEPARATOR . $timestampFilename . '.txt';
@@ -213,7 +160,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     // Redirect to feed after posting
-    header('Location: /feed');
+    header('Location: /feed/');
     exit;
 }
 
@@ -261,6 +208,9 @@ if (!$content_path) {
 }
 
 $content = file_get_contents($content_path);
+if ($error !== '') {
+    $content = '<div id="error">' . htmlspecialchars($error, ENT_QUOTES, 'UTF-8') . '</div><br>' . $content;
+}
 $html = str_replace('{content}', $content, $template);
 $html = str_replace('{title}', $title, $html);
 $html = str_replace('{description}', $description, $html);

@@ -15,6 +15,8 @@
             <button type="button" id="bbcode-image-btn" class="bbcode-btn" data-tooltip="attach image"><i class="fa-solid fa-image"></i></button>
         </label>
         <input id="bbcode-image-input" name="images[]" type="file" accept="image/*" multiple style="display: none;">
+        <button type="button" id="bbcode-voice-btn" class="bbcode-btn bbcode-voice-btn" data-tooltip="record voice note"><i class="fa-solid fa-microphone"></i></button>
+        <input id="bbcode-voice-input" name="voice_notes[]" type="file" accept="audio/*" multiple style="display: none;">
         <button type="button" class="bbcode-btn" data-tag="code=python" data-tooltip="code block"><i class="fa-solid fa-code"></i></button>
         <button type="button" id="bbcode-list-btn" class="bbcode-btn" data-tag="list" data-tooltip="list"><i class="fa-solid fa-list-ul"></i></button>
         <button type="button" id="bbcode-tooltip-btn" class="bbcode-btn" data-tooltip="tooltip"><i class="fa-solid fa-comment-dots"></i></button>
@@ -27,6 +29,7 @@
         </select>
         <button type="button" id="bbcode-preview-toggle" class="bbcode-btn" data-tooltip="toggle preview"><i class="fa-solid fa-eye"></i></button>
     </div>
+    <div class="bbcode-voice-recorder" hidden></div>
     <textarea id="bbcode-textbox" name="content"></textarea>
     <div id="bbcode-preview" style="display: none;"></div>
 </div>

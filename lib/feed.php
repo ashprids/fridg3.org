@@ -28,6 +28,13 @@ if (!function_exists('fridg3_feed_images_dir')) {
     }
 }
 
+if (!function_exists('fridg3_feed_voice_dir')) {
+    function fridg3_feed_voice_dir(): string
+    {
+        return fridg3_feed_find_root() . DIRECTORY_SEPARATOR . 'data' . DIRECTORY_SEPARATOR . 'audio' . DIRECTORY_SEPARATOR . 'voice';
+    }
+}
+
 if (!function_exists('fridg3_feed_humanize_datetime')) {
     function fridg3_feed_humanize_datetime(string $dtStr): string
     {
@@ -153,6 +160,27 @@ if (!function_exists('fridg3_feed_write_replies')) {
     }
 }
 
+if (!function_exists('fridg3_feed_extract_voice_files')) {
+    function fridg3_feed_extract_voice_files(string $content): array
+    {
+        preg_match_all('/\[audio=\/data\/audio\/voice\/([a-zA-Z0-9_.-]+)\](?:\[name:[^\]]*\])?/i', $content, $matches);
+        return array_values(array_unique(array_map('basename', $matches[1] ?? [])));
+    }
+}
+
+if (!function_exists('fridg3_feed_delete_voice_files_from_content')) {
+    function fridg3_feed_delete_voice_files_from_content(string $content): void
+    {
+        $voiceDir = fridg3_feed_voice_dir();
+        foreach (fridg3_feed_extract_voice_files($content) as $filename) {
+            $path = $voiceDir . DIRECTORY_SEPARATOR . $filename;
+            if (is_file($path)) {
+                @unlink($path);
+            }
+        }
+    }
+}
+
 if (!function_exists('fridg3_feed_load_replies')) {
     function fridg3_feed_load_replies(string $postId): array
     {
@@ -265,6 +293,7 @@ if (!function_exists('fridg3_feed_delete_reply')) {
 
         foreach ($replies as $reply) {
             if (($reply['id'] ?? '') === $replyId) {
+                fridg3_feed_delete_voice_files_from_content((string)($reply['body'] ?? ''));
                 $deleted = true;
                 continue;
             }
@@ -276,6 +305,126 @@ if (!function_exists('fridg3_feed_delete_reply')) {
         }
 
         return fridg3_feed_write_replies($postId, $updatedReplies);
+    }
+}
+
+if (!function_exists('fridg3_feed_probe_audio_duration')) {
+    function fridg3_feed_probe_audio_duration(string $path): ?float
+    {
+        if (!is_file($path) || !function_exists('shell_exec')) {
+            return null;
+        }
+
+        $cmd = 'ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 ' . escapeshellarg($path) . ' 2>/dev/null';
+        $output = @shell_exec($cmd);
+        if (!is_string($output)) {
+            return null;
+        }
+
+        $duration = (float)trim($output);
+        return $duration > 0 ? $duration : null;
+    }
+}
+
+if (!function_exists('fridg3_feed_transcode_voice_note')) {
+    function fridg3_feed_transcode_voice_note(string $srcPath, string $destPath): bool
+    {
+        if (!function_exists('shell_exec')) {
+            return false;
+        }
+
+        $tmpPath = $destPath . '.tmp.m4a';
+        @unlink($tmpPath);
+        $cmd = 'ffmpeg -y -v error -i ' . escapeshellarg($srcPath)
+            . ' -vn -ac 1 -ar 24000 -c:a aac -b:a 32k -movflags +faststart '
+            . escapeshellarg($tmpPath) . ' 2>/dev/null';
+        @shell_exec($cmd);
+
+        if (!is_file($tmpPath) || (@filesize($tmpPath) ?: 0) <= 0) {
+            @unlink($tmpPath);
+            return false;
+        }
+
+        $duration = fridg3_feed_probe_audio_duration($tmpPath);
+        if ($duration === null || $duration > 121.0) {
+            @unlink($tmpPath);
+            return false;
+        }
+
+        $moved = @rename($tmpPath, $destPath);
+        if (!$moved) {
+            @unlink($tmpPath);
+        }
+
+        return $moved;
+    }
+}
+
+if (!function_exists('fridg3_feed_process_uploaded_voice_notes')) {
+    function fridg3_feed_process_uploaded_voice_notes(array $files): array
+    {
+        $voiceDir = fridg3_feed_voice_dir();
+        if (!is_dir($voiceDir)) {
+            @mkdir($voiceDir, 0777, true);
+        }
+
+        $voiceMap = [];
+        if (!isset($files['name']) || !is_array($files['name'])) {
+            return $voiceMap;
+        }
+
+        $count = count($files['name']);
+        for ($i = 0; $i < $count; $i++) {
+            $error = $files['error'][$i] ?? UPLOAD_ERR_NO_FILE;
+            if ($error !== UPLOAD_ERR_OK) {
+                continue;
+            }
+
+            $tmpPath = (string)($files['tmp_name'][$i] ?? '');
+            $origName = (string)($files['name'][$i] ?? ('voice-note-' . $i . '.m4a'));
+            $size = (int)($files['size'][$i] ?? 0);
+            if ($tmpPath === '' || $size <= 0 || $size > 12000000 || !is_uploaded_file($tmpPath)) {
+                continue;
+            }
+
+            $sourceDuration = fridg3_feed_probe_audio_duration($tmpPath);
+            if ($sourceDuration !== null && $sourceDuration > 121.0) {
+                continue;
+            }
+
+            $destName = bin2hex(random_bytes(12)) . '.m4a';
+            $destPath = $voiceDir . DIRECTORY_SEPARATOR . $destName;
+            if (!fridg3_feed_transcode_voice_note($tmpPath, $destPath)) {
+                @unlink($destPath);
+                continue;
+            }
+
+            $voiceMap[$i] = [
+                'url' => '/data/audio/voice/' . $destName,
+                'name' => 'voice-note.m4a',
+                'duration' => fridg3_feed_probe_audio_duration($destPath) ?? $sourceDuration ?? 0,
+            ];
+        }
+
+        return $voiceMap;
+    }
+}
+
+if (!function_exists('fridg3_feed_replace_voice_placeholders')) {
+    function fridg3_feed_replace_voice_placeholders(string $content, array $voiceMap): string
+    {
+        if (empty($voiceMap)) {
+            return $content;
+        }
+
+        return (string)preg_replace_callback('/\[voice:(\d+)\](?:\[name:([^\]]*)\])?/i', function($m) use ($voiceMap) {
+            $idx = (int)$m[1];
+            if (!isset($voiceMap[$idx])) {
+                return $m[0];
+            }
+            $name = isset($m[2]) && strlen(trim($m[2])) ? trim($m[2]) : ($voiceMap[$idx]['name'] ?? 'voice-note.m4a');
+            return '[audio=' . $voiceMap[$idx]['url'] . '][name:' . $name . ']';
+        }, $content);
     }
 }
 

@@ -21,10 +21,10 @@ all API routes live under `/api/*` and are handled by PHP.
 
 - requires logged-in user
 - updates user settings in `accounts.json`
-- can set `theme` to `default`, `custom`, or a valid `/themes/*.json` theme id
+- can set `theme` to `default`, `classic`, or a valid `/themes/*.json` theme id
 - can set `mobileFriendlyView` and sync the `mobile_friendly_view` cookie
 - syncs the `theme_pref` cookie so anonymous and first-load rendering can pick the active theme
-- validates color fields as `#RRGGBB`
+- validates color fields as `#RRGGBB`; the settings UI only sends color fields for `classic`
 - admin users can also toggle maintenance mode through the settings flow
 
 ### `/api/themes`
@@ -32,7 +32,7 @@ all API routes live under `/api/*` and are handled by PHP.
 `GET`
 
 - public route
-- returns selectable themes discovered from `/themes/*.json`
+- returns selectable themes, with `default` displayed as `blackprint` before discovered themes
 - each valid theme must include `name`, `html`, and `css`
 - theme `html` and `css` paths are resolved from `/themes/lib`
 

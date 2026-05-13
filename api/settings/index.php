@@ -94,7 +94,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             if (isset($account['theme'])) {
                 $result['settings']['theme'] = function_exists('fridg3_normalize_theme_id')
                     ? fridg3_normalize_theme_id($account['theme'])
-                    : ($account['theme'] === 'custom' ? 'custom' : 'default');
+                    : 'default';
             }
             if (isset($account['colors']) && is_array($account['colors'])) {
                 $result['settings']['colors'] = $account['colors'];
@@ -138,7 +138,7 @@ $mobileViewRaw = $mobileViewProvided ? (string)$_POST['mobileFriendlyView'] : nu
 
 $allowedIntensity = ['none', 'low', 'medium', 'high'];
 $availableThemes = function_exists('fridg3_list_themes') ? fridg3_list_themes(dirname(__DIR__, 2)) : [];
-$allowedThemes = array_merge(['default', 'custom'], array_keys($availableThemes));
+$allowedThemes = array_merge(['default'], array_keys($availableThemes));
 $colorFields = ['bg', 'fg', 'border', 'subtle', 'links'];
 
 $errors = [];
@@ -280,6 +280,29 @@ if (!empty($_POST['colors']) && is_array($_POST['colors'])) {
 }
 
 if (!empty($colors)) {
+    $colorTheme = $themeProvided ? $theme : null;
+    if ($colorTheme === null && isset($_COOKIE['theme_pref'])) {
+        $colorTheme = function_exists('fridg3_normalize_theme_id')
+            ? fridg3_normalize_theme_id($_COOKIE['theme_pref'])
+            : (string)$_COOKIE['theme_pref'];
+    }
+    if ($colorTheme === null) {
+        $accountsPath = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'data' . DIRECTORY_SEPARATOR . 'accounts' . DIRECTORY_SEPARATOR . 'accounts.json';
+        $data = load_accounts_data($accountsPath);
+        if ($data !== null) {
+            foreach ($data['accounts'] as $account) {
+                if (isset($account['username']) && (string)$account['username'] === $username && isset($account['theme'])) {
+                    $colorTheme = function_exists('fridg3_normalize_theme_id')
+                        ? fridg3_normalize_theme_id($account['theme'])
+                        : (string)$account['theme'];
+                    break;
+                }
+            }
+        }
+    }
+}
+
+if (!empty($colors) && $colorTheme === 'classic') {
     $validColors = [];
     foreach ($colors as $k => $v) {
         if (!in_array($k, $colorFields, true)) continue;

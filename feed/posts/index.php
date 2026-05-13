@@ -104,9 +104,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $replyAction = (string)($_POST['reply_action'] ?? 'create');
     $replyId = trim((string)($_POST['reply_id'] ?? ''));
     $imageMap = [];
+    $voiceMap = [];
     if (isset($_FILES['images']) && is_array($_FILES['images'])) {
         $imageMap = fridg3_feed_process_uploaded_images($_FILES['images']);
         $replyBody = fridg3_feed_replace_image_placeholders($replyBody, $imageMap);
+    }
+    if ($replyAction === 'create' && isset($_FILES['voice_notes']) && is_array($_FILES['voice_notes'])) {
+        $voiceMap = fridg3_feed_process_uploaded_voice_notes($_FILES['voice_notes']);
+        $replyBody = fridg3_feed_replace_voice_placeholders($replyBody, $voiceMap);
+        if (preg_match('/\[voice:\d+\]/i', $replyBody) === 1) {
+            foreach ($voiceMap as $voice) {
+                fridg3_feed_delete_voice_files_from_content('[audio=' . ($voice['url'] ?? '') . ']');
+            }
+            $replyBody = '';
+            $replyError = 'voice note failed. keep it under 2 minutes and try again.';
+        }
     }
     $canModerateReplies = fridg3_feed_current_user_can_moderate_replies($username);
     $targetReply = null;
@@ -120,7 +132,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         && fridg3_feed_current_user_can_manage_reply($username, (string)($targetReply['username'] ?? ''));
 
     if (!hash_equals((string)$_SESSION['csrf_token'], $submittedToken)) {
+        foreach ($voiceMap as $voice) {
+            fridg3_feed_delete_voice_files_from_content('[audio=' . ($voice['url'] ?? '') . ']');
+        }
         $replyError = 'invalid request. try again.';
+    } elseif ($replyError !== '' && $replyAction === 'create') {
+        // Keep the validation error set above.
     } elseif ($replyAction === 'delete') {
         if (!$canManageTargetReply) {
             $replyEditError = 'you do not have permission to delete replies.';
@@ -313,6 +330,8 @@ if (isset($_SESSION['user']) && isset($_SESSION['user']['username'])) {
         . '<button type="button" id="bbcode-image-btn" class="bbcode-btn" data-tooltip="attach image"><i class="fa-solid fa-image"></i></button>'
         . '</label>'
         . '<input id="bbcode-image-input" name="images[]" type="file" accept="image/*" multiple style="display: none;">'
+        . '<button type="button" id="bbcode-voice-btn" class="bbcode-btn bbcode-voice-btn" data-tooltip="record voice note"><i class="fa-solid fa-microphone"></i></button>'
+        . '<input id="bbcode-voice-input" name="voice_notes[]" type="file" accept="audio/*" multiple style="display: none;">'
         . '<button type="button" class="bbcode-btn" data-tag="code=python" data-tooltip="code block"><i class="fa-solid fa-code"></i></button>'
         . '<button type="button" id="bbcode-list-btn" class="bbcode-btn" data-tag="list" data-tooltip="list"><i class="fa-solid fa-list-ul"></i></button>'
         . '<button type="button" id="bbcode-tooltip-btn" class="bbcode-btn" data-tooltip="tooltip"><i class="fa-solid fa-comment-dots"></i></button>'
@@ -325,6 +344,7 @@ if (isset($_SESSION['user']) && isset($_SESSION['user']['username'])) {
         . '</select>'
         . '<button type="button" id="bbcode-preview-toggle" class="bbcode-btn" data-tooltip="toggle preview"><i class="fa-solid fa-eye"></i></button>'
         . '</div>'
+        . '<div class="bbcode-voice-recorder" hidden></div>'
         . '<textarea id="bbcode-textbox" class="feed-reply-textbox" name="reply_content" placeholder="write a reply..." maxlength="4000">{reply_form_value}</textarea>'
         . '<div id="bbcode-preview" style="display: none;"></div>'
         . '</div>'

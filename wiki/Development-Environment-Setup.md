@@ -8,6 +8,7 @@ example stack:
 
 - VS Code
 - PHP installed locally
+- ffmpeg and ffprobe installed locally for voice note validation/compression
 - a VS Code extension that can serve PHP projects
 - Git
 
@@ -33,6 +34,8 @@ php -v
 if that prints a version, you’re chilling.
 
 this repo’s GitHub Actions lint job uses PHP `8.3`, so using PHP 8.3 locally is the safest move if you want fewer "works on my machine" plot twists.
+
+voice notes in chat/feed also need `ffmpeg` and `ffprobe` on the PATH. without those, uploads will fail closed instead of storing huge browser blobs, which is annoying but correct.
 
 ## 3. Open The Repo In VS Code
 
@@ -104,6 +107,7 @@ data/
   images/
   music/
   audio/
+  audio/voice/
   contact/
   downloads/
 ```

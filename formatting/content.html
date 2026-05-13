@@ -103,36 +103,13 @@
         font-size: 13px;
     }
 
-    .formatting-bbcode-preview {
-        display: block !important;
-    }
-
-    .formatting-bbcode-textbox {
-        min-height: 120px !important;
-    }
-
-    .formatting-gallery #grid {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-
-    .formatting-image-sample {
-        display: grid;
-        place-items: center;
-        aspect-ratio: 1;
-        border: 1px solid var(--border);
-        background: rgba(255, 255, 255, 0.04);
-        color: var(--subtle);
-        font-size: 12px;
-    }
-
     .formatting-chat-actions {
         max-width: 220px;
     }
 
     @media (max-width: 700px) {
         .formatting-grid,
-        .formatting-swatch-row,
-        .formatting-gallery #grid {
+        .formatting-swatch-row {
             grid-template-columns: 1fr;
         }
     }
@@ -261,37 +238,41 @@ echo "highlighted code block";
 
     <section class="formatting-section">
         <h3>feed, guestbook, and journal cards</h3>
-        <div id="posts">
-            <article id="post">
-                <div id="post-header">
-                    <span id="post-username">fridge</span>
-                    <span id="post-date-feed">2026-05-13 <span id="post-bookmark-feed" data-tooltip="save post"><i class="fa-regular fa-bookmark"></i></span></span>
-                </div>
-                <div id="post-content">
-                    feed-style post content with a list:
-                    <ul>
-                        <li>first item</li>
-                        <li>second item</li>
-                    </ul>
-                </div>
-            </article>
 
-            <article id="post">
-                <div>
-                    <span id="post-title">journal card title</span>
-                    <span id="post-bookmark" data-tooltip="save post"><i class="fa-regular fa-bookmark"></i></span>
+        <h4>feed card</h4>
+        <div id="posts">
+            <a href="/feed/posts/formatting-sample" class="feed-post-link" style="text-decoration:none;color:inherit;">
+                <div id="post" style="cursor: pointer;">
+                    <div id="post-header">
+                        <span id="post-username">@fridge</span>
+                        <span id="post-date-feed">2h ago &bull; <span class="feed-reply-count"><i class="fa-regular fa-comment"></i> 3</span> &bull; <span id="post-edit-feed" data-tooltip="edit post" style="cursor:pointer !important" data-edit-href="/feed/edit?post=formatting-sample.txt"><i class="fa-solid fa-pencil"></i></span> <span id="post-bookmark-feed" data-tooltip="save post" data-post-id="formatting-sample"><i class="fa-regular fa-bookmark"></i></span></span>
+                    </div>
+                    <span id="post-content">feed-style post content copied from the generated feed card shape.</span>
                 </div>
-                <span id="post-date">2026-05-13</span>
-                <span id="post-description">short description for a journal/bookmark card.</span>
-                <img id="post-image" src="/resources/icon.png" alt="formatting image sample">
-            </article>
+            </a>
+        </div>
+
+        <h4>guestbook card</h4>
+        <div id="posts">
+            <div id="post">
+                <div id="post-header">
+                    <span id="post-username">Anonymous</span>
+                    <div class="guestbook-post-actions"><span id="post-date-feed" title="2026-05-13 01:55">2h ago</span><a class="guestbook-edit-btn" href="/guestbook/edit?file=formatting-sample.txt" data-tooltip="edit post"><i class="fa-solid fa-pen"></i></a><form class="guestbook-delete-form" method="POST" action="/guestbook/index.php" data-site-confirm="1" data-confirm-title="delete guestbook entry?" data-confirm-detail="this removes the guestbook entry from the site." data-confirm-text="delete" data-cancel-text="cancel"><input type="hidden" name="delete_file" value="formatting-sample.txt"><button type="submit" id="post-edit-feed" class="guestbook-delete-btn" data-tooltip="delete post"><i class="fa-solid fa-trash"></i></button></form></div>
+                </div>
+                <span id="post-content">guestbook message content copied from the real guestbook renderer.</span>
+            </div>
+        </div>
+
+        <h4>journal card</h4>
+        <div id="posts">
+            <a id="post" class="journal-post-link" href="/journal/posts/formatting-sample">
+                <span id="post-date">2026-05-13</span><span id="journal-post-actions" style="position:absolute;top:12px;right:12px;display:inline-flex;align-items:center;gap:8px;"><span id="post-edit-feed" data-tooltip="edit post" data-edit-href="/journal/edit?post=formatting-sample" style="color: var(--subtle); font-size: 12px;"><i class="fa-solid fa-pencil"></i></span><span id="post-bookmark" style="position:static;top:auto;right:auto;" data-tooltip="save post" data-post-id="journal:formatting-sample"><i class="fa-regular fa-bookmark"></i></span></span><span id="post-title">journal card title</span><span id="post-description">short description copied from the generated journal card shape.</span>
+            </a>
         </div>
 
         <div class="guestbook-pagination" aria-label="pagination sample">
-            <a class="guestbook-page-btn" href="/formatting">prev</a>
-            <a class="guestbook-page-btn current" href="/formatting">1</a>
+            <span class="guestbook-page-btn current" aria-current="page">1</span>
             <a class="guestbook-page-btn" href="/formatting">2</a>
-            <a class="guestbook-page-btn" href="/formatting">next</a>
         </div>
     </section>
 
@@ -299,26 +280,31 @@ echo "highlighted code block";
         <h3>bbcode editor pieces</h3>
         <div class="bbcode-editor">
             <div class="bbcode-toolbar">
-                <button type="button" class="bbcode-btn" data-tooltip="bold"><i class="fa-solid fa-bold"></i></button>
-                <button type="button" class="bbcode-btn" data-tooltip="italic"><i class="fa-solid fa-italic"></i></button>
-                <button type="button" class="bbcode-btn" data-tooltip="underline"><i class="fa-solid fa-underline"></i></button>
-                <button type="button" class="bbcode-btn" data-tooltip="strikethrough"><i class="fa-solid fa-strikethrough"></i></button>
-                <button type="button" class="bbcode-btn" data-tooltip="spoiler"><i class="fa-solid fa-eye-slash"></i></button>
-                <button type="button" class="bbcode-btn" data-tooltip="color"><i class="fa-solid fa-palette"></i></button>
-                <button type="button" class="bbcode-btn" data-tooltip="image"><i class="fa-solid fa-image"></i></button>
-                <button type="button" class="bbcode-btn" data-tooltip="code"><i class="fa-solid fa-code"></i></button>
-                <button type="button" class="bbcode-btn disabled" data-tooltip="disabled tool"><i class="fa-solid fa-ban"></i></button>
-                <select class="bbcode-dropdown" data-tooltip="heading">
-                    <option>normal</option>
-                    <option value="h3">heading 3</option>
-                    <option value="h4">heading 4</option>
+                <button type="button" class="bbcode-btn" data-tag="b" data-tooltip="bold"><i class="fa-solid fa-bold"></i></button>
+                <button type="button" class="bbcode-btn" data-tag="i" data-tooltip="italic"><i class="fa-solid fa-italic"></i></button>
+                <button type="button" class="bbcode-btn" data-tag="u" data-tooltip="underline"><i class="fa-solid fa-underline"></i></button>
+                <button type="button" class="bbcode-btn" data-tag="s" data-tooltip="strikethrough"><i class="fa-solid fa-strikethrough"></i></button>
+                <button type="button" id="bbcode-spoiler-btn" class="bbcode-btn" data-tooltip="spoiler"><i class="fa-solid fa-eye-slash"></i></button>
+                <button type="button" id="bbcode-color-btn" class="bbcode-btn" data-tooltip="color"><i class="fa-solid fa-palette"></i></button>
+                <input id="bbcode-color-input" type="color" style="display: none;">
+                <label for="bbcode-image-input">
+                    <button type="button" id="bbcode-image-btn" class="bbcode-btn" data-tooltip="attach image"><i class="fa-solid fa-image"></i></button>
+                </label>
+                <input id="bbcode-image-input" name="images[]" type="file" accept="image/*" multiple style="display: none;">
+                <button type="button" class="bbcode-btn" data-tag="code=python" data-tooltip="code block"><i class="fa-solid fa-code"></i></button>
+                    <button type="button" id="bbcode-list-btn" class="bbcode-btn" data-tag="list" data-tooltip="list"><i class="fa-solid fa-list-ul"></i></button>
+                <button type="button" id="bbcode-tooltip-btn" class="bbcode-btn" data-tooltip="tooltip"><i class="fa-solid fa-comment-dots"></i></button>
+                <button type="button" id="bbcode-link-btn" class="bbcode-btn" data-tooltip="link"><i class="fa-solid fa-link"></i></button>
+                <select id="bbcode-header-dropdown" class="bbcode-dropdown" data-tooltip="heading">
+                    <option value="">headings</option>
+                    <option value="h3">heading</option>
+                    <option value="h4">sub-heading</option>
+                    <option value="h5">caption</option>
                 </select>
+                <button type="button" id="bbcode-preview-toggle" class="bbcode-btn" data-tooltip="save draft + open preview"><i class="fa-solid fa-eye"></i></button>
             </div>
-            <textarea id="bbcode-textbox" class="formatting-bbcode-textbox">[b]bbcode textarea[/b]</textarea>
-            <div id="bbcode-preview" class="formatting-bbcode-preview">
-                <h3>preview heading</h3>
-                <p>rendered preview area with <span data-tooltip="tooltip inside preview">hover text</span>.</p>
-            </div>
+            <textarea id="bbcode-textbox" name="content">[b]bbcode textarea[/b]</textarea>
+            <div id="bbcode-preview" style="display: none;"></div>
         </div>
     </section>
 
@@ -326,24 +312,26 @@ echo "highlighted code block";
         <h3>gallery grid</h3>
         <div id="grid">
             <div class="grid-item">
-                <div class="formatting-image-sample grid-image">grid image</div>
-                <p class="grid-caption">grid caption</p>
-                <p class="grid-subcaption">grid subcaption</p>
-                <form class="grid-delete-form" data-formatting-demo-form>
-                    <button class="grid-delete-button" type="submit"><i class="fa-solid fa-trash"></i> delete</button>
+                <img class="grid-image" src="/resources/icon.png" alt="formatting sample image">
+                <div class="grid-caption">512 x 512</div>
+                <div class="grid-subcaption">formatting sample image</div>
+                <form class="grid-delete-form" action="/api/gallery/delete/index.php" method="POST">
+                    <input type="hidden" name="filename" value="formatting-sample.png">
+                    <button type="submit" class="grid-delete-button" aria-label="delete formatting sample image"><i class="fa-solid fa-trash"></i> delete</button>
                 </form>
             </div>
 
             <div class="grid-item">
-                <div class="formatting-image-sample grid-image">grid image</div>
-                <p class="grid-caption">linked-looking caption</p>
-                <p class="grid-subcaption">metadata or description text</p>
+                <img class="grid-image" src="/resources/favicon-96x96.png" alt="formatting favicon sample">
+                <div class="grid-caption">96 x 96</div>
+                <div class="grid-subcaption">formatting favicon sample</div>
             </div>
         </div>
     </section>
 
     <section class="formatting-section">
         <h3>admin and dashboard cards</h3>
+        <h4>account admin card</h4>
         <div class="account-admin-list">
             <a class="account-admin-card" href="/account/admin">
                 <strong>account card</strong>
@@ -354,20 +342,18 @@ echo "highlighted code block";
                     <span class="account-admin-badge">journal</span>
                 </span>
             </a>
+        </div>
 
+        <h4>chat admin card</h4>
+        <div class="chat-admin-list">
             <article class="chat-admin-card">
-                <div>
-                    <strong>chat admin card</strong>
-                    <span>created 2026-05-13</span>
-                    <button class="chat-copy-link" type="button" data-tooltip="copy chat link">https://fridg3.org/chat/sample</button>
-                </div>
-                <div class="chat-card-actions formatting-chat-actions">
-                    <a id="two-buttons" href="/chat">open</a>
-                    <button class="danger-button" type="button">delete</button>
-                </div>
+                <div><strong>private chat</strong><button class="chat-copy-link" type="button" data-copy-url="https://fridg3.org/chat/formattingdemo" data-tooltip="copy chat link">formattingdemo (click to copy)</button><span>unclaimed &middot; created 26-05-13</span></div><div class="chat-card-actions"><a id="two-buttons" href="/chat/formattingdemo">open</a><form class="chat-delete-form" method="post" action="/chat/formattingdemo" data-no-spa="1" data-confirm-text="delete"><input type="hidden" name="action" value="delete"><button class="danger-button" type="submit">delete</button></form></div>
             </article>
+        </div>
 
-            <article class="chat-admin-card contact-admin-card formatting-contact-card">
+        <h4>contact dashboard card</h4>
+        <div class="account-admin-list">
+            <article class="chat-admin-card contact-admin-card">
                 <div class="contact-admin-copy">
                     <div class="contact-admin-header">
                         <strong class="contact-admin-title">contact sender</strong>
@@ -375,12 +361,14 @@ echo "highlighted code block";
                     </div>
                     <div class="contact-admin-meta">
                         <span>2026-05-13 01:55</span>
-                        <span>notified discord</span>
                     </div>
                     <div class="contact-admin-alert">discord notify failed: sample warning</div>
                     <div class="contact-admin-message">contact dashboard message content, wrapped in a readable box.</div>
                 </div>
-                <form class="contact-admin-actions" data-formatting-demo-form>
+                <form class="contact-admin-actions" method="post" action="/contact?dashboard=1" data-no-spa="1" data-site-confirm="1" data-confirm-title="delete contact submission?" data-confirm-detail="this cannot be undone." data-confirm-text="delete" data-cancel-text="cancel">
+                    <input type="hidden" name="csrf" value="formatting-csrf">
+                    <input type="hidden" name="action" value="delete">
+                    <input type="hidden" name="id" value="formatting-sample">
                     <button class="danger-button" type="submit">delete</button>
                 </form>
             </article>
@@ -396,6 +384,11 @@ echo "highlighted code block";
     }
 
     root.dataset.formattingBound = '1';
+
+    root.addEventListener('submit', function (event) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+    }, true);
 
     root.querySelectorAll('[data-formatting-demo-form]').forEach(function (form) {
         form.addEventListener('submit', function (event) {

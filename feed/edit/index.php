@@ -6,6 +6,7 @@ while (!file_exists($sessionBootstrapDir . "/lib/session.php") && dirname($sessi
 }
 require_once $sessionBootstrapDir . "/lib/session.php";
 fridg3_start_session();
+require_once dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'lib' . DIRECTORY_SEPARATOR . 'feed.php';
 
 // Require logged-in user
 if (!isset($_SESSION['user']) || !isset($_SESSION['user']['username'])) {
@@ -71,9 +72,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             }
         }
+        fridg3_feed_delete_voice_files_from_content($postBody);
+        foreach (fridg3_feed_load_replies(pathinfo(basename($postId), PATHINFO_FILENAME)) as $reply) {
+            fridg3_feed_delete_voice_files_from_content((string)($reply['body'] ?? ''));
+        }
         
         // Delete the post file
         @unlink($postPath);
+        @unlink(fridg3_feed_replies_dir() . DIRECTORY_SEPARATOR . pathinfo(basename($postId), PATHINFO_FILENAME) . '.json');
         
         // Redirect back to feed
         header('Location: /feed');

@@ -1084,6 +1084,7 @@ function loadPageIntoContent(url, addToHistory = true) {
 
 function setupSpaNavigation() {
     document.addEventListener('click', function(e) {
+        if (e.target.closest('.feed-audio-note')) return;
         // Let dedicated handlers take over for feed edit icons
         if (e.target.closest('#post-edit-feed')) return;
 
@@ -1818,9 +1819,9 @@ const COLOR_DEFAULTS = {
 const MOBILE_VIEW_COOKIE = 'mobile_friendly_view';
 const MOBILE_VIEW_DOMAIN = '.fridg3.org';
 
-// Apply saved color prefs early on page load only when the custom theme is active.
+// Apply saved color prefs early on page load only when the classic theme is active.
 (() => {
-    if (loadLocalThemePref() !== 'custom') {
+    if (loadLocalThemePref() !== 'classic') {
         clearColorVars();
         return;
     }
@@ -1852,7 +1853,9 @@ function normalizeTheme(theme) {
     if (typeof theme !== 'string') return 'default';
     const normalized = theme.trim().toLowerCase();
     if (normalized === '' || normalized === 'default') return 'default';
-    if (normalized === 'custom') return 'custom';
+    if (normalized === 'blackprint') return 'default';
+    if (normalized === 'custom') return 'classic';
+    if (normalized === 'newsprint') return 'whiteprint';
     if (/^[a-z0-9_-]+$/.test(normalized)) return normalized;
     return 'default';
 }
@@ -2212,25 +2215,23 @@ function initSettingsPage() {
             const selectedTheme = getThemeSelection();
             themeSelect.innerHTML = '';
 
-            const defaultOption = document.createElement('option');
-            defaultOption.value = 'default';
-            defaultOption.textContent = 'default';
-            themeSelect.appendChild(defaultOption);
-
-            const customOption = document.createElement('option');
-            customOption.value = 'custom';
-            customOption.textContent = 'custom...';
-            themeSelect.appendChild(customOption);
-
             (Array.isArray(themes) ? themes : []).forEach(theme => {
                 const id = normalizeTheme(theme && theme.id);
                 const name = theme && typeof theme.name === 'string' ? theme.name.trim() : '';
-                if (id === 'default' || id === 'custom' || !name) return;
+                if (!name) return;
+                if ([...themeSelect.options].some(option => option.value === id)) return;
                 const option = document.createElement('option');
                 option.value = id;
                 option.textContent = name;
                 themeSelect.appendChild(option);
             });
+
+            if (![...themeSelect.options].some(option => option.value === 'default')) {
+                const defaultOption = document.createElement('option');
+                defaultOption.value = 'default';
+                defaultOption.textContent = 'blackprint';
+                themeSelect.insertBefore(defaultOption, themeSelect.firstChild);
+            }
 
             setThemeSelection(selectedTheme);
         };
@@ -2239,7 +2240,7 @@ function initSettingsPage() {
             if (!themeSelect) return;
             const normalizedTheme = normalizeTheme(theme);
             themeSelect.value = normalizedTheme;
-            if (themeSelect.value === '' && normalizedTheme !== 'default' && normalizedTheme !== 'custom') {
+            if (themeSelect.value === '' && normalizedTheme !== 'default') {
                 const pendingOption = document.createElement('option');
                 pendingOption.value = normalizedTheme;
                 pendingOption.textContent = normalizedTheme;
@@ -2258,9 +2259,9 @@ function initSettingsPage() {
         const applyThemeSelection = (theme) => {
             const normalizedTheme = normalizeTheme(theme);
             if (colorSection) {
-                colorSection.style.display = normalizedTheme === 'custom' ? '' : 'none';
+                colorSection.style.display = normalizedTheme === 'classic' ? '' : 'none';
             }
-            if (normalizedTheme === 'custom') {
+            if (normalizedTheme === 'classic') {
                 const colors = Object.assign({}, COLOR_DEFAULTS, loadLocalColorPrefs() || getColorValuesFromInputs());
                 setColorInputs(colors);
                 applyColorVars(colors);
@@ -2286,7 +2287,7 @@ function initSettingsPage() {
         };
 
         const persistColors = (colors, opts = {}) => {
-            if (getThemeSelection() !== 'custom') {
+            if (getThemeSelection() !== 'classic') {
                 clearColorVars();
                 return Promise.resolve();
             }
@@ -2412,7 +2413,7 @@ function initSettingsPage() {
         // Persist colors immediately when changed
         colorInputs.forEach(inp => {
             inp.addEventListener('input', () => {
-                if (getThemeSelection() !== 'custom') return;
+                if (getThemeSelection() !== 'classic') return;
                 const chosen = getColorValuesFromInputs();
                 persistColors(chosen);
             });
@@ -2446,10 +2447,10 @@ function initSettingsPage() {
             saveLocalThemePref(selectedTheme);
             setThemeCookie(selectedTheme);
 
-            // Colors: only custom themes override style.css variables
+            // Colors: only classic overrides style.css variables
             const chosenColors = getColorValuesFromInputs();
             const mergedColors = Object.assign({}, COLOR_DEFAULTS, chosenColors);
-            if (selectedTheme === 'custom') {
+            if (selectedTheme === 'classic') {
                 persistColors(mergedColors, { skipServer: isLoggedIn });
             } else {
                 clearColorVars();
@@ -2463,7 +2464,7 @@ function initSettingsPage() {
                 params.append('theme', selectedTheme);
                 params.append('mobileFriendlyView', mobileViewEnabled ? 'on' : 'off');
 
-                if (selectedTheme === 'custom' && Object.keys(mergedColors).length) {
+                if (selectedTheme === 'classic' && Object.keys(mergedColors).length) {
                     // flatten colors into separate fields (merged so defaults persist server-side)
                     Object.entries(mergedColors).forEach(([k, v]) => {
                         params.append('color' + k.charAt(0).toUpperCase() + k.slice(1), v);
@@ -2583,6 +2584,7 @@ function initSidebarAndBBCode() {
             const raw = el.textContent || '';
             const html = parseBBCode(raw);
             el.innerHTML = html;
+            initInlineMediaPlayers(el);
 
             // Highlight any code blocks in formatted content
             if (typeof hljs !== 'undefined') {
@@ -2685,6 +2687,10 @@ function initMiniPlayer() {
         const PLAYER_STATE_KEY = 'miniPlayerStateV1';
         // Default volume if no saved state
         const DEFAULT_VOLUME = 0.3;
+        let isSeeking = false;
+        let lastVolume = 1;
+        let lastTrackLabel = '';
+
         setLiveMode(false);
 
         // Optional initial state from body data attributes
@@ -2763,28 +2769,43 @@ function initMiniPlayer() {
         // Capture the latest state right before a full page refresh/close
         window.addEventListener('beforeunload', savePlayerState);
 
-        const updateTitleScroll = () => {
+        function updateTitleScroll() {
             if (!titleContainerEl || !titleEl) return;
+            titleEl.classList.remove('scrolling');
+            titleEl.style.transform = '';
+            titleEl.style.removeProperty('--scroll-distance');
+            titleEl.style.removeProperty('--scroll-duration');
+
             const containerWidth = titleContainerEl.clientWidth || 0;
             const contentWidth = titleEl.scrollWidth || 0;
             const overflow = contentWidth - containerWidth;
             if (overflow > 4) {
+                const gap = 36;
+                const distance = contentWidth + gap;
+                const duration = Math.max(10, Math.min(26, distance / 18));
+                titleEl.setAttribute('data-scroll-text', titleEl.textContent || '');
+                titleEl.style.setProperty('--scroll-gap', gap + 'px');
+                titleEl.style.setProperty('--scroll-distance', distance + 'px');
+                titleEl.style.setProperty('--scroll-duration', duration + 's');
+                // Restart the marquee after measurements so repeated title changes
+                // begin from the readable start position.
+                void titleEl.offsetWidth;
                 titleEl.classList.add('scrolling');
-                titleEl.style.setProperty('--scroll-distance', overflow + 'px');
             } else {
-                titleEl.classList.remove('scrolling');
-                titleEl.style.removeProperty('--scroll-distance');
-                titleEl.style.transform = '';
+                titleEl.removeAttribute('data-scroll-text');
+                titleEl.style.removeProperty('--scroll-gap');
             }
-        };
+        }
 
-        const setNowPlayingTitle = (label) => {
+        function setNowPlayingTitle(label) {
             if (!titleEl) return;
             titleEl.textContent = label;
             lastTrackLabel = label || '';
             // wait a frame so layout is updated
             requestAnimationFrame(updateTitleScroll);
-        };
+        }
+
+        window.addEventListener('resize', () => requestAnimationFrame(updateTitleScroll));
 
         const normalizeArtUrl = (art) => {
             if (!art) return null;
@@ -2823,10 +2844,6 @@ function initMiniPlayer() {
                 });
             } catch (_) { /* no-op */ }
         };
-
-        let isSeeking = false;
-        let lastVolume = 1;
-        let lastTrackLabel = '';
 
         const updatePlayingClass = () => {
             if (!miniPlayerEl) return;
@@ -2905,6 +2922,138 @@ function initMiniPlayer() {
             savePlayerState();
             updateVisibility();
             updatePlayingClass();
+        };
+
+        const playAlbumTrack = (track, idx, albumMeta) => {
+            if (!track) return;
+            const src = track.directory || track.file_directory || '';
+            if (!src) return;
+
+            const meta = albumMeta || {};
+            const name = track.name || `Track ${idx + 1}`;
+            const artistLabel = meta.albumArtist ? ' - ' + meta.albumArtist : '';
+
+            audio.src = src;
+            audio.play().catch(() => {});
+            setLiveMode(false);
+            setPlayIcon(true);
+            clearActiveTracks();
+            if (tracklistEl) {
+                tracklistEl.innerHTML = '';
+                tracklistEl.style.display = 'none';
+            }
+            if (artEl) {
+                artEl.src = meta.albumArt || '';
+            }
+            setNowPlayingTitle(name + artistLabel);
+            setMediaSessionMetadata({
+                name,
+                albumArtist: meta.albumArtist || '',
+                albumName: meta.albumName || '',
+                albumArt: meta.albumArt || ''
+            });
+            if (seekEl) {
+                seekEl.value = '0';
+            }
+            savePlayerState();
+            updateVisibility();
+            updatePlayingClass();
+            startAlbumRunFromIndex(meta.albumId || '', idx);
+        };
+
+        const showAlbumTrackPopup = (albumMeta, tracks) => {
+            const meta = albumMeta || {};
+            const playableTracks = (tracks || [])
+                .map((track, index) => ({ track, index }))
+                .filter(entry => entry.track && (entry.track.directory || entry.track.file_directory));
+
+            const overlay = document.createElement('div');
+            overlay.className = 'site-popup-overlay album-track-popup-overlay';
+            overlay.setAttribute('role', 'dialog');
+            overlay.setAttribute('aria-modal', 'true');
+
+            const dialog = document.createElement('div');
+            dialog.className = 'site-popup-dialog album-track-popup-dialog';
+
+            const title = document.createElement('div');
+            title.className = 'site-popup-title';
+            title.textContent = meta.albumName || 'album tracks';
+
+            const detail = document.createElement('div');
+            detail.className = 'site-popup-detail album-track-popup-detail';
+
+            const close = () => {
+                document.removeEventListener('keydown', onKeydown);
+                overlay.classList.add('is-closing');
+                window.setTimeout(() => overlay.remove(), 160);
+            };
+
+            const onKeydown = (event) => {
+                if (event.key === 'Escape') close();
+            };
+
+            if (meta.albumArtist || meta.albumType) {
+                const byline = document.createElement('div');
+                byline.className = 'album-track-popup-meta';
+                byline.textContent = [meta.albumArtist, meta.albumType].filter(Boolean).join(' / ');
+                detail.append(byline);
+            }
+
+            const list = document.createElement('div');
+            list.className = 'album-track-list';
+
+            if (!playableTracks.length) {
+                const empty = document.createElement('div');
+                empty.className = 'album-track-empty';
+                empty.textContent = 'no tracks defined';
+                list.append(empty);
+            } else {
+                playableTracks.forEach((entry, idx) => {
+                    const track = entry.track;
+                    const trackIndex = entry.index;
+                    const button = document.createElement('button');
+                    button.className = 'album-track-button';
+                    button.type = 'button';
+
+                    const number = document.createElement('span');
+                    number.className = 'album-track-number';
+                    number.textContent = String(idx + 1).padStart(2, '0');
+
+                    const name = document.createElement('span');
+                    name.className = 'album-track-name';
+                    name.textContent = track.name || `Track ${trackIndex + 1}`;
+
+                    button.append(number, name);
+                    button.addEventListener('click', () => {
+                        playAlbumTrack(track, trackIndex, meta);
+                        close();
+                    });
+                    list.append(button);
+                });
+            }
+
+            detail.append(list);
+
+            const actions = document.createElement('div');
+            actions.className = 'site-popup-actions';
+
+            const closeButton = document.createElement('button');
+            closeButton.className = 'site-popup-button site-popup-ok';
+            closeButton.type = 'button';
+            closeButton.textContent = 'close';
+            closeButton.addEventListener('click', close);
+            actions.append(closeButton);
+
+            dialog.append(title, detail, actions);
+            overlay.append(dialog);
+            overlay.addEventListener('click', event => {
+                if (event.target === overlay) close();
+            });
+            document.addEventListener('keydown', onKeydown);
+            document.body.append(overlay);
+
+            const firstTrackButton = list.querySelector('.album-track-button');
+            (firstTrackButton || closeButton).focus();
         };
 
         const handleAutoplayOnEnded = () => {
@@ -3072,7 +3221,7 @@ function initMiniPlayer() {
         // Album grid integration: clicking entries controls the mini player.
         const bindAlbumLinks = () => {
             const albumLinks = document.querySelectorAll('.album-link');
-            if (!albumLinks.length || !tracklistEl) return;
+            if (!albumLinks.length) return;
 
             // Rebuild track library from current album definitions
             trackLibrary.tracks = [];
@@ -3162,66 +3311,19 @@ function initMiniPlayer() {
                         return;
                     }
 
-                    // For full Albums: populate the track list above the player.
-                    tracklistEl.innerHTML = '';
+                    // For full Albums: show the track picker in the site popup.
                     clearActiveTracks();
-                    tracklistEl.style.display = 'none';
-
-                    if (!tracks.length) {
-                        const empty = document.createElement('div');
-                        empty.className = 'mini-track';
-                        empty.textContent = 'no tracks defined';
-                        tracklistEl.appendChild(empty);
-                        tracklistEl.style.display = 'flex';
-                        return;
+                    if (tracklistEl) {
+                        tracklistEl.innerHTML = '';
+                        tracklistEl.style.display = 'none';
                     }
-
-                    tracks.forEach((track, idx) => {
-                        const name = track.name || `Track ${idx + 1}`;
-                        const src = track.directory || track.file_directory || '';
-                        if (!src) return;
-
-                        const row = document.createElement('div');
-                        row.className = 'mini-track';
-                        row.textContent = `${idx + 1}. ${name}`;
-                        row.dataset.src = src;
-
-                        row.addEventListener('click', () => {
-                            if (!row.dataset.src) return;
-                            audio.src = row.dataset.src;
-                            audio.play().catch(() => {});
-                            setLiveMode(false);
-                            setPlayIcon(true);
-                            clearActiveTracks();
-                            row.classList.add('active');
-                            if (artEl) {
-                                artEl.src = albumArt || '';
-                            }
-                            const artistLabel = albumArtist ? ' - ' + albumArtist : '';
-                            setNowPlayingTitle(name + artistLabel);
-                            setMediaSessionMetadata({
-                                name,
-                                albumArtist,
-                                albumName,
-                                albumArt
-                            });
-                            if (seekEl) {
-                                seekEl.value = '0';
-                            }
-                            savePlayerState();
-                            updateVisibility();
-                            updatePlayingClass();
-
-                            // When the user selects an album track, start an album run
-                            const trackId = normalizeTrackSrc(row.dataset.src);
-                            startAlbumRunFromIndex(albumId, idx);
-                        });
-
-                        tracklistEl.appendChild(row);
-                        if (tracklistEl.style.display !== 'flex') {
-                            tracklistEl.style.display = 'flex';
-                        }
-                    });
+                    showAlbumTrackPopup({
+                        albumName,
+                        albumArtist,
+                        albumType,
+                        albumArt,
+                        albumId
+                    }, tracks);
                 });
             });
         };
@@ -4085,6 +4187,12 @@ document.addEventListener('submit', function(e) {
     submitGalleryDelete(form);
 });
 
+document.addEventListener('click', function(event) {
+    const audioNote = event.target && event.target.closest ? event.target.closest('.feed-audio-note') : null;
+    if (!audioNote) return;
+    event.preventDefault();
+}, true);
+
 // Note: /bookmarks is rendered server-side from the user's bookmark JSON.
 
 // Enhance /bookmarks with localStorage bookmarks for non-logged-in users
@@ -4171,6 +4279,7 @@ function enhanceBookmarksPage() {
                         const raw = bodySpan.textContent || '';
                         const html = parseBBCode(raw);
                         bodySpan.innerHTML = html;
+                        initInlineMediaPlayers(bodySpan);
 
                         if (typeof hljs !== 'undefined') {
                             bodySpan.querySelectorAll('pre code').forEach((block) => {
@@ -4189,8 +4298,393 @@ window.addEventListener('DOMContentLoaded', enhanceBookmarksPage);
 // BBCode formatting state (images + file list) is global so that
 // it can be reused when the editor is loaded via SPA navigation.
 const bbcodeImages = new Map();
+const bbcodeVoiceNotes = new Map();
 const imageFileStore = new DataTransfer();
+const voiceFileStore = new DataTransfer();
 let isPreviewMode = false;
+const VOICE_NOTE_MAX_MS = 120000;
+const VOICE_NOTE_AUDIO_CONSTRAINTS = {
+    echoCancellation: { ideal: true },
+    noiseSuppression: { ideal: true },
+    autoGainControl: { ideal: true }
+};
+
+function fridg3VoiceMimeType() {
+    if (!window.MediaRecorder) return '';
+    const candidates = [
+        'audio/mp4',
+        'audio/webm;codecs=opus',
+        'audio/ogg;codecs=opus',
+        'audio/webm'
+    ];
+    return candidates.find(type => {
+        try {
+            return MediaRecorder.isTypeSupported(type);
+        } catch (_) {
+            return false;
+        }
+    }) || '';
+}
+
+function fridg3VoiceExtension(mimeType) {
+    const value = String(mimeType || '').toLowerCase();
+    if (value.includes('mp4')) return 'm4a';
+    if (value.includes('ogg')) return 'ogg';
+    if (value.includes('webm')) return 'webm';
+    return 'webm';
+}
+
+function fridg3CreateVoiceRecorder(container, onReady) {
+    if (!container || container.dataset.voiceRecorderBound === '1') return null;
+    container.dataset.voiceRecorderBound = '1';
+    container.innerHTML = [
+        '<div class="voice-recorder-status">ready to record</div>',
+        '<div class="voice-recorder-timer">0:00 / 2:00</div>',
+        '<div class="voice-recorder-preview" hidden></div>',
+        '<div class="voice-recorder-actions">',
+        '<button type="button" data-voice-action="record"><i class="fa-solid fa-microphone"></i><span>record</span></button>',
+        '<button type="button" data-voice-action="accept" hidden><i class="fa-solid fa-check"></i><span>use</span></button>',
+        '<button type="button" data-voice-action="discard" hidden><i class="fa-solid fa-xmark"></i><span>discard</span></button>',
+        '</div>'
+    ].join('');
+
+    const status = container.querySelector('.voice-recorder-status');
+    const timer = container.querySelector('.voice-recorder-timer');
+    const preview = container.querySelector('.voice-recorder-preview');
+    const recordBtn = container.querySelector('[data-voice-action="record"]');
+    const recordIcon = recordBtn ? recordBtn.querySelector('i') : null;
+    const recordText = recordBtn ? recordBtn.querySelector('span') : null;
+    const acceptBtn = container.querySelector('[data-voice-action="accept"]');
+    const discardBtn = container.querySelector('[data-voice-action="discard"]');
+    let stream = null;
+    let recorder = null;
+    let chunks = [];
+    let startedAt = 0;
+    let tickTimer = null;
+    let stopTimer = null;
+    let currentBlob = null;
+    let currentUrl = '';
+    let currentMime = '';
+    let isRecording = false;
+    let isStopping = false;
+
+    const setText = (text) => { if (status) status.textContent = text; };
+    const formatTime = (seconds) => {
+        seconds = Math.max(0, Math.floor(seconds || 0));
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        return mins + ':' + (secs < 10 ? '0' : '') + secs;
+    };
+    const updateTimer = () => {
+        const elapsed = startedAt ? Math.min(120, (Date.now() - startedAt) / 1000) : 0;
+        if (timer) timer.textContent = formatTime(elapsed) + ' / 2:00';
+    };
+    const previewMode = () => container.classList.contains('chat-voice-recorder') ? 'chat' : 'feed';
+    const clearPreview = () => {
+        if (currentUrl) URL.revokeObjectURL(currentUrl);
+        currentUrl = '';
+        currentBlob = null;
+        if (preview) {
+            preview.innerHTML = '';
+            preview.hidden = true;
+        }
+    };
+    const reset = () => {
+        if (tickTimer) clearInterval(tickTimer);
+        if (stopTimer) clearTimeout(stopTimer);
+        tickTimer = null;
+        stopTimer = null;
+        startedAt = 0;
+        chunks = [];
+        if (stream) {
+            stream.getTracks().forEach(track => track.stop());
+            stream = null;
+        }
+        recorder = null;
+        isRecording = false;
+        isStopping = false;
+        if (recordBtn) recordBtn.hidden = false;
+        if (recordBtn) recordBtn.disabled = false;
+        if (recordIcon) {
+            recordIcon.classList.add('fa-microphone');
+            recordIcon.classList.remove('fa-stop');
+        }
+        if (recordText) recordText.textContent = 'record';
+        if (acceptBtn) acceptBtn.hidden = true;
+        if (discardBtn) discardBtn.hidden = true;
+        updateTimer();
+    };
+    const stopRecording = () => {
+        if (!recorder || !isRecording || isStopping) {
+            return;
+        }
+        isStopping = true;
+        if (recordBtn) recordBtn.disabled = true;
+        setText('processing voice note...');
+        if (recorder.state !== 'inactive') {
+            recorder.stop();
+        }
+    };
+
+    if (recordBtn) {
+        recordBtn.addEventListener('click', async () => {
+            if (isRecording) {
+                stopRecording();
+                return;
+            }
+            if (isStopping) return;
+
+            clearPreview();
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || !window.MediaRecorder) {
+                setText('voice recording is not supported in this browser');
+                return;
+            }
+            currentMime = fridg3VoiceMimeType();
+            if (!currentMime) {
+                setText('no supported audio recorder found');
+                return;
+            }
+            try {
+                try {
+                    stream = await navigator.mediaDevices.getUserMedia({ audio: VOICE_NOTE_AUDIO_CONSTRAINTS });
+                } catch (constraintError) {
+                    stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                }
+                recorder = new MediaRecorder(stream, {
+                    mimeType: currentMime,
+                    audioBitsPerSecond: 48000
+                });
+                chunks = [];
+                recorder.addEventListener('dataavailable', event => {
+                    if (event.data && event.data.size > 0) chunks.push(event.data);
+                });
+                recorder.addEventListener('error', () => {
+                    reset();
+                    setText('recording failed');
+                });
+                recorder.addEventListener('stop', () => {
+                    const stoppedMime = recorder ? recorder.mimeType : currentMime;
+                    currentBlob = new Blob(chunks, { type: stoppedMime || currentMime });
+                    if (stream) {
+                        stream.getTracks().forEach(track => track.stop());
+                        stream = null;
+                    }
+                    if (tickTimer) clearInterval(tickTimer);
+                    if (stopTimer) clearTimeout(stopTimer);
+                    tickTimer = null;
+                    stopTimer = null;
+                    isRecording = false;
+                    isStopping = false;
+                    if (recordBtn) recordBtn.disabled = false;
+                    recorder = null;
+                    if (currentBlob.size <= 0) {
+                        reset();
+                        setText('recording failed');
+                        return;
+                    }
+                    currentUrl = URL.createObjectURL(currentBlob);
+                    if (preview) {
+                        preview.innerHTML = renderChatStyleAudio(currentUrl, 'voice note', previewMode());
+                        preview.hidden = false;
+                        initInlineMediaPlayers(preview);
+                    }
+                    if (recordBtn) recordBtn.hidden = false;
+                    if (recordIcon) {
+                        recordIcon.classList.add('fa-microphone');
+                        recordIcon.classList.remove('fa-stop');
+                    }
+                    if (recordText) recordText.textContent = 'record';
+                    if (acceptBtn) acceptBtn.hidden = false;
+                    if (discardBtn) discardBtn.hidden = false;
+                    setText('preview your voice note');
+                    updateTimer();
+                });
+                recorder.start();
+                isRecording = true;
+                isStopping = false;
+                startedAt = Date.now();
+                tickTimer = setInterval(updateTimer, 250);
+                stopTimer = setTimeout(stopRecording, VOICE_NOTE_MAX_MS);
+                if (recordIcon) {
+                    recordIcon.classList.add('fa-stop');
+                    recordIcon.classList.remove('fa-microphone');
+                }
+                if (recordText) recordText.textContent = 'stop';
+                if (acceptBtn) acceptBtn.hidden = true;
+                if (discardBtn) discardBtn.hidden = true;
+                setText('recording...');
+                updateTimer();
+            } catch (_) {
+                reset();
+                setText('microphone access blocked');
+            }
+        });
+    }
+
+    if (discardBtn) {
+        discardBtn.addEventListener('click', () => {
+            clearPreview();
+            reset();
+            setText('ready to record');
+        });
+    }
+    if (acceptBtn) {
+        acceptBtn.addEventListener('click', () => {
+            if (!currentBlob) return;
+            const mime = currentBlob.type || currentMime || 'audio/webm';
+            const ext = fridg3VoiceExtension(mime);
+            const file = new File([currentBlob], 'voice-note.' + ext, { type: mime });
+            if (typeof onReady === 'function') onReady(file, currentUrl);
+            clearPreview();
+            reset();
+            setText('voice note added');
+            container.hidden = true;
+        });
+    }
+
+    return { reset, clearPreview };
+}
+
+window.fridg3CreateVoiceRecorder = fridg3CreateVoiceRecorder;
+
+function renderChatStyleAudio(url, fileName, mode = 'feed') {
+    const escapeAttr = (value) => String(value || '')
+        .replace(/&/g, '&amp;')
+        .replace(/"/g, '&quot;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+    const escapeText = (value) => String(value || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+    const safeUrl = escapeAttr(url);
+    const safeName = escapeText(fileName || 'voice note');
+    const isChat = mode === 'chat';
+    const classes = isChat
+        ? 'chat-attachment chat-attachment-media chat-attachment-audio voice-preview-chat-note'
+        : 'feed-audio-note feed-voice-note chat-attachment chat-attachment-media chat-attachment-audio';
+    const label = isChat
+        ? `<a class="chat-attachment-download" href="${safeUrl}"><i class="fa-solid fa-microphone"></i><span>${safeName}</span></a>`
+        : '';
+    return [
+        `<div class="${classes}">`,
+        `<audio class="chat-media-element" preload="metadata" src="${safeUrl}"></audio>`,
+        label,
+        '<div class="chat-media-player" data-media-kind="audio">',
+        '<button class="chat-media-play" type="button" aria-label="play audio"><i class="fa-solid fa-play"></i></button>',
+        '<input class="chat-media-seek" type="range" min="0" max="1000" value="0" step="1" aria-label="seek audio">',
+        '<span class="chat-media-time">0:00 / 0:00</span>',
+        '<button class="chat-media-speed" type="button" aria-label="playback speed"><span class="chat-media-speed-label">1x</span></button>',
+        '</div>',
+        '</div>'
+    ].join('');
+}
+
+function initInlineMediaPlayers(root = document) {
+    const scope = root && root.querySelectorAll ? root : document;
+    const wraps = [];
+    if (scope.matches && scope.matches('.chat-attachment-media')) {
+        wraps.push(scope);
+    }
+    scope.querySelectorAll('.chat-attachment-media').forEach(function(wrap) {
+        wraps.push(wrap);
+    });
+    wraps.forEach(function(wrap) {
+        if (wrap.dataset.mediaBound === '1') return;
+        const media = wrap.querySelector('.chat-media-element');
+        const controls = wrap.querySelector('.chat-media-player');
+        if (!media || !controls) return;
+        wrap.dataset.mediaBound = '1';
+
+        if (wrap.classList.contains('feed-audio-note')) {
+            wrap.addEventListener('click', function(event) {
+                event.preventDefault();
+                event.stopPropagation();
+            });
+        }
+
+        const play = controls.querySelector('.chat-media-play');
+        const playIcon = play ? play.querySelector('i') : null;
+        const seek = controls.querySelector('.chat-media-seek');
+        const time = controls.querySelector('.chat-media-time');
+        const speed = controls.querySelector('.chat-media-speed');
+        const speedLabel = speed ? speed.querySelector('.chat-media-speed-label') : null;
+        const playbackSpeeds = [1, 1.5, 2];
+        const format = (seconds) => {
+            seconds = Number(seconds || 0);
+            if (!isFinite(seconds) || seconds < 0) seconds = 0;
+            const mins = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            return mins + ':' + (secs < 10 ? '0' : '') + secs;
+        };
+        const updatePlay = () => {
+            if (!playIcon) return;
+            playIcon.classList.toggle('fa-play', media.paused);
+            playIcon.classList.toggle('fa-pause', !media.paused);
+        };
+        const updateTime = () => {
+            const duration = isFinite(media.duration) ? media.duration : 0;
+            if (seek && !seek.matches(':active')) {
+                seek.value = duration > 0 ? String(Math.round((media.currentTime / duration) * 1000)) : '0';
+            }
+            if (time) time.textContent = format(media.currentTime) + ' / ' + format(duration);
+        };
+        const updateSpeed = () => {
+            if (!speedLabel) return;
+            const rate = playbackSpeeds.includes(media.playbackRate) ? media.playbackRate : 1;
+            speedLabel.textContent = rate + 'x';
+            if (speed) speed.setAttribute('aria-label', 'playback speed ' + rate + 'x');
+        };
+
+        if (play) {
+            play.addEventListener('click', function() {
+                if (media.paused) {
+                    document.querySelectorAll('.chat-media-element').forEach(function(other) {
+                        if (other !== media) other.pause();
+                    });
+                    media.play().catch(function() {});
+                } else {
+                    media.pause();
+                }
+            });
+        }
+        if (seek) {
+            seek.addEventListener('input', function() {
+                if (!isFinite(media.duration) || media.duration <= 0) return;
+                media.currentTime = (Number(seek.value || 0) / 1000) * media.duration;
+                updateTime();
+            });
+        }
+        if (speed) {
+            speed.addEventListener('click', function() {
+                const currentIndex = playbackSpeeds.indexOf(media.playbackRate);
+                const nextIndex = currentIndex === -1 ? 0 : (currentIndex + 1) % playbackSpeeds.length;
+                media.playbackRate = playbackSpeeds[nextIndex];
+                updateSpeed();
+            });
+        }
+        media.addEventListener('loadedmetadata', updateTime);
+        media.addEventListener('loadedmetadata', function resetPreviewSeekOnce() {
+            media.removeEventListener('loadedmetadata', resetPreviewSeekOnce);
+            if (media.currentTime > 0 && media.currentTime >= (isFinite(media.duration) ? media.duration - 0.05 : 0)) {
+                media.currentTime = 0;
+            }
+            if (seek) seek.value = '0';
+            updateTime();
+        });
+        media.addEventListener('timeupdate', updateTime);
+        media.addEventListener('play', updatePlay);
+        media.addEventListener('pause', updatePlay);
+        media.addEventListener('ended', function() {
+            updatePlay();
+            updateTime();
+        });
+        media.addEventListener('ratechange', updateSpeed);
+        updatePlay();
+        updateTime();
+        updateSpeed();
+    });
+}
 
 // Compress images client-side to JPEG under 1MB (also converts PNG/GIF/WEBP to JPEG)
 async function compressImageToJpegUnder1MB(file, maxBytes = 1000000) {
@@ -4270,10 +4764,12 @@ async function compressImageToJpegUnder1MB(file, maxBytes = 1000000) {
 
 function initBBCodeEditor() {
     const bbcodeTextbox = document.getElementById('bbcode-textbox');
-    const bbcodePreview = document.getElementById('bbcode-preview');
-    const bbcodePreviewToggle = document.getElementById('bbcode-preview-toggle');
-    const bbcodeHeaderDropdown = document.getElementById('bbcode-header-dropdown');
-    const bbcodeButtons = document.querySelectorAll('.bbcode-btn');
+    const bbcodeEditor = bbcodeTextbox ? bbcodeTextbox.closest('.bbcode-editor') : null;
+    const bbcodeScope = bbcodeEditor || document;
+    const bbcodePreview = bbcodeScope.querySelector('#bbcode-preview');
+    const bbcodePreviewToggle = bbcodeScope.querySelector('#bbcode-preview-toggle');
+    const bbcodeHeaderDropdown = bbcodeScope.querySelector('#bbcode-header-dropdown');
+    const bbcodeButtons = bbcodeScope.querySelectorAll('.bbcode-btn');
 
     // Avoid rebinding if this editor instance is already initialized
     if (!bbcodeTextbox || bbcodeTextbox.dataset.bbcodeInitialized === '1') return;
@@ -4281,7 +4777,7 @@ function initBBCodeEditor() {
 
     bbcodeButtons.forEach(button => {
         button.addEventListener('click', function() {
-            if (this.id === 'bbcode-preview-toggle' || this.id === 'bbcode-image-btn' || this.id === 'bbcode-color-btn' || this.id === 'bbcode-tooltip-btn' || this.id === 'bbcode-link-btn' || this.id === 'bbcode-spoiler-btn') return;
+            if (this.id === 'bbcode-preview-toggle' || this.id === 'bbcode-image-btn' || this.id === 'bbcode-voice-btn' || this.id === 'bbcode-color-btn' || this.id === 'bbcode-tooltip-btn' || this.id === 'bbcode-link-btn' || this.id === 'bbcode-spoiler-btn') return;
             
             const tag = this.getAttribute('data-tag');
             const start = bbcodeTextbox.selectionStart;
@@ -4431,8 +4927,11 @@ function initBBCodeEditor() {
     }
     
     // Image attachment
-    const bbcodeImageBtn = document.getElementById('bbcode-image-btn');
-    const bbcodeImageInput = document.getElementById('bbcode-image-input');
+    const bbcodeImageBtn = bbcodeScope.querySelector('#bbcode-image-btn');
+    const bbcodeImageInput = bbcodeScope.querySelector('#bbcode-image-input');
+    const bbcodeVoiceBtn = bbcodeScope.querySelector('.bbcode-voice-btn, #bbcode-voice-btn');
+    const bbcodeVoiceInput = bbcodeScope.querySelector('#bbcode-voice-input');
+    const bbcodeVoiceRecorder = bbcodeScope.querySelector('.bbcode-voice-recorder');
 
     const queueImageFile = async (file) => {
         let processedFile = file;
@@ -4512,6 +5011,31 @@ function initBBCodeEditor() {
             if (used) {
                 bbcodeImageInput.files = imageFileStore.files;
             }
+        });
+    }
+
+    if (bbcodeVoiceBtn && bbcodeVoiceInput && bbcodeVoiceRecorder) {
+        fridg3CreateVoiceRecorder(bbcodeVoiceRecorder, function(file) {
+            const fileIndex = voiceFileStore.files.length;
+            voiceFileStore.items.add(file);
+            bbcodeVoiceInput.files = voiceFileStore.files;
+            bbcodeVoiceNotes.set(fileIndex, {
+                url: URL.createObjectURL(file),
+                name: file.name || 'voice-note.m4a'
+            });
+
+            const start = bbcodeTextbox.selectionStart;
+            const end = bbcodeTextbox.selectionEnd;
+            const beforeText = bbcodeTextbox.value.substring(0, start);
+            const afterText = bbcodeTextbox.value.substring(end);
+            const newText = `[voice:${fileIndex}][name:${file.name || 'voice-note.m4a'}]`;
+            bbcodeTextbox.value = beforeText + newText + afterText;
+            bbcodeTextbox.focus();
+            bbcodeTextbox.setSelectionRange(start + newText.length, start + newText.length);
+        });
+
+        bbcodeVoiceBtn.addEventListener('click', function() {
+            bbcodeVoiceRecorder.hidden = !bbcodeVoiceRecorder.hidden;
         });
     }
 
@@ -4624,6 +5148,7 @@ function initBBCodeEditor() {
                 const bbcodeText = bbcodeTextbox.value;
                 const htmlText = parseBBCode(bbcodeText);
                 bbcodePreview.innerHTML = htmlText;
+                initInlineMediaPlayers(bbcodePreview);
                 bbcodeTextbox.style.display = 'none';
                 bbcodePreview.style.display = 'block';
                 
@@ -4730,6 +5255,14 @@ function parseBBCode(text) {
         imgUrlMap.set(id, { url, name: customName });
         return `[img-placeholder:${id}]`;
     });
+
+    const audioUrlMap = new Map();
+    let audioCounter = 0;
+    text = text.replace(/\[audio=([^\]\s]+)\](?:\[name:(.*?)\])?/gi, function(match, url, customName) {
+        const id = audioCounter++;
+        audioUrlMap.set(id, { url, name: customName });
+        return `[audio-placeholder:${id}]`;
+    });
     
     // Replace [link=URL]text[/link] with placeholder
     text = text.replace(/\[link=(https?:\/\/[^\]]+)\](.*?)\[\/link\]/gis, function(match, url, text) {
@@ -4813,6 +5346,19 @@ function parseBBCode(text) {
         }
         return match;
     });
+    html = html.replace(/\[audio-placeholder:(\d+)\]/gi, function(match, id) {
+        const audioData = audioUrlMap.get(parseInt(id));
+        if (!audioData) return match;
+        const fileName = audioData.name || audioData.url.split('/').pop() || 'audio';
+        return renderChatStyleAudio(audioData.url, fileName);
+    });
+    html = html.replace(/\[voice:(\d+)\](?:\[name:(.*?)\])?/gi, function(match, id, customName) {
+        const voiceObj = bbcodeVoiceNotes.get(parseInt(id));
+        if (!voiceObj) return match;
+        const fileName = customName || voiceObj.name || 'voice-note.m4a';
+        return renderChatStyleAudio(voiceObj.url, fileName);
+    });
+    html = html.replace(/(<div class="[^"]*\bfeed-audio-note\b[\s\S]*?<\/div>\s*<\/div>)\n+/gi, '$1');
     // Convert newlines to <br> for regular content
     html = html.replace(/\n/g, '<br>'); // actual newline characters
     html = html.replace(/\\n/g, '<br>'); // literal "\n" sequences

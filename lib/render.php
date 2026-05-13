@@ -86,8 +86,14 @@ if (!function_exists('fridg3_normalize_theme_id')) {
         if ($theme === '' || $theme === 'default') {
             return 'default';
         }
+        if ($theme === 'blackprint') {
+            return 'default';
+        }
         if ($theme === 'custom') {
-            return 'custom';
+            return 'classic';
+        }
+        if ($theme === 'newsprint') {
+            return 'whiteprint';
         }
         if (preg_match('/^[a-z0-9_-]+$/', $theme)) {
             return $theme;
@@ -165,6 +171,10 @@ if (!function_exists('fridg3_list_themes')) {
                 continue;
             }
 
+            if (isset($themes[$id])) {
+                continue;
+            }
+
             $themes[$id] = [
                 'id' => $id,
                 'name' => $name,
@@ -178,6 +188,12 @@ if (!function_exists('fridg3_list_themes')) {
         }
 
         uasort($themes, function($a, $b) {
+            $priority = ['whiteprint' => 0, 'classic' => 1];
+            $aPriority = $priority[$a['id']] ?? 10;
+            $bPriority = $priority[$b['id']] ?? 10;
+            if ($aPriority !== $bPriority) {
+                return $aPriority <=> $bPriority;
+            }
             return strcasecmp($a['name'], $b['name']);
         });
 
@@ -258,7 +274,7 @@ if (!function_exists('fridg3_get_preferred_theme_id')) {
 if (!function_exists('fridg3_get_active_theme')) {
     function fridg3_get_active_theme($startDir) {
         $themeId = fridg3_get_preferred_theme_id($startDir);
-        if ($themeId === 'default' || $themeId === 'custom') {
+        if ($themeId === 'default') {
             return null;
         }
 
@@ -300,10 +316,31 @@ if (!function_exists('get_preferred_template_name')) {
 }
 
 if (!function_exists('apply_preferred_theme_stylesheet')) {
+    function fridg3_apply_body_theme_class($template, $className) {
+        $className = trim((string)$className);
+        if ($className === '' || !preg_match('/^[a-z0-9_-]+$/', $className)) {
+            return $template;
+        }
+        if (preg_match('/<body\b[^>]*\bclass=(["\'])(.*?)\1/i', $template, $matches)) {
+            $classes = preg_split('/\s+/', trim($matches[2])) ?: [];
+            if (in_array($className, $classes, true)) {
+                return $template;
+            }
+            $newClassValue = trim($matches[2] . ' ' . $className);
+            return preg_replace(
+                '/(<body\b[^>]*\bclass=)(["\'])(.*?)\2/i',
+                '$1$2' . $newClassValue . '$2',
+                $template,
+                1
+            );
+        }
+        return preg_replace('/<body\b/i', '<body class="' . $className . '"', $template, 1);
+    }
+
     function apply_preferred_theme_stylesheet($template, $startDir) {
         $theme = fridg3_get_active_theme($startDir);
         if ($theme === null) {
-            return $template;
+            return fridg3_apply_body_theme_class($template, 'blackprint-theme');
         }
 
         $href = htmlspecialchars($theme['cssHref'], ENT_QUOTES, 'UTF-8');

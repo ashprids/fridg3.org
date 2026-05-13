@@ -22,7 +22,12 @@ if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
 
 $rootDir = dirname(__DIR__, 2);
 $themes = function_exists('fridg3_list_themes') ? fridg3_list_themes($rootDir) : [];
-$themeList = [];
+$themeList = [
+    [
+        'id' => 'default',
+        'name' => 'blackprint',
+    ],
+];
 
 foreach ($themes as $theme) {
     $themeList[] = [

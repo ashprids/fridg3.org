@@ -41,7 +41,7 @@ typical route flow:
 6. inject placeholders like `{content}`, `{title}`, `{description}`, `{user_greeting}`
 7. optionally swap account footer button to logout when logged in
 
-theme selection also runs through `lib/render.php`. desktop requests can use a theme HTML template from `/themes/lib`; mobile requests always keep `template_mobile.html` and append the selected theme CSS after the mobile inline styles.
+theme selection also runs through `lib/render.php`. `default` is blackprint and uses the base template/style. desktop requests for selectable themes can use a theme HTML template from `/themes/lib`; mobile requests always keep `template_mobile.html` and append the selected theme CSS after the mobile inline styles. legacy saved values are normalized (`blackprint` to `default`, `custom` to `classic`, `newsprint` to `whiteprint`).
 
 some routes also pull in extra shared libs like `lib/feed.php` for route-specific persistence helpers instead of keeping all that logic inline.
 

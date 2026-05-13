@@ -10,6 +10,7 @@ homepage with dynamic latest feed, latest journal, and music cards.
 
 - list/search/paginate feed posts from `data/feed/*.txt`
 - create visibility depends on admin or `allowedPages` containing `feed`
+- create composer supports recorded voice notes; accepted recordings request browser noise suppression, echo cancellation, and auto gain when available, are previewed before posting, capped at 2 minutes, transcoded to compressed `.m4a`, stored under `data/audio/voice/`, and played with inline controls that include a `1x`/`1.5x`/`2x` speed toggle
 - writes derived `index.toml`
 - `@mentions` in BBCode are highlighted client-side for notification-aware feed posts
 
@@ -22,9 +23,10 @@ Related:
 ### `/feed/posts/{id}`
 
 - single-post thread view for a feed item
-- logged-in users can reply with BBCode and image uploads
+- logged-in users can reply with BBCode, image uploads, and recorded voice notes using the same inline speed-toggle playback controls
 - reply edit/delete is allowed for the reply author, admins, the original post owner, or accounts with `allowedPages` containing `comments`
 - replies persist under `data/feed/replies/{postId}.json`
+- deleting a reply removes voice note files referenced by that reply
 
 ### `/journal`
 
@@ -56,7 +58,7 @@ Related:
 
 - builds album grids from `data/music/frdg3/*.json` and `data/music/cactile/*.json`
 - songs reference `data/audio/*`
-- integrates with the shared mini player
+- integrates with the shared mini player; album clicks open an on-site popup track picker, while singles/remixes play directly
 
 ### `/gallery`
 
@@ -165,9 +167,10 @@ one-to-one conversation view.
 - if the backing file is deleted, returning recipients see the ended-conversation page
 - messages are stored inside the encrypted per-conversation JSON envelope under `data/chat`
 - image/file attachments up to 8 MB are stored as encrypted per-chat blobs and served only after chat access checks
-- selecting an attachment shows an attached-file indicator before send; image attachments use the site image viewer
+- the composer `+` menu supports file upload or recording a voice note; voice notes are previewed before send, capped at 2 minutes, transcoded to compressed `.m4a`, and stored as encrypted chat attachments
+- selecting an attachment shows an attached-file indicator before send; image attachments use the site image viewer, while audio, voice, and video attachments embed with custom themed playback controls inside the chat; audio/voice controls include the `1x`/`1.5x`/`2x` speed toggle
 - messages can visually reply to a previous message, and clicking/tapping a message opens reply/react/delete actions; message deletion uses an in-site confirmation popup, and deleted messages stay in place as dimmed `message deleted` placeholders
-- reactions are emoji-based, searchable from the message context menu or the desktop-only emoji button beside the composer; the picker loads Twemoji-compatible Emojibase data from jsDelivr and falls back to a tiny local set if unavailable
+- reactions are emoji-based, searchable from the message context menu or the desktop-only emoji button beside the composer; the picker loads Emoji 16 Emojibase data from jsDelivr, lazy-renders results as users search/scroll, supports typed or pasted emoji from the search box, and falls back to a tiny local set if unavailable
 - both sides send active/away presence heartbeats plus short-lived typing state, and the page live-polls whether the other side is online, away, or offline while showing a non-layout-shifting typing indicator inside the message box
 - message sends update the current page immediately, and open chat pages poll for new messages; unfocused/hidden chat tabs play `/chat/alert.ogg` and prefix the page title with an unread count when the other side sends new messages
 - message timestamps show time only, with a date divider inserted at the first message for each day

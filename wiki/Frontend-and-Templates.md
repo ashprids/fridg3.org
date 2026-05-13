@@ -45,6 +45,8 @@ this is not just a tiny CSS tweak. it is a separate HTML shell, so shared struct
 
 translation: if you change shared ids, buttons, or route transitions, test more than one page or you will summon weird bugs.
 
+the mini player is shared chrome. `/music` album cards should open the site popup track picker and send the chosen song into the mini player; do not rebuild album track lists inside the sidebar player.
+
 ## Popups And External Links
 
 use the on-site popup helpers in `main.js`, not native browser `alert()`, `confirm()`, or `prompt()`.
@@ -67,7 +69,9 @@ all clicked `http(s)` links that leave `fridg3.org`, `www.fridg3.org`, or `m.fri
 - mobile-template-specific overrides
 - mini player, ASCII blocks, cards, grids, and assorted route UI
 
-themes are declared by `/themes/*.json` and assets live in `/themes/lib`. desktop theme selection can use themed HTML and CSS; mobile view keeps the mobile template and appends theme CSS after mobile-specific inline styles.
+blackprint is the base/default theme in `/style.css` and `template.html`. its default-only CSS is scoped to `body.blackprint-theme`; keep it scoped so selectable themes are not forced to override blackprint details just to look normal. selectable themes are declared by `/themes/*.json` and assets live in `/themes/lib`; `classic` is the old default look and is the only settings theme that exposes color picker overrides. desktop theme selection can use themed HTML and CSS; mobile view keeps the mobile template and appends theme CSS after mobile-specific inline styles. default mobile rendering receives `blackprint-theme` from `lib/render.php`.
+
+the homepage FRIDG3.ORG ASCII hero uses the shared `--hero-ascii-*` color variables so each theme can tune the gradient without editing homepage markup. the server-time and resource ASCII use `--time-*` and `--resource-*` variables, which default to the hero palette unless a theme overrides them. resource cards are intentionally unboxed so the ASCII itself carries the theme.
 
 frdgBeats is theme-aware. its base stylesheet keeps the original default DAW colors, while selected theme stylesheets override `.frdgbeats-daw` `--fb-*` variables derived from `--bg`, `--fg`, `--border`, `--subtle`, and `--links`. body-mounted popups copy those variables from the app wrapper so their dialogs stay opaque and themed. synth and effect custom editors keep their own unique styling across every theme. the frdgBeats route also forces the app content area to full width after theme CSS loads.
 
