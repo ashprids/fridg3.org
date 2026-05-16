@@ -11,6 +11,7 @@ desktop shell with:
 - `{user_greeting}` placeholder
 - `{content}` placeholder
 - maintenance banner
+- local dev-mode banner injected by `lib/render.php`
 - mini player markup
 - page view footer
 
@@ -30,6 +31,7 @@ this is not just a tiny CSS tweak. it is a separate HTML shell, so shared struct
 `main.js` is the site-wide behavior blob. it handles a lot:
 
 - maintenance/WIP enforcement
+- dev-mode display is server-rendered when the host looks local
 - SPA-ish navigation and route transitions
 - page view footer updates
 - settings load/save

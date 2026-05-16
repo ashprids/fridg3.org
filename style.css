@@ -2373,8 +2373,310 @@ hr {
     color: var(--subtle);
 }
 
+#admin-account-delete-feed-form {
+    margin-top: 24px;
+}
+
 #admin-account-delete-form {
     margin-top: 8px;
+}
+
+.account-rip-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 2100;
+    display: grid;
+    place-items: center;
+    padding: 18px;
+    background:
+        radial-gradient(circle at 50% 52%, rgba(255, 255, 255, 0.11), transparent 26%),
+        rgba(0, 0, 0, 0);
+    opacity: 0;
+    pointer-events: none;
+    backdrop-filter: brightness(1);
+    animation: account-rip-backdrop 2600ms cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
+.account-rip-stage {
+    position: relative;
+    width: min(420px, calc(100vw - 36px));
+    min-height: 190px;
+    display: grid;
+    place-items: center;
+    perspective: 900px;
+}
+
+.account-rip-card {
+    position: relative;
+    z-index: 2;
+    width: min(360px, 100%);
+    box-sizing: border-box;
+    overflow: hidden;
+    min-height: 116px;
+    transform-origin: 50% 50%;
+    box-shadow: 0 24px 70px rgba(0, 0, 0, 0.58);
+    animation: account-rip-card-enter 620ms cubic-bezier(0.19, 1, 0.22, 1) forwards;
+}
+
+.account-rip-card-whole {
+    position: absolute;
+    inset: auto;
+}
+
+.account-rip-half {
+    position: absolute;
+    inset: auto;
+    opacity: 0;
+    animation: none;
+    backface-visibility: hidden;
+}
+
+.account-rip-half::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    opacity: 0.86;
+    pointer-events: none;
+}
+
+.account-rip-left {
+    clip-path: polygon(0 0, 53% 0, 47% 8%, 54% 15%, 46% 24%, 53% 34%, 45% 43%, 52% 54%, 45% 63%, 52% 73%, 46% 84%, 53% 100%, 0 100%);
+    transform-origin: 47% 46%;
+}
+
+.account-rip-left::after {
+    background:
+        linear-gradient(90deg, transparent 40%, rgba(255, 255, 255, 0.12) 45%, rgba(0, 0, 0, 0.22) 52%, transparent 59%),
+        repeating-linear-gradient(96deg, transparent 0 9px, rgba(255, 255, 255, 0.1) 9px 10px, transparent 10px 17px);
+}
+
+.account-rip-right {
+    clip-path: polygon(47% 0, 100% 0, 100% 100%, 47% 100%, 54% 84%, 48% 73%, 55% 63%, 48% 54%, 55% 43%, 47% 34%, 54% 24%, 46% 15%, 53% 8%);
+    transform-origin: 53% 46%;
+}
+
+.account-rip-right::after {
+    background:
+        linear-gradient(90deg, transparent 41%, rgba(0, 0, 0, 0.2) 48%, rgba(255, 255, 255, 0.13) 55%, transparent 60%),
+        repeating-linear-gradient(84deg, transparent 0 8px, rgba(255, 255, 255, 0.09) 8px 9px, transparent 9px 16px);
+}
+
+.account-rip-tear-line {
+    position: absolute;
+    z-index: 4;
+    width: 16px;
+    height: 118px;
+    opacity: 0;
+    pointer-events: none;
+    clip-path: polygon(42% 0, 70% 7%, 47% 14%, 63% 23%, 38% 31%, 62% 41%, 42% 50%, 58% 60%, 36% 70%, 61% 81%, 44% 90%, 66% 100%, 28% 100%, 48% 90%, 31% 81%, 52% 70%, 35% 60%, 51% 50%, 30% 41%, 54% 31%, 33% 23%, 53% 14%, 31% 7%, 55% 0);
+    background:
+        repeating-linear-gradient(180deg, rgba(255, 255, 255, 0.4) 0 5px, rgba(255, 255, 255, 0.08) 5px 12px),
+        linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.28), rgba(0, 0, 0, 0.18), transparent);
+    filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.18));
+}
+
+.account-rip-scraps {
+    position: absolute;
+    inset: 0;
+    z-index: 5;
+    pointer-events: none;
+}
+
+.account-rip-scraps i {
+    position: absolute;
+    left: 50%;
+    top: 55%;
+    width: calc(8px * var(--s));
+    height: calc(5px * var(--s));
+    border: 1px solid color-mix(in srgb, var(--border) 78%, transparent);
+    border-radius: 1px;
+    background: color-mix(in srgb, var(--bg) 88%, var(--fg) 12%);
+    opacity: 0;
+    transform: translate(-50%, -50%);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.22);
+}
+
+.account-rip-overlay.is-ripping .account-rip-card-whole {
+    animation:
+        account-rip-card-enter 620ms cubic-bezier(0.19, 1, 0.22, 1) forwards,
+        account-rip-whole-stretch 560ms cubic-bezier(0.45, 0, 0.16, 1) 620ms forwards,
+        account-rip-whole-hide 1ms linear 1180ms forwards;
+}
+
+.account-rip-overlay.is-ripping .account-rip-left {
+    animation:
+        account-rip-half-show 1ms linear 1160ms forwards,
+        account-rip-left-fall 1380ms cubic-bezier(0.2, 0.72, 0.26, 1) 1180ms forwards;
+}
+
+.account-rip-overlay.is-ripping .account-rip-right {
+    animation:
+        account-rip-half-show 1ms linear 1160ms forwards,
+        account-rip-right-fall 1380ms cubic-bezier(0.2, 0.72, 0.26, 1) 1180ms forwards;
+}
+
+.account-rip-overlay.is-ripping .account-rip-tear-line {
+    animation: account-rip-tear-flash 720ms ease-out 700ms forwards;
+}
+
+.account-rip-overlay.is-ripping .account-rip-scraps i {
+    animation: account-rip-scrap 1180ms cubic-bezier(0.24, 0.64, 0.34, 1) calc(var(--d) + 0.48s) forwards;
+}
+
+@keyframes account-rip-backdrop {
+    0% {
+        opacity: 0;
+        background-color: rgba(0, 0, 0, 0);
+        backdrop-filter: brightness(1);
+    }
+    22% {
+        opacity: 1;
+        background-color: rgba(0, 0, 0, 0.7);
+        backdrop-filter: brightness(0.46) blur(1px);
+    }
+    84% {
+        opacity: 1;
+        background-color: rgba(0, 0, 0, 0.78);
+        backdrop-filter: brightness(0.38) blur(1px);
+    }
+    100% {
+        opacity: 1;
+        background-color: rgba(0, 0, 0, 0.84);
+        backdrop-filter: brightness(0.32) blur(2px);
+    }
+}
+
+@keyframes account-rip-card-enter {
+    0% {
+        opacity: 0;
+        transform: translateY(42px) scale(0.82) rotateX(12deg) rotateZ(0deg);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0) scale(1) rotateX(0deg) rotateZ(0deg);
+    }
+}
+
+@keyframes account-rip-whole-hide {
+    100% {
+        opacity: 0;
+    }
+}
+
+@keyframes account-rip-whole-stretch {
+    0% {
+        filter: brightness(1);
+        transform: translateY(0) scale(1) skewX(0deg) rotateZ(0deg);
+    }
+    30% {
+        filter: brightness(1.05);
+        transform: translateY(-2px) scaleX(1.035) scaleY(0.985) skewX(-1.8deg) rotateZ(-0.4deg);
+    }
+    54% {
+        filter: brightness(1.08);
+        transform: translateY(1px) scaleX(1.105) scaleY(0.965) skewX(2.2deg) rotateZ(0.5deg);
+    }
+    74% {
+        filter: brightness(1.12);
+        transform: translateY(-1px) scaleX(1.155) scaleY(0.948) skewX(-2.8deg) rotateZ(-0.6deg);
+    }
+    100% {
+        filter: brightness(1.16);
+        transform: translateY(0) scaleX(1.19) scaleY(0.935) skewX(0deg) rotateZ(0deg);
+    }
+}
+
+@keyframes account-rip-half-show {
+    100% {
+        opacity: 1;
+    }
+}
+
+@keyframes account-rip-left-fall {
+    0% {
+        opacity: 1;
+        filter: brightness(1);
+        transform: translate(-18px, 0) scaleX(1.08) scaleY(0.96) rotateZ(-2deg) rotateX(0deg);
+    }
+    16% {
+        transform: translate(-56px, -13px) scaleX(1.02) scaleY(0.99) rotateZ(-10deg) rotateX(7deg);
+    }
+    36% {
+        transform: translate(-74px, 18px) scaleX(0.98) scaleY(1.01) rotateZ(-16deg) rotateX(14deg);
+    }
+    100% {
+        opacity: 0;
+        filter: brightness(0.68) blur(0.4px);
+        transform: translate(-132px, 292px) scaleX(0.94) scaleY(1.03) rotateZ(-27deg) rotateX(36deg);
+    }
+}
+
+@keyframes account-rip-right-fall {
+    0% {
+        opacity: 1;
+        filter: brightness(1);
+        transform: translate(18px, 0) scaleX(1.08) scaleY(0.96) rotateZ(2deg) rotateX(0deg);
+    }
+    16% {
+        transform: translate(56px, -13px) scaleX(1.02) scaleY(0.99) rotateZ(10deg) rotateX(7deg);
+    }
+    36% {
+        transform: translate(74px, 18px) scaleX(0.98) scaleY(1.01) rotateZ(16deg) rotateX(14deg);
+    }
+    100% {
+        opacity: 0;
+        filter: brightness(0.68) blur(0.4px);
+        transform: translate(132px, 292px) scaleX(0.94) scaleY(1.03) rotateZ(27deg) rotateX(36deg);
+    }
+}
+
+@keyframes account-rip-tear-flash {
+    0% {
+        opacity: 0;
+        transform: scaleY(0.08) scaleX(0.5);
+    }
+    25% {
+        opacity: 0.42;
+        transform: scaleY(0.72) scaleX(0.82);
+    }
+    58% {
+        opacity: 0.34;
+        transform: scaleY(1.06) scaleX(0.96);
+    }
+    100% {
+        opacity: 0;
+        transform: scaleY(1.16) scaleX(1.08);
+    }
+}
+
+@keyframes account-rip-scrap {
+    0% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.4) rotate(0deg);
+    }
+    18% {
+        opacity: 0.9;
+    }
+    100% {
+        opacity: 0;
+        transform: translate(calc(-50% + var(--x)), calc(-50% + var(--y))) scale(0.2) rotate(var(--r));
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .account-rip-overlay {
+        animation-duration: 420ms;
+        background-color: rgba(0, 0, 0, 0.78);
+    }
+
+    .account-rip-card,
+    .account-rip-overlay.is-ripping .account-rip-card-whole,
+    .account-rip-overlay.is-ripping .account-rip-left,
+    .account-rip-overlay.is-ripping .account-rip-right,
+    .account-rip-overlay.is-ripping .account-rip-tear-line,
+    .account-rip-overlay.is-ripping .account-rip-scraps i {
+        animation-duration: 1ms;
+    }
 }
 
 .chat-view {
@@ -5097,6 +5399,22 @@ body.blackprint-theme .danger-button:hover,
 body.blackprint-theme button:hover{
     background: var(--fg);
     color: #101315;
+}
+
+body.blackprint-theme #admin-account-delete-feed-form .danger-button,
+body.blackprint-theme #admin-account-delete-form .danger-button,
+body.blackprint-theme .danger-button {
+    background: #7b2e3b !important;
+    color: #f4dedc !important;
+    border-color: #a64a56 !important;
+}
+
+body.blackprint-theme #admin-account-delete-feed-form .danger-button:hover,
+body.blackprint-theme #admin-account-delete-form .danger-button:hover,
+body.blackprint-theme .danger-button:hover {
+    background: #9a3a49 !important;
+    color: #ffffff !important;
+    border-color: #c76873 !important;
 }
 
 body.blackprint-theme .chat-view{

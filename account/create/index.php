@@ -6,6 +6,7 @@ while (!file_exists($sessionBootstrapDir . "/lib/session.php") && dirname($sessi
 }
 require_once $sessionBootstrapDir . "/lib/session.php";
 fridg3_start_session();
+require_once dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'lib' . DIRECTORY_SEPARATOR . 'render.php';
 
 // Restrict access to logged-in admins only
 if (!isset($_SESSION['user']) || !isset($_SESSION['user']['username'])) {
@@ -48,6 +49,8 @@ $formAllowFeed = false;
 $formAllowJournal = false;
 $formAllowComments = false;
 $formAllowChat = false;
+$isLocalDevServer = function_exists('fridg3_is_local_dev_server') && fridg3_is_local_dev_server();
+$createdAccountMustResetPassword = true;
 
 function generate_random_password(int $length = 15): string {
     $chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
@@ -59,6 +62,25 @@ function generate_random_password(int $length = 15): string {
     return $out;
 }
 
+function generate_random_account_number(array $accountsData): string {
+    $existing = [];
+    foreach ((array)($accountsData['accounts'] ?? []) as $account) {
+        if (isset($account['username'])) {
+            $existing[strtolower((string)$account['username'])] = true;
+        }
+    }
+
+    for ($i = 0; $i < 25; $i++) {
+        $accountNumber = str_pad((string)random_int(0, 9999), 4, '0', STR_PAD_LEFT);
+        $username = 'user' . $accountNumber;
+        if (!isset($existing[strtolower($username)])) {
+            return $accountNumber;
+        }
+    }
+
+    return (string)random_int(10000, 99999);
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $formUsername = trim($_POST['username'] ?? '');
     $formName = trim($_POST['name'] ?? '');
@@ -68,6 +90,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $formAllowJournal = isset($_POST['allowJournal']);
     $formAllowComments = isset($_POST['allowComments']);
     $formAllowChat = isset($_POST['allowChat']);
+    $wantsRandomAccount = $isLocalDevServer && isset($_POST['random_account']);
+
+    $accountsData = json_decode(@file_get_contents($accountsPath), true);
+    if (!is_array($accountsData)) {
+        $accountsData = ['accounts' => []];
+    }
+    if (!isset($accountsData['accounts']) || !is_array($accountsData['accounts'])) {
+        $accountsData['accounts'] = [];
+    }
+
+    if ($wantsRandomAccount) {
+        $accountNumber = generate_random_account_number($accountsData);
+        $formUsername = 'user' . $accountNumber;
+        $formName = 'User #' . $accountNumber;
+        $formDiscordUserId = '';
+        $formIsAdmin = false;
+        $formAllowFeed = true;
+        $formAllowJournal = false;
+        $formAllowComments = true;
+        $formAllowChat = false;
+        $createdAccountMustResetPassword = false;
+    }
 
     if ($formUsername === '' || $formName === '') {
         $errorMessage = 'username and name are required.';
@@ -78,14 +122,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif ($formDiscordUserId !== '' && !preg_match('/^\d{17,20}$/', $formDiscordUserId)) {
         $errorMessage = 'discord user id must be 17-20 digits.';
     } else {
-        $accountsData = json_decode(@file_get_contents($accountsPath), true);
-        if (!is_array($accountsData)) {
-            $accountsData = ['accounts' => []];
-        }
-        if (!isset($accountsData['accounts']) || !is_array($accountsData['accounts'])) {
-            $accountsData['accounts'] = [];
-        }
-
         foreach ($accountsData['accounts'] as $account) {
             if (isset($account['username']) && strcasecmp((string)$account['username'], $formUsername) === 0) {
                 $errorMessage = 'username already exists.';
@@ -94,7 +130,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         if ($errorMessage === '') {
-            $plainPassword = generate_random_password(15);
+            $plainPassword = $wantsRandomAccount ? '' : generate_random_password(15);
             $passwordHash = password_hash($plainPassword, PASSWORD_BCRYPT);
 
             $allowedPages = [];
@@ -116,7 +152,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'name' => $formName,
                 'password' => $passwordHash,
                 'isAdmin' => $formIsAdmin,
-                'mustResetPassword' => true,
+                'mustResetPassword' => $createdAccountMustResetPassword,
                 'allowedPages' => $allowedPages,
             ];
             if ($formDiscordUserId !== '') {
@@ -230,11 +266,6 @@ function find_template_file($filename) {
     return null;
 }
 
-$render_helper_path = find_template_file('lib/render.php');
-if ($render_helper_path) {
-    require_once $render_helper_path;
-}
-
 $template_name = function_exists('get_preferred_template_name')
     ? get_preferred_template_name(__DIR__)
     : 'template.html';
@@ -271,6 +302,7 @@ $content = str_replace([
     '{allow_journal_checked}',
     '{allow_comments_checked}',
     '{allow_chat_checked}',
+    '{dev_random_account_controls}',
 ], [
     $errorMessage === '' ? 'display:none;' : '',
     htmlspecialchars($errorMessage, ENT_QUOTES, 'UTF-8'),
@@ -285,6 +317,9 @@ $content = str_replace([
     $formAllowJournal ? 'checked' : '',
     $formAllowComments ? 'checked' : '',
     $formAllowChat ? 'checked' : '',
+    $isLocalDevServer
+        ? '<div class="dev-account-tools"><button id="two-buttons" type="submit" name="random_account" value="1" formnovalidate>generate random dev account</button></div><br>'
+        : '',
 ], $content);
 $html = str_replace('{content}', $content, $template);
 $html = str_replace('{title}', $title, $html);

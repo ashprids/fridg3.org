@@ -32,6 +32,33 @@ if (!function_exists('fridg3_is_truthy_value')) {
     }
 }
 
+if (!function_exists('fridg3_is_local_dev_server')) {
+    function fridg3_is_local_dev_server(): bool {
+        if (isset($_ENV['FRIDG3_DEV_MODE']) && fridg3_is_truthy_value($_ENV['FRIDG3_DEV_MODE'])) {
+            return true;
+        }
+        if (isset($_SERVER['FRIDG3_DEV_MODE']) && fridg3_is_truthy_value($_SERVER['FRIDG3_DEV_MODE'])) {
+            return true;
+        }
+
+        $host = strtolower(trim((string)($_SERVER['HTTP_HOST'] ?? $_SERVER['SERVER_NAME'] ?? '')));
+        $host = preg_replace('/:\d+$/', '', $host);
+        $host = trim($host, '[]');
+
+        if ($host === '' || $host === 'localhost' || $host === '0.0.0.0' || $host === '::1') {
+            return true;
+        }
+        if (preg_match('/^127(?:\.\d{1,3}){3}$/', $host)) {
+            return true;
+        }
+        if (substr($host, -10) === '.localhost' || substr($host, -5) === '.test') {
+            return true;
+        }
+
+        return false;
+    }
+}
+
 if (!function_exists('fridg3_get_mobile_cookie_domain')) {
     function fridg3_get_mobile_cookie_domain() {
         $host = strtolower((string)($_SERVER['HTTP_HOST'] ?? ''));
@@ -340,19 +367,34 @@ if (!function_exists('apply_preferred_theme_stylesheet')) {
     function apply_preferred_theme_stylesheet($template, $startDir) {
         $theme = fridg3_get_active_theme($startDir);
         if ($theme === null) {
-            return fridg3_apply_body_theme_class($template, 'blackprint-theme');
+            return fridg3_inject_dev_mode_banner(fridg3_apply_body_theme_class($template, 'blackprint-theme'));
         }
 
         $href = htmlspecialchars($theme['cssHref'], ENT_QUOTES, 'UTF-8');
         if (strpos($template, 'href="' . $href . '"') !== false || strpos($template, "href='" . $href . "'") !== false) {
-            return $template;
+            return fridg3_inject_dev_mode_banner($template);
         }
 
         $themeLink = '    <link rel="stylesheet" href="' . $href . '">' . "\n";
         if (stripos($template, '</head>') !== false) {
-            return preg_replace('/<\/head>/i', $themeLink . '</head>', $template, 1);
+            return fridg3_inject_dev_mode_banner(preg_replace('/<\/head>/i', $themeLink . '</head>', $template, 1));
         }
 
-        return $themeLink . $template;
+        return fridg3_inject_dev_mode_banner($themeLink . $template);
+    }
+}
+
+if (!function_exists('fridg3_inject_dev_mode_banner')) {
+    function fridg3_inject_dev_mode_banner($template) {
+        if (!fridg3_is_local_dev_server() || strpos($template, 'id="dev-mode-banner"') !== false) {
+            return $template;
+        }
+
+        $banner = '<span id="dev-mode-banner" style="color: #9fd6a3; line-height: 1.15;"><i class="fa-solid fa-code"></i> <b>developer mode</b></span>';
+        if (strpos($template, 'id="maintenance-banner"') !== false) {
+            return preg_replace('/(<br><span id="maintenance-banner"[^>]*>.*?<\/span>)/is', '$1' . $banner, $template, 1);
+        }
+
+        return preg_replace('/(<span id="title">.*?<\/span>)/is', '$1<br>' . $banner, $template, 1);
     }
 }

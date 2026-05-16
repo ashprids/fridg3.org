@@ -64,7 +64,14 @@ window.addEventListener('DOMContentLoaded', function () {
     <button id="form-button" type="submit">apply changes</button>
 </form>
 
-<form id="admin-account-delete-form" method="post" action="/account/admin/edit/index.php?username={original_username}" data-no-spa="1" data-site-confirm="1" data-confirm-title="delete account?" data-confirm-detail="this cannot be undone." data-confirm-text="delete" data-cancel-text="cancel" novalidate>
+<form id="admin-account-delete-feed-form" method="post" action="/account/admin/edit/index.php?username={original_username}" data-no-spa="1" data-site-confirm="1" data-admin-password-confirm="1" data-confirm-title="purge user content?" data-confirm-detail="this removes this user's feed posts, attached images, voice notes, and reply data. this cannot be undone." data-confirm-text="purge content" data-cancel-text="cancel" data-password-title="confirm purge" data-password-detail="enter your admin password to purge this user's content." novalidate>
+    <input type="hidden" name="csrf_token" value="{csrf_token}">
+    <input type="hidden" name="original_username" value="{original_username}">
+    <input type="hidden" name="account_action" value="delete_feed_posts">
+    <button class="danger-button" type="submit" name="delete_feed_posts" value="1" formnovalidate>purge user content</button>
+</form>
+
+<form id="admin-account-delete-form" method="post" action="/account/admin/edit/index.php?username={original_username}" data-no-spa="1" data-site-confirm="1" data-admin-password-confirm="1" data-delete-animation="account-rip" data-account-username="{account_username}" data-account-name="{account_name}" data-account-is-admin="{account_is_admin}" data-account-pages="{account_pages}" data-confirm-title="delete account?" data-confirm-detail="this cannot be undone." data-confirm-text="delete" data-cancel-text="cancel" data-password-title="confirm account deletion" data-password-detail="enter your admin password to delete this account." novalidate>
     <input type="hidden" name="csrf_token" value="{csrf_token}">
     <input type="hidden" name="original_username" value="{original_username}">
     <input type="hidden" name="account_action" value="delete">

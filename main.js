@@ -1147,14 +1147,145 @@ document.addEventListener('submit', function(e) {
         cancelText: form.getAttribute('data-cancel-text') || (isChatDelete ? 'keep chat' : 'cancel')
     }).then(function(confirmed) {
         if (!confirmed) return;
-        form.dataset.confirmed = '1';
-        if (form.requestSubmit) {
-            form.requestSubmit();
-        } else {
-            form.submit();
+        const submitConfirmedForm = function() {
+            if (form.requestSubmit) {
+                form.requestSubmit();
+            } else {
+                form.submit();
+            }
+        };
+
+        const continueAfterPassword = function() {
+            form.dataset.confirmed = '1';
+
+            if (form.getAttribute('data-delete-animation') === 'account-rip') {
+                playAccountDeleteRipAnimation(form).then(submitConfirmedForm).catch(submitConfirmedForm);
+                return;
+            }
+
+            submitConfirmedForm();
+        };
+
+        if (form.getAttribute('data-admin-password-confirm') === '1') {
+            showSitePopup({
+                title: form.getAttribute('data-password-title') || 'confirm destructive action',
+                detail: form.getAttribute('data-password-detail') || 'enter your admin password to continue.',
+                input: true,
+                inputType: 'password',
+                okText: 'continue',
+                cancelText: 'cancel'
+            }).then(function(password) {
+                if (password === null) return;
+                let input = form.querySelector('input[name="admin_password"]');
+                if (!input) {
+                    input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = 'admin_password';
+                    form.appendChild(input);
+                }
+                input.value = password;
+                continueAfterPassword();
+            });
+            return;
         }
+
+        continueAfterPassword();
     });
 });
+
+function playAccountDeleteRipAnimation(form) {
+    return new Promise(function(resolve) {
+        try {
+            if (!form || document.querySelector('.account-rip-overlay')) {
+                resolve();
+                return;
+            }
+
+            const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            const username = form.getAttribute('data-account-username') || 'unknown';
+            const name = form.getAttribute('data-account-name') || '';
+            const isAdmin = form.getAttribute('data-account-is-admin') === '1';
+            const pages = (form.getAttribute('data-account-pages') || '').split(',').filter(Boolean);
+            const overlay = document.createElement('div');
+            overlay.className = 'account-rip-overlay';
+            overlay.setAttribute('aria-hidden', 'true');
+
+            const stage = document.createElement('div');
+            stage.className = 'account-rip-stage';
+
+            const buildCard = function(extraClass) {
+                const card = document.createElement('div');
+                card.className = extraClass + ' account-admin-card';
+
+                const strong = document.createElement('strong');
+                strong.textContent = '@' + username;
+                card.appendChild(strong);
+
+                const nameEl = document.createElement('span');
+                nameEl.textContent = name;
+                card.appendChild(nameEl);
+
+                const meta = document.createElement('span');
+                meta.className = 'account-admin-meta';
+                if (isAdmin) {
+                    const badge = document.createElement('span');
+                    badge.className = 'account-admin-badge';
+                    badge.textContent = 'admin';
+                    meta.appendChild(badge);
+                }
+                pages.forEach(function(page) {
+                    const badge = document.createElement('span');
+                    badge.className = 'account-page-badge';
+                    badge.textContent = page;
+                    meta.appendChild(badge);
+                });
+                if (!meta.children.length) {
+                    meta.textContent = 'no extra perms set';
+                }
+                card.appendChild(meta);
+                return card;
+            };
+
+            const wholeCard = buildCard('account-rip-card account-rip-card-whole');
+            const leftHalf = buildCard('account-rip-card account-rip-half account-rip-left');
+            const rightHalf = buildCard('account-rip-card account-rip-half account-rip-right');
+            const tearLine = document.createElement('div');
+            tearLine.className = 'account-rip-tear-line';
+
+            const scrapWrap = document.createElement('div');
+            scrapWrap.className = 'account-rip-scraps';
+            for (let i = 0; i < 28; i++) {
+                const scrap = document.createElement('i');
+                scrap.style.setProperty('--x', String(Math.round((Math.random() - 0.5) * 280)) + 'px');
+                scrap.style.setProperty('--y', String(Math.round(110 + Math.random() * 210)) + 'px');
+                scrap.style.setProperty('--r', String(Math.round((Math.random() - 0.5) * 520)) + 'deg');
+                scrap.style.setProperty('--d', String((0.44 + Math.random() * 0.48).toFixed(2)) + 's');
+                scrap.style.setProperty('--s', String((0.55 + Math.random() * 1.05).toFixed(2)));
+                scrapWrap.appendChild(scrap);
+            }
+
+            stage.appendChild(wholeCard);
+            stage.appendChild(leftHalf);
+            stage.appendChild(rightHalf);
+            stage.appendChild(tearLine);
+            stage.appendChild(scrapWrap);
+            overlay.appendChild(stage);
+            document.body.appendChild(overlay);
+
+            if (prefersReducedMotion) {
+                window.setTimeout(resolve, 420);
+                return;
+            }
+
+            window.setTimeout(function() {
+                overlay.classList.add('is-ripping');
+            }, 80);
+            window.setTimeout(resolve, 2600);
+        } catch (_) {
+            resolve();
+        }
+    });
+}
 
 // Dedicated handler for feed edit icons so clicking the pencil goes
 // to the edit view without breaking SPA navigation or bubbling to the

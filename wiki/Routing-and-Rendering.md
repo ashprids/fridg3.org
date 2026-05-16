@@ -93,6 +93,10 @@ the admin bypass depends on either:
 - `is_admin` cookie
 - `/api/account/is-admin`
 
+## Local Dev Mode
+
+`lib/render.php` treats `localhost`, `127.x.x.x`, `0.0.0.0`, `::1`, `*.localhost`, `*.test`, or truthy `FRIDG3_DEV_MODE` as local development. Local renders inject a sidebar `dev mode` banner beside the maintenance banner.
+
 ## Page View Counting
 
 page views are not baked in by PHP. the footer view count is hydrated by `main.js`, which posts the current path to `/api/page-view`.

@@ -72,10 +72,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             }
         }
-        fridg3_feed_delete_voice_files_from_content($postBody);
-        foreach (fridg3_feed_load_replies(pathinfo(basename($postId), PATHINFO_FILENAME)) as $reply) {
-            fridg3_feed_delete_voice_files_from_content((string)($reply['body'] ?? ''));
-        }
+        fridg3_feed_delete_post_voice_files(pathinfo(basename($postId), PATHINFO_FILENAME), $postBody);
         
         // Delete the post file
         @unlink($postPath);

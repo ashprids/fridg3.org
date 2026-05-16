@@ -8,6 +8,7 @@ require_once $sessionBootstrapDir . "/lib/session.php";
 fridg3_start_session();
 
 require_once dirname(__DIR__) . DIRECTORY_SEPARATOR . 'helpers.php';
+require_once dirname(__DIR__, 3) . DIRECTORY_SEPARATOR . 'lib' . DIRECTORY_SEPARATOR . 'feed.php';
 
 account_admin_require_admin();
 
@@ -65,6 +66,112 @@ if ($extraJson === false) {
     $extraJson = '{}';
 }
 
+function account_admin_parse_feed_post_file(string $path): ?array {
+    if (!is_file($path)) {
+        return null;
+    }
+
+    $raw = @file_get_contents($path);
+    if ($raw === false) {
+        return null;
+    }
+
+    $lines = preg_split("/(\r\n|\n|\r)/", $raw);
+    $username = isset($lines[0]) ? ltrim(trim((string)$lines[0]), '@') : '';
+    $body = count($lines) > 2 ? implode("\n", array_slice($lines, 2)) : '';
+    if ($username === '') {
+        return null;
+    }
+
+    return [
+        'username' => $username,
+        'body' => $body,
+    ];
+}
+
+function account_admin_delete_feed_images_from_content(string $content): void {
+    $imagesDir = fridg3_feed_images_dir();
+    preg_match_all('/\[img=\/data\/images\/([^\]]+)\]/i', $content, $matches);
+    foreach ($matches[1] ?? [] as $imageFile) {
+        $imagePath = $imagesDir . DIRECTORY_SEPARATOR . basename((string)$imageFile);
+        if (is_file($imagePath)) {
+            @unlink($imagePath);
+        }
+    }
+}
+
+function account_admin_delete_feed_post_file(string $postPath): bool {
+    $postData = account_admin_parse_feed_post_file($postPath);
+    if ($postData === null) {
+        return false;
+    }
+
+    $postId = pathinfo(basename($postPath), PATHINFO_FILENAME);
+    account_admin_delete_feed_images_from_content((string)$postData['body']);
+    foreach (fridg3_feed_load_replies($postId) as $reply) {
+        account_admin_delete_feed_images_from_content((string)($reply['body'] ?? ''));
+    }
+    fridg3_feed_delete_post_voice_files($postId, (string)$postData['body']);
+    @unlink(fridg3_feed_replies_dir() . DIRECTORY_SEPARATOR . $postId . '.json');
+    return @unlink($postPath);
+}
+
+function account_admin_delete_user_feed_posts(string $username): array {
+    $safeUsername = ltrim(trim($username), '@');
+    $postsDir = fridg3_feed_posts_dir();
+    $deleted = 0;
+    $failed = 0;
+
+    if ($safeUsername === '' || !is_dir($postsDir)) {
+        return ['deleted' => 0, 'failed' => 0];
+    }
+
+    $files = glob($postsDir . DIRECTORY_SEPARATOR . '*.txt');
+    if ($files === false) {
+        return ['deleted' => 0, 'failed' => 0];
+    }
+
+    foreach ($files as $postPath) {
+        $postData = account_admin_parse_feed_post_file($postPath);
+        if ($postData === null || (string)$postData['username'] !== $safeUsername) {
+            continue;
+        }
+
+        if (account_admin_delete_feed_post_file($postPath)) {
+            $deleted++;
+        } else {
+            $failed++;
+        }
+    }
+
+    return ['deleted' => $deleted, 'failed' => $failed];
+}
+
+function account_admin_verify_current_admin_password(string $password, array $accountsData): bool {
+    $currentUsername = isset($_SESSION['user']['username']) ? (string)$_SESSION['user']['username'] : '';
+    if ($currentUsername === '') {
+        return false;
+    }
+
+    foreach ($accountsData['accounts'] as $account) {
+        if (!isset($account['username']) || (string)$account['username'] !== $currentUsername) {
+            continue;
+        }
+        if (empty($account['password'])) {
+            return $password === '';
+        }
+
+        $storedPassword = (string)$account['password'];
+        if (password_get_info($storedPassword)['algo'] !== null) {
+            return password_verify($password, $storedPassword);
+        }
+
+        return hash_equals($storedPassword, $password);
+    }
+
+    return false;
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $submittedToken = (string)($_POST['csrf_token'] ?? '');
     if (!hash_equals((string)$_SESSION['csrf_token'], $submittedToken)) {
@@ -77,7 +184,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $requestedAction = (string)$_POST['account_action'];
         }
 
-        if ($requestedAction === 'delete') {
+        $needsAdminPassword = in_array($requestedAction, ['delete', 'delete_feed_posts'], true);
+        if ($needsAdminPassword && !account_admin_verify_current_admin_password((string)($_POST['admin_password'] ?? ''), $accountsData)) {
+            $errorMessage = 'admin password did not match. destructive action cancelled.';
+        } elseif ($requestedAction === 'delete') {
             $currentSessionUsername = isset($_SESSION['user']['username']) ? (string)$_SESSION['user']['username'] : '';
             if ($currentSessionUsername === $selectedUsername) {
                 $errorMessage = 'nice try. deleting the account you are currently using is blocked.';
@@ -91,6 +201,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     header('Location: /account/admin?deleted=' . rawurlencode($selectedUsername));
                     exit;
                 }
+            }
+        } elseif ($requestedAction === 'delete_feed_posts') {
+            $deleteResult = account_admin_delete_user_feed_posts($selectedUsername);
+            if ($deleteResult['failed'] > 0) {
+                $errorMessage = 'deleted ' . $deleteResult['deleted'] . ' feed post(s), but '
+                    . $deleteResult['failed'] . ' failed. check file permissions.';
+            } elseif ($deleteResult['deleted'] === 0) {
+                $successMessage = 'no feed posts found for @' . $selectedUsername . '.';
+            } else {
+                $successMessage = 'deleted ' . $deleteResult['deleted'] . ' feed post(s) for @' . $selectedUsername . '.';
             }
         } else {
             $formUsername = trim((string)($_POST['username'] ?? ''));
@@ -238,6 +358,9 @@ $content = str_replace(
         '{reset_password_checked}',
         '{extra_json}',
         '{csrf_token}',
+        '{account_name}',
+        '{account_is_admin}',
+        '{account_pages}',
     ],
     [
         $errorMessage === '' ? 'display:none;' : '',
@@ -258,6 +381,9 @@ $content = str_replace(
         isset($_POST['resetPassword']) && $successMessage === '' ? 'checked' : '',
         htmlspecialchars($extraJson, ENT_QUOTES, 'UTF-8'),
         htmlspecialchars((string)$_SESSION['csrf_token'], ENT_QUOTES, 'UTF-8'),
+        htmlspecialchars($formName, ENT_QUOTES, 'UTF-8'),
+        $formIsAdmin ? '1' : '0',
+        htmlspecialchars(implode(',', $allowedPages), ENT_QUOTES, 'UTF-8'),
     ],
     $content
 );

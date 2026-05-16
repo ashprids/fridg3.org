@@ -163,8 +163,25 @@ if (!function_exists('fridg3_feed_write_replies')) {
 if (!function_exists('fridg3_feed_extract_voice_files')) {
     function fridg3_feed_extract_voice_files(string $content): array
     {
-        preg_match_all('/\[audio=\/data\/audio\/voice\/([a-zA-Z0-9_.-]+)\](?:\[name:[^\]]*\])?/i', $content, $matches);
-        return array_values(array_unique(array_map('basename', $matches[1] ?? [])));
+        preg_match_all('/\[audio=([^\]\s]+)\](?:\[name:[^\]]*\])?/i', $content, $matches);
+
+        $filenames = [];
+        foreach ($matches[1] ?? [] as $rawUrl) {
+            $url = trim(html_entity_decode((string)$rawUrl, ENT_QUOTES, 'UTF-8'), "\"'");
+            $path = parse_url($url, PHP_URL_PATH);
+            if (!is_string($path) || $path === '') {
+                $path = $url;
+            }
+
+            $path = str_replace('\\', '/', rawurldecode($path));
+            if (preg_match('#(?:^|/)data/audio/voice/([a-zA-Z0-9_.-]+)$#i', $path, $fileMatch) !== 1) {
+                continue;
+            }
+
+            $filenames[] = basename($fileMatch[1]);
+        }
+
+        return array_values(array_unique($filenames));
     }
 }
 
@@ -177,6 +194,22 @@ if (!function_exists('fridg3_feed_delete_voice_files_from_content')) {
             if (is_file($path)) {
                 @unlink($path);
             }
+        }
+    }
+}
+
+if (!function_exists('fridg3_feed_delete_post_voice_files')) {
+    function fridg3_feed_delete_post_voice_files(string $postId, string $postBody): void
+    {
+        fridg3_feed_delete_voice_files_from_content($postBody);
+
+        $safePostId = preg_replace('/[^a-zA-Z0-9_\-]/', '', basename($postId));
+        if ($safePostId === '') {
+            return;
+        }
+
+        foreach (fridg3_feed_load_replies($safePostId) as $reply) {
+            fridg3_feed_delete_voice_files_from_content((string)($reply['body'] ?? ''));
         }
     }
 }

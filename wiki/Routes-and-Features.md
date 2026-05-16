@@ -11,6 +11,7 @@ homepage with dynamic latest feed, latest journal, and music cards.
 - list/search/paginate feed posts from `data/feed/*.txt`
 - create visibility depends on admin or `allowedPages` containing `feed`
 - create composer supports recorded voice notes; accepted recordings request browser noise suppression, echo cancellation, and auto gain when available, are previewed before posting, capped at 2 minutes, transcoded to compressed `.m4a`, stored under `data/audio/voice/`, and played with inline controls that include a `1x`/`1.5x`/`2x` speed toggle
+- deleting a feed post removes voice note files referenced by the post body and its replies
 - writes derived `index.toml`
 - `@mentions` in BBCode are highlighted client-side for notification-aware feed posts
 
@@ -76,6 +77,7 @@ Related:
 - UI shell only
 - persistence handled by `/api/settings`
 - includes theme/glow settings and mobile-friendly-view preference
+- local dev mode can bootstrap a blank-password `admin` / `Administrator` account when no admin accounts exist
 - shows a Discord linking action for logged-in users and disables it once `discordUserId` is already linked
 
 ## Account Routes
@@ -109,6 +111,7 @@ admin-only account creation flow that writes to `data/accounts/accounts.json`.
 - newly created accounts are flagged with `mustResetPassword`
 - if a Discord id is provided, it asks the local toast bot to DM the invite credentials
 - if that DM fails, the account is still created and the UI now shows the bot's concrete failure reason instead of a generic HTTP 500
+- local dev mode shows a random dev-account generator that creates `userXXXX` / `User #XXXX` with feed/comment permissions, a blank password, no forced password reset, and no Discord invite
 
 ### `/account/change-password` and `/account/password`
 
@@ -134,6 +137,8 @@ not covered in the older references, but very real.
 
 - admin-only account editor
 - supports rename, display-name change, permission changes, reset password, and delete
+- delete confirmation plays a centered rip-in-half account card animation before the destructive POST continues
+- the `purge user content` danger button must purge all user-owned content; currently this includes feed posts, attached images, voice notes, and reply data
 - preserves unknown extra account fields through an editable JSON object field
 - blocks deleting the currently logged-in account
 - includes `comments` and `chat` as grantable `allowedPages` permissions
