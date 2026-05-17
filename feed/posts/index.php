@@ -364,7 +364,7 @@ foreach ($replies as $reply) {
     if ($canManageThisReply && $replyId !== '') {
         $replyActionsHtml = '<span class="feed-reply-actions">'
             . '<a class="feed-reply-action-link" href="/feed/posts/' . rawurlencode((string)$postIdNoExt) . '?edit_reply=' . rawurlencode($replyId) . '"><i class="fa-solid fa-pencil"></i></a>'
-            . '<form class="feed-reply-delete-form" method="post" action="/feed/posts/' . rawurlencode((string)$postIdNoExt) . '">'
+            . '<form class="feed-reply-delete-form" method="post" action="/feed/posts/' . rawurlencode((string)$postIdNoExt) . '" data-site-confirm="1" data-confirm-title="delete reply?" data-confirm-detail="this removes the reply from this feed post." data-confirm-text="delete" data-cancel-text="cancel">'
             . '<input type="hidden" name="csrf_token" value="' . htmlspecialchars((string)$_SESSION['csrf_token'], ENT_QUOTES, 'UTF-8') . '">'
             . '<input type="hidden" name="reply_action" value="delete">'
             . '<input type="hidden" name="reply_id" value="' . htmlspecialchars($replyId, ENT_QUOTES, 'UTF-8') . '">'

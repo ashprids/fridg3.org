@@ -15,7 +15,7 @@ all API routes live under `/api/*` and are handled by PHP.
 
 - requires logged-in user
 - returns current settings from `data/accounts/accounts.json`
-- currently exposes `theme`, `glowIntensity`, `colors`, and `mobileFriendlyView`
+- currently exposes `theme`, `glowIntensity`, `colors`, `mobileFriendlyView`, and `onekoEnabled`
 
 `POST`
 
@@ -23,6 +23,7 @@ all API routes live under `/api/*` and are handled by PHP.
 - updates user settings in `accounts.json`
 - can set `theme` to `default`, `classic`, or a valid `/themes/*.json` theme id
 - can set `mobileFriendlyView` and sync the `mobile_friendly_view` cookie
+- can set `onekoEnabled` for the optional cursor-following cat
 - syncs the `theme_pref` cookie so anonymous and first-load rendering can pick the active theme
 - validates color fields as `#RRGGBB`; the settings UI only sends color fields for `classic`
 - admin users can also toggle maintenance mode through the settings flow

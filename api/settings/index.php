@@ -84,6 +84,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             'glowIntensity' => null,
             'colors' => null,
             'mobileFriendlyView' => null,
+            'onekoEnabled' => null,
         ],
     ];
     foreach ($data['accounts'] as $account) {
@@ -101,6 +102,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             }
             if (array_key_exists('mobileFriendlyView', $account)) {
                 $result['settings']['mobileFriendlyView'] = is_truthy_setting($account['mobileFriendlyView']);
+            }
+            if (array_key_exists('onekoEnabled', $account)) {
+                $result['settings']['onekoEnabled'] = is_truthy_setting($account['onekoEnabled']);
             }
             break;
         }
@@ -136,6 +140,9 @@ $maintenanceRaw = $maintenanceProvided ? (string)$_POST['maintenanceMode'] : nul
 $mobileViewProvided = array_key_exists('mobileFriendlyView', $_POST);
 $mobileViewRaw = $mobileViewProvided ? (string)$_POST['mobileFriendlyView'] : null;
 
+$onekoProvided = array_key_exists('onekoEnabled', $_POST);
+$onekoRaw = $onekoProvided ? (string)$_POST['onekoEnabled'] : null;
+
 $allowedIntensity = ['none', 'low', 'medium', 'high'];
 $availableThemes = function_exists('fridg3_list_themes') ? fridg3_list_themes(dirname(__DIR__, 2)) : [];
 $allowedThemes = array_merge(['default'], array_keys($availableThemes));
@@ -170,6 +177,45 @@ if ($mobileViewProvided) {
     foreach ($data['accounts'] as &$account) {
         if (isset($account['username']) && (string)$account['username'] === $username) {
             $account['mobileFriendlyView'] = $mobileEnabled;
+            $updated = true;
+            break;
+        }
+    }
+    unset($account);
+
+    if ($updated) {
+        if (!save_accounts_data($accountsPath, $data)) {
+            http_response_code(500);
+            echo json_encode(['ok' => false, 'error' => 'write_failed']);
+            exit;
+        }
+        $didWork = true;
+    }
+}
+
+if ($onekoProvided) {
+    $truthy = ['1', 'true', 'yes', 'y', 'on', 'enabled'];
+    $falsy  = ['0', 'false', 'no', 'n', 'off', 'disabled'];
+    $lower = strtolower(trim((string)$onekoRaw));
+    if (!in_array($lower, $truthy, true) && !in_array($lower, $falsy, true)) {
+        http_response_code(400);
+        echo json_encode(['ok' => false, 'error' => 'invalid_oneko_value']);
+        exit;
+    }
+
+    $onekoEnabled = in_array($lower, $truthy, true);
+    $accountsPath = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'data' . DIRECTORY_SEPARATOR . 'accounts' . DIRECTORY_SEPARATOR . 'accounts.json';
+    $data = load_accounts_data($accountsPath);
+    if ($data === null) {
+        http_response_code(500);
+        echo json_encode(['ok' => false, 'error' => 'accounts_invalid']);
+        exit;
+    }
+
+    $updated = false;
+    foreach ($data['accounts'] as &$account) {
+        if (isset($account['username']) && (string)$account['username'] === $username) {
+            $account['onekoEnabled'] = $onekoEnabled;
             $updated = true;
             break;
         }
@@ -375,7 +421,7 @@ if ($maintenanceProvided) {
     $didWork = true;
 }
 
-if ($didWork || $intensityProvided || $themeProvided || $maintenanceProvided || $mobileViewProvided) {
+if ($didWork || $intensityProvided || $themeProvided || $maintenanceProvided || $mobileViewProvided || $onekoProvided) {
     echo json_encode(['ok' => true]);
     exit;
 }

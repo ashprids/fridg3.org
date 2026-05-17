@@ -33,6 +33,7 @@ expected top-level shape:
       "theme": "default|classic|theme-id",
       "glowIntensity": "none|low|medium|high",
       "mobileFriendlyView": true,
+      "onekoEnabled": true,
       "colors": {
         "bg": "#RRGGBB",
         "fg": "#RRGGBB",

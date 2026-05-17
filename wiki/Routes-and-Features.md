@@ -76,7 +76,7 @@ Related:
 
 - UI shell only
 - persistence handled by `/api/settings`
-- includes theme/glow settings and mobile-friendly-view preference
+- includes theme/glow settings, optional cursor cat, and mobile-friendly-view preference
 - local dev mode can bootstrap a blank-password `admin` / `Administrator` account when no admin accounts exist
 - shows a Discord linking action for logged-in users and disables it once `discordUserId` is already linked
 

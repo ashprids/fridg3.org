@@ -43,17 +43,16 @@ _|"""""|_|"""""|_|"""""|_|"""""|_|"""""|_|"""""|_|"""""|_|"""""|
 <div class="checkbox-group">
     <label class="checkbox-label">
         <input type="checkbox" class="checkbox" id="mobile-friendly-toggle">
-        <span>enable mobile-friendly view</span>
+        <span>force mobile view</span>
     </label>
-    <span style="color: var(--subtle);">when enabled, all page visits will redirect to m.fridg3.org. 
-    <br><br>this layout is designed for users on a screen that is longer vertically than horizontally (i.e. mobile phones, vertical monitors).</span>
 </div>
 <br><br><hr><br>
-<h3>theme</h3>
+<h3>appearance</h3><br>
+<h4>theme</h4>
 <select class="dropdown" id="theme-select">
     <option value="default">blackprint</option>
 </select>
-<br><br><br><hr><br>
+<br><br>
 <div id="color-scheme-section" style="display:none">
 <h3>color scheme</h3>
 <div id="color-scheme-group">
@@ -81,7 +80,7 @@ _|"""""|_|"""""|_|"""""|_|"""""|_|"""""|_|"""""|_|"""""|_|"""""|
 <button id="color-reset" data-tooltip="reset color scheme to defaults">reset to default</button>
 <br><br><hr><br>
 </div>
-<h3>text glow intensity</h3>
+<h4>text glow intensity</h4>
 <div class="radio-group" id="glow-intensity-group">
     <label class="radio-label">
         <input type="radio" class="radio" name="glow-intensity" value="none">
@@ -99,6 +98,15 @@ _|"""""|_|"""""|_|"""""|_|"""""|_|"""""|_|"""""|_|"""""|_|"""""|
         <input type="radio" class="radio" name="glow-intensity" value="high">
         <span>high</span>
     </label>
+</div>
+<br>
+<h4>oneko</h4>
+<div class="checkbox-group">
+    <label class="checkbox-label">
+        <input type="checkbox" class="checkbox" id="oneko-toggle">
+        <span>enable oneko</span>
+    </label>
+    <span style="color: var(--subtle);">a fun little friend.</span>
 </div>
 <br><br><hr><br>
 <button style="background-color: #206420" id="settings-save" data-tooltip="save your configuration.\nwill save to your account if you're logged in">save changes</button>

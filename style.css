@@ -2384,10 +2384,15 @@ hr {
 .account-rip-overlay {
     position: fixed;
     inset: 0;
+    width: 100vw;
+    height: 100vh;
+    height: 100dvh;
     z-index: 2100;
     display: grid;
     place-items: center;
     padding: 18px;
+    box-sizing: border-box;
+    overflow: hidden;
     background:
         radial-gradient(circle at 50% 52%, rgba(255, 255, 255, 0.11), transparent 26%),
         rgba(0, 0, 0, 0);
@@ -2399,17 +2404,18 @@ hr {
 
 .account-rip-stage {
     position: relative;
-    width: min(420px, calc(100vw - 36px));
-    min-height: 190px;
+    width: min(568px, calc(100vw - 52px));
     display: grid;
     place-items: center;
+    align-self: center;
+    justify-self: center;
     perspective: 900px;
 }
 
 .account-rip-card {
     position: relative;
     z-index: 2;
-    width: min(360px, 100%);
+    width: 100%;
     box-sizing: border-box;
     overflow: hidden;
     min-height: 116px;
@@ -2419,13 +2425,17 @@ hr {
 }
 
 .account-rip-card-whole {
-    position: absolute;
-    inset: auto;
+    position: relative;
+    grid-area: 1 / 1;
+    margin: 0 auto;
 }
 
 .account-rip-half {
     position: absolute;
-    inset: auto;
+    top: 0;
+    left: 0;
+    right: 0;
+    margin: 0 auto;
     opacity: 0;
     animation: none;
     backface-visibility: hidden;
@@ -2463,6 +2473,9 @@ hr {
 
 .account-rip-tear-line {
     position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
     z-index: 4;
     width: 16px;
     height: 118px;
@@ -2633,19 +2646,19 @@ hr {
 @keyframes account-rip-tear-flash {
     0% {
         opacity: 0;
-        transform: scaleY(0.08) scaleX(0.5);
+        transform: translate(-50%, -50%) scaleY(0.08) scaleX(0.5);
     }
     25% {
         opacity: 0.42;
-        transform: scaleY(0.72) scaleX(0.82);
+        transform: translate(-50%, -50%) scaleY(0.72) scaleX(0.82);
     }
     58% {
         opacity: 0.34;
-        transform: scaleY(1.06) scaleX(0.96);
+        transform: translate(-50%, -50%) scaleY(1.06) scaleX(0.96);
     }
     100% {
         opacity: 0;
-        transform: scaleY(1.16) scaleX(1.08);
+        transform: translate(-50%, -50%) scaleY(1.16) scaleX(1.08);
     }
 }
 
@@ -3726,6 +3739,26 @@ pre code.hljs {
 
 #two-buttons:active {
     background-color: var(--bg)
+}
+
+.edit-form-actions {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 8px;
+    margin-top: 16px;
+}
+
+.edit-form-actions #two-buttons {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    min-height: 40px;
+    margin: 0;
+}
+
+.edit-form-actions #two-buttons + #two-buttons {
+    margin-left: 0;
 }
 
 #error {

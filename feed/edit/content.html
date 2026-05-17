@@ -1,6 +1,9 @@
 <h1>edit feed post</h1>
 <h2>modify or remove your existing feed post</h2>
 <br>
+<form id="delete-feed-post-form" method="POST" style="display:none" data-no-spa="1" data-site-confirm="1" data-confirm-title="delete feed post?" data-confirm-detail="this removes the feed post, attached voice notes, images, and replies." data-confirm-text="delete" data-cancel-text="cancel">
+<input type="hidden" name="delete" value="1">
+</form>
 <form id="create-post-form" method="POST" enctype="multipart/form-data">
 <div class="bbcode-editor">
     <div class="bbcode-toolbar">
@@ -30,6 +33,7 @@
     <textarea id="bbcode-textbox" name="content"></textarea>
     <div id="bbcode-preview" style="display: none;"></div>
 </div>
-<br><br>
-<button id="two-buttons" type="submit" name="delete" value="1" data-tooltip="this is permanent and cannot be undone!">delete post</button><button id="two-buttons" type="submit">save changes</button>
+<div class="edit-form-actions">
+<button id="two-buttons" type="submit" form="delete-feed-post-form" data-tooltip="this is permanent and cannot be undone!">delete post</button><button id="two-buttons" type="submit">save changes</button>
+</div>
 </form>

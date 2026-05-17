@@ -63,6 +63,12 @@ $postSubtitle = (string)($lines[2] ?? '');
 $postHtml = implode("\n", array_slice($lines, 3));
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (isset($_POST['delete'])) {
+        @unlink($postFile);
+        header('Location: /journal');
+        exit;
+    }
+
     $newTitle = trim((string)($_POST['title'] ?? ''));
     $newDescription = trim((string)($_POST['description'] ?? ''));
     $newContent = (string)($_POST['content'] ?? '');

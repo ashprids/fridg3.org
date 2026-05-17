@@ -57,6 +57,7 @@ use the on-site popup helpers in `main.js`, not native browser `alert()`, `confi
 - confirmations: `showSitePopup({ title, detail/html, okText, cancelText })`
 - text input: `showSitePrompt(title, detail, value)`
 - form confirmations: add `data-site-confirm="1"` plus `data-confirm-*` text attributes
+- account deletion can use `data-delete-animation="account-rip"`; other destructive forms should use plain in-site confirmations
 
 all clicked `http(s)` links that leave `fridg3.org`, `www.fridg3.org`, or `m.fridg3.org` automatically show a safety popup before navigation. use `data-no-external-popup` only for a deliberately exempt link, and document why because bypassing safety popups is usually sus.
 

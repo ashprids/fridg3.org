@@ -1055,6 +1055,7 @@ function loadPageIntoContent(url, addToHistory = true) {
                 setupSpaForms();
                 initOffTopicArchive();
                 initSettingsPage();
+                syncOnekoPreference();
                 initAsciiTime();
                 autoScaleAsciiFont();
                 rerunAsciiScalingAfterContent();
@@ -1449,6 +1450,7 @@ function bindSpaForm(form) {
                 initAsciiUsage();
                 initAsciiTime();
                 initOffTopicArchive();
+                syncOnekoPreference();
                 rerunAsciiScalingAfterContent();
                 initTooltips();
                 fitMobileAsciiLayout();
@@ -1949,6 +1951,13 @@ const COLOR_DEFAULTS = {
 };
 const MOBILE_VIEW_COOKIE = 'mobile_friendly_view';
 const MOBILE_VIEW_DOMAIN = '.fridg3.org';
+const ONEKO_ENABLED_KEY = 'onekoEnabled';
+const ONEKO_ASSET_URL = '/resources/oneko.gif';
+const ONEKO_SIZE = 32;
+const ONEKO_SPEED = 10;
+const ONEKO_FRAME_MS = 100;
+const ONEKO_SLEEP_AFTER_MS = 15000;
+let onekoController = null;
 
 // Apply saved color prefs early on page load only when the classic theme is active.
 (() => {
@@ -2064,6 +2073,178 @@ function setMobileViewCookie(enabled) {
         const domain = shouldUseSharedFridg3CookieDomain() ? `; Domain=${MOBILE_VIEW_DOMAIN}` : '';
         document.cookie = `${MOBILE_VIEW_COOKIE}=${value}; Max-Age=${maxAge}; Path=/; SameSite=Lax${domain}${secure}`;
     } catch (_) { /* ignore */ }
+}
+
+function readLocalOnekoEnabled() {
+    try {
+        const value = localStorage.getItem(ONEKO_ENABLED_KEY);
+        if (value === null) return false;
+        return ['1', 'true', 'yes', 'y', 'on', 'enabled'].includes(String(value).trim().toLowerCase());
+    } catch (_) {
+        return false;
+    }
+}
+
+function saveLocalOnekoEnabled(enabled) {
+    try {
+        localStorage.setItem(ONEKO_ENABLED_KEY, enabled ? '1' : '0');
+    } catch (_) { /* ignore */ }
+}
+
+function setOnekoSprite(el, frame) {
+    if (!el || !frame) return;
+    el.style.backgroundPosition = `${frame[0] * ONEKO_SIZE}px ${frame[1] * ONEKO_SIZE}px`;
+}
+
+function startOneko() {
+    if (onekoController && onekoController.el && document.body.contains(onekoController.el)) {
+        return;
+    }
+
+    stopOneko();
+
+    const el = document.createElement('div');
+    el.id = 'oneko';
+    el.setAttribute('aria-hidden', 'true');
+    el.style.position = 'fixed';
+    el.style.width = `${ONEKO_SIZE}px`;
+    el.style.height = `${ONEKO_SIZE}px`;
+    el.style.left = '0';
+    el.style.top = '0';
+    el.style.zIndex = '2147483647';
+    el.style.pointerEvents = 'none';
+    el.style.backgroundImage = `url("${ONEKO_ASSET_URL}")`;
+    el.style.imageRendering = 'pixelated';
+    el.style.transform = 'translate(-16px, -16px)';
+
+    const state = {
+        x: Math.max(ONEKO_SIZE, Math.round(window.innerWidth / 2)),
+        y: Math.max(ONEKO_SIZE, Math.round(window.innerHeight / 2)),
+        targetX: Math.max(ONEKO_SIZE, Math.round(window.innerWidth / 2)),
+        targetY: Math.max(ONEKO_SIZE, Math.round(window.innerHeight / 2)),
+        frameCount: 0,
+        idleTime: 0,
+        idleAnimation: null,
+        idleAnimationFrame: 0,
+    };
+
+    const spriteSets = {
+        idle: [[-3, -3]],
+        alert: [[-7, -3]],
+        scratchSelf: [[-5, 0], [-6, 0], [-7, 0]],
+        tired: [[-3, -2]],
+        sleeping: [[-2, 0], [-2, -1]],
+        N: [[-1, -2], [-1, -3]],
+        NE: [[0, -2], [0, -3]],
+        E: [[-3, 0], [-3, -1]],
+        SE: [[-5, -1], [-5, -2]],
+        S: [[-6, -3], [-7, -2]],
+        SW: [[-5, -3], [-6, -1]],
+        W: [[-4, -2], [-4, -3]],
+        NW: [[-1, 0], [-1, -1]],
+    };
+
+    const setPosition = () => {
+        state.x = Math.min(Math.max(ONEKO_SIZE / 2, state.x), window.innerWidth - ONEKO_SIZE / 2);
+        state.y = Math.min(Math.max(ONEKO_SIZE / 2, state.y), window.innerHeight - ONEKO_SIZE / 2);
+        el.style.left = `${state.x}px`;
+        el.style.top = `${state.y}px`;
+    };
+
+    const setSprite = (name, frameIndex = 0) => {
+        const frames = spriteSets[name] || spriteSets.idle;
+        setOnekoSprite(el, frames[frameIndex % frames.length]);
+    };
+
+    const pickDirection = (diffX, diffY) => {
+        const angle = Math.atan2(diffY, diffX) * 180 / Math.PI;
+        if (angle > -22.5 && angle <= 22.5) return 'E';
+        if (angle > 22.5 && angle <= 67.5) return 'SE';
+        if (angle > 67.5 && angle <= 112.5) return 'S';
+        if (angle > 112.5 && angle <= 157.5) return 'SW';
+        if (angle > 157.5 || angle <= -157.5) return 'W';
+        if (angle > -157.5 && angle <= -112.5) return 'NW';
+        if (angle > -112.5 && angle <= -67.5) return 'N';
+        return 'NE';
+    };
+
+    const mouseMove = (event) => {
+        state.targetX = event.clientX;
+        state.targetY = event.clientY;
+        state.idleAnimation = null;
+        state.idleAnimationFrame = 0;
+    };
+
+    const tick = () => {
+        const diffX = state.targetX - state.x;
+        const diffY = state.targetY - state.y;
+        const distance = Math.hypot(diffX, diffY);
+
+        if (distance < ONEKO_SPEED || distance < 48) {
+            state.idleTime += ONEKO_FRAME_MS;
+            if (state.idleTime >= ONEKO_SLEEP_AFTER_MS && Math.floor((state.idleTime - ONEKO_SLEEP_AFTER_MS) / 2000) % 2 === 1) {
+                setSprite('sleeping', state.idleAnimationFrame++);
+            } else if (state.idleTime >= ONEKO_SLEEP_AFTER_MS) {
+                setSprite('tired');
+            } else {
+                setSprite('idle');
+            }
+            setPosition();
+            return;
+        }
+
+        state.idleTime = 0;
+        state.idleAnimation = null;
+        state.x += diffX / distance * ONEKO_SPEED;
+        state.y += diffY / distance * ONEKO_SPEED;
+        setPosition();
+        setSprite(pickDirection(diffX, diffY), state.frameCount++);
+    };
+
+    document.body.appendChild(el);
+    setSprite('idle');
+    setPosition();
+
+    const interval = window.setInterval(tick, ONEKO_FRAME_MS);
+    window.addEventListener('mousemove', mouseMove, { passive: true });
+    onekoController = { el, interval, mouseMove, state };
+}
+
+function stopOneko() {
+    if (!onekoController) {
+        document.getElementById('oneko')?.remove();
+        return;
+    }
+
+    window.clearInterval(onekoController.interval);
+    window.removeEventListener('mousemove', onekoController.mouseMove);
+    onekoController.el?.remove();
+    onekoController = null;
+}
+
+function setOnekoEnabled(enabled, opts = {}) {
+    if (opts.persistLocal !== false) {
+        saveLocalOnekoEnabled(enabled);
+    }
+    if (enabled) {
+        startOneko();
+    } else {
+        stopOneko();
+    }
+}
+
+function syncOnekoPreference() {
+    const localEnabled = readLocalOnekoEnabled();
+    setOnekoEnabled(localEnabled, { persistLocal: false });
+
+    if (!document.getElementById('user-greeting') || !window.fetch) return;
+    fetch('/api/settings', {
+        method: 'GET',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+    }).then(r => r.ok ? r.json() : null).then(data => {
+        if (!data || !data.ok || !data.settings || typeof data.settings.onekoEnabled !== 'boolean') return;
+        setOnekoEnabled(data.settings.onekoEnabled);
+    }).catch(() => {});
 }
 
 function setThemeCookie(theme) {
@@ -2257,6 +2438,7 @@ function initTooltips() {
 }
 
 window.addEventListener('DOMContentLoaded', initTooltips);
+window.addEventListener('DOMContentLoaded', syncOnekoPreference);
 
 // Settings page: glow intensity control
 function initSettingsPage() {
@@ -2273,6 +2455,7 @@ function initSettingsPage() {
         const colorGroup = document.getElementById('color-scheme-group');
         const colorResetBtn = document.getElementById('color-reset');
         const mobileViewToggle = document.getElementById('mobile-friendly-toggle');
+        const onekoToggle = document.getElementById('oneko-toggle');
         const saveBtn = document.getElementById('settings-save');
         const sitemapBtn = document.querySelector('[data-action="generate-sitemap"]');
         if (!glowGroup || !saveBtn) return;
@@ -2299,6 +2482,11 @@ function initSettingsPage() {
         const setMobileViewToggle = (enabled) => {
             if (!mobileViewToggle) return;
             mobileViewToggle.checked = enabled === true;
+        };
+
+        const setOnekoToggle = (enabled) => {
+            if (!onekoToggle) return;
+            onekoToggle.checked = enabled === true;
         };
 
         const loadMaintenanceState = async () => {
@@ -2488,6 +2676,7 @@ function initSettingsPage() {
         applyThemeSelection(initialTheme);
         syncMobileViewCookieWithCurrentHost();
         setMobileViewToggle(readMobileViewCookie());
+        setOnekoToggle(readLocalOnekoEnabled());
 
         if (window.fetch) {
             fetch('/api/themes', {
@@ -2537,6 +2726,10 @@ function initSettingsPage() {
                 if (typeof data.settings.mobileFriendlyView === 'boolean' && readMobileViewCookie() === null && host !== 'm.fridg3.org') {
                     setMobileViewToggle(data.settings.mobileFriendlyView);
                     setMobileViewCookie(data.settings.mobileFriendlyView);
+                }
+                if (typeof data.settings.onekoEnabled === 'boolean') {
+                    setOnekoToggle(data.settings.onekoEnabled);
+                    setOnekoEnabled(data.settings.onekoEnabled);
                 }
             }).catch(() => {});
         }
@@ -2588,12 +2781,15 @@ function initSettingsPage() {
             }
             const mobileViewEnabled = !!(mobileViewToggle && mobileViewToggle.checked);
             setMobileViewCookie(mobileViewEnabled);
+            const onekoEnabled = !!(onekoToggle && onekoToggle.checked);
+            setOnekoEnabled(onekoEnabled);
 
             if (isLoggedIn && window.fetch) {
                 const params = new URLSearchParams();
                 params.append('glowIntensity', selected);
                 params.append('theme', selectedTheme);
                 params.append('mobileFriendlyView', mobileViewEnabled ? 'on' : 'off');
+                params.append('onekoEnabled', onekoEnabled ? 'on' : 'off');
 
                 if (selectedTheme === 'classic' && Object.keys(mergedColors).length) {
                     // flatten colors into separate fields (merged so defaults persist server-side)
