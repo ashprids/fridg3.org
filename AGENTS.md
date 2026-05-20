@@ -27,8 +27,8 @@ A /data/ directory is recommended for previewing the website with high accuracy.
 
 If a /data/ directory is absent, the user can download a developer copy of the current production /data/ directory from Google Drive.
 
-### /others/frdgbeats
-frdgBeats has its own wiki in /others/frdgbeats/wiki. Make sure the
+### /tools/frdgbeats
+frdgBeats has its own wiki in /tools/frdgbeats/wiki. Make sure the
 wiki is kept up-to-date with any changes made; update it whenever you
 make a change wherever necessary.
 

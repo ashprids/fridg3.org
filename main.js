@@ -889,17 +889,48 @@ function openExternalWebsiteLink(anchor, event) {
     window.location.href = href;
 }
 
-function executeInlineContentScripts(rootEl) {
+function syncSpaPageAssets(doc) {
+    try {
+        if (!doc || !doc.head || !document.head) return;
+        doc.head.querySelectorAll('link[rel~="stylesheet"][href]').forEach((link) => {
+            const href = link.href || link.getAttribute('href') || '';
+            if (!href) return;
+            const exists = Array.from(document.head.querySelectorAll('link[rel~="stylesheet"][href]'))
+                .some(existing => existing.href === href);
+            if (exists) return;
+            document.head.appendChild(link.cloneNode(true));
+        });
+
+        doc.head.querySelectorAll('style').forEach((style) => {
+            const css = style.textContent || '';
+            if (!css.includes('frdgbeats-daw')) return;
+            const key = 'spa-style:' + css.trim();
+            const exists = Array.from(document.head.querySelectorAll('style[data-spa-style-key]'))
+                .some(existing => existing.dataset.spaStyleKey === key);
+            if (exists) return;
+            const cloned = style.cloneNode(true);
+            cloned.dataset.spaStyleKey = key;
+            document.head.appendChild(cloned);
+        });
+    } catch (_) { /* no-op */ }
+}
+
+function executeContentScripts(rootEl) {
     try {
         if (!rootEl) return;
         const scripts = rootEl.querySelectorAll('script');
         scripts.forEach((oldScript) => {
-            if (!oldScript || oldScript.src) return;
+            if (!oldScript) return;
             const newScript = document.createElement('script');
+            Array.from(oldScript.attributes).forEach((attr) => {
+                newScript.setAttribute(attr.name, attr.value);
+            });
             if (oldScript.type) {
                 newScript.type = oldScript.type;
             }
-            newScript.textContent = oldScript.textContent || '';
+            if (!oldScript.src) {
+                newScript.textContent = oldScript.textContent || '';
+            }
             oldScript.replaceWith(newScript);
         });
     } catch (_) { /* no-op */ }
@@ -997,8 +1028,9 @@ function loadPageIntoContent(url, addToHistory = true) {
                     return;
                 }
 
+                syncSpaPageAssets(doc);
                 contentEl.innerHTML = newContent.innerHTML;
-                executeInlineContentScripts(contentEl);
+                executeContentScripts(contentEl);
 
                 const newTitle = doc.querySelector('title');
                 if (newTitle) {
@@ -1392,8 +1424,9 @@ function bindSpaForm(form) {
                     return;
                 }
 
+                syncSpaPageAssets(doc);
                 contentEl.innerHTML = newContent.innerHTML;
-                executeInlineContentScripts(contentEl);
+                executeContentScripts(contentEl);
 
                 const newTitle = doc.querySelector('title');
                 if (newTitle) {
@@ -4112,6 +4145,7 @@ function initSidebarActiveState() {
             '/merch',
             '/bookmarks',
             '/saves',
+            '/tools',
             '/others',
         ];
 

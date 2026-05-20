@@ -62,15 +62,15 @@ production nginx needs explicit rewrites for PHP routes that accept path-style i
 
 the contact route is configured POST-safe at `/contact`, old `/email` paths redirect to `/contact`, and `/data/contact/` is blocked from direct web access.
 
-mdpaste share links use `/others/mdpaste/s/{id}` and need this block before the generic `location /` fallback. keep the regexes quoted, because nginx treats unquoted `{16}` like cursed config syntax.
+mdpaste share links use `/tools/mdpaste/s/{id}` and need this block before the generic `location /` fallback. keep the regexes quoted, because nginx treats unquoted `{16}` like cursed config syntax.
 
 ```nginx
 # mdpaste clean URLs
-location ~ "^/others/mdpaste/s/[a-fA-F0-9]{16}/?$" {
-    rewrite "^/others/mdpaste/s/([a-fA-F0-9]{16})/?$" /others/mdpaste/s/index.php?id=$1 last;
+location ~ "^/tools/mdpaste/s/[a-fA-F0-9]{16}/?$" {
+    rewrite "^/tools/mdpaste/s/([a-fA-F0-9]{16})/?$" /tools/mdpaste/s/index.php?id=$1 last;
 }
-location /others/mdpaste/s/ { try_files $uri $uri/ /others/mdpaste/s/index.php?$args; }
-location /others/mdpaste/   { try_files $uri $uri/ /others/mdpaste/index.php?$args; }
+location /tools/mdpaste/s/ { try_files $uri $uri/ /tools/mdpaste/s/index.php?$args; }
+location /tools/mdpaste/   { try_files $uri $uri/ /tools/mdpaste/index.php?$args; }
 ```
 
 ## Backup Workflow

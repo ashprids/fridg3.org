@@ -76,7 +76,7 @@ blackprint is the base/default theme in `/style.css` and `template.html`. its de
 
 the homepage FRIDG3.ORG ASCII hero uses the shared `--hero-ascii-*` color variables so each theme can tune the gradient without editing homepage markup. the server-time and resource ASCII use `--time-*` and `--resource-*` variables, which default to the hero palette unless a theme overrides them. resource cards are intentionally unboxed so the ASCII itself carries the theme.
 
-frdgBeats is theme-aware. its base stylesheet keeps the original default DAW colors, while selected theme stylesheets override `.frdgbeats-daw` `--fb-*` variables derived from `--bg`, `--fg`, `--border`, `--subtle`, and `--links`. body-mounted popups copy those variables from the app wrapper so their dialogs stay opaque and themed. synth and effect custom editors keep their own unique styling across every theme. the frdgBeats route also forces the app content area to full width after theme CSS loads.
+frdgBeats is theme-aware. its base stylesheet keeps the original default DAW colors, while selected theme stylesheets override `.frdgbeats-daw` `--fdgb-*` variables derived from `--bg`, `--fg`, `--border`, `--subtle`, and `--links`. body-mounted popups copy those variables from the app wrapper so their dialogs stay opaque and themed. synth and effect custom editors keep their own unique styling across every theme. the frdgBeats route also forces the app content area to full width after theme CSS loads.
 
 fonts and icons come from:
 

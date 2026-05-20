@@ -50,7 +50,7 @@ all API routes live under `/api/*` and are handled by PHP.
 
 ## Content / Media
 
-### `/others/mdpaste/`
+### `/tools/mdpaste/`
 
 `POST` JSON payload with `{ markdown, password, hardBreaks }`.
 
