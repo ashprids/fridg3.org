@@ -268,9 +268,41 @@ expected shape:
   "bot": { "token": "...", "client_id": "...", "status": "online|offline" },
   "stream": { "url": "http(s)://...", "name": "..." },
   "channel": { "id": "...", "name": "..." },
-  "features": { "auto_play": true, "loop": true }
+  "features": { "auto_play": true, "loop": true },
+  "groq": {
+    "api_key": "...",
+    "model": "llama-3.1-8b-instant",
+    "vision_model": "meta-llama/llama-4-scout-17b-16e-instruct",
+    "temperature": 0.8,
+    "top_p": 0.95,
+    "max_completion_tokens": 700,
+    "timeout_seconds": 30,
+    "max_history_messages": 12,
+    "max_vision_images": 5
+  }
 }
 ```
+
+`groq` powers Toast's AI replies to direct messages only. If `api_key` is empty, Toast still logs inbound DMs but skips the AI reply. `model` defaults to `llama-3.1-8b-instant`, and image/GIF DMs use `vision_model`, defaulting to Groq's `meta-llama/llama-4-scout-17b-16e-instruct`. `max_history_messages` controls how many recent logged DM messages are sent as conversation context, and `max_vision_images` caps image attachments at Groq's 5-image request limit. Toast also sends Groq a compact summary of its bot duties, including radio playback, slash-command radio controls, account-linking support, and automated notification DMs. When a DM appears to ask about fridg3.org, Toast can also send small relevant context from `wiki/Home.md` and `wiki/Routes-and-Features.md` to Groq so replies can describe the site without sounding like developer docs.
+
+AI DM replies are split before Discord's hard message limit when paragraph or sentence boundaries make multi-message pacing feel more natural. Toast also waits longer before sending longer chunks so the visible typing state roughly follows response length.
+
+Toast's AI prompt includes an exact Discord slash-command allow-list: `/play`, `/stop`, `/status`, and `/sendmsg`. Website paths such as `/feed` must be described as fridg3.org pages, not Discord slash commands.
+
+### `others/toast-discord-bot/bot/personality.json`
+
+expected shape:
+
+```json
+{
+  "system_prompt": "core Toast personality instructions",
+  "style_rules": ["optional behavior/style rule"],
+  "do_not": ["optional constraint"],
+  "private_lore": "optional lore that Toast only shares when directly asked"
+}
+```
+
+if this file is missing, empty, or invalid, the bot logs a warning and uses a small built-in Toast fallback prompt. `private_lore` is included in the system prompt with an explicit guardrail to avoid volunteering it unless the user asks about Toast's origin, lore, backstory, life, or purpose.
 
 ### `toast-updates.json`
 
@@ -285,6 +317,7 @@ expected shape:
 
 - tracked inbound/outbound DM threads used by `/others/toast-discord-bot/messages`
 - stores per-user profile snapshot data plus message history
+- an inbound DM containing exactly `CLEARMEMORY` acts as a memory boundary for AI replies; future Groq context only includes messages after the newest boundary
 
 ### contact notification endpoint
 

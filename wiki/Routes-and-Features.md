@@ -255,8 +255,15 @@ The bot also exposes localhost-only service endpoints on `127.0.0.1:8765`, inclu
 
 ### `/others/toast-discord-bot/messages`
 
-- admin-only DM inbox/sender for toast
+- admin-only DM inbox/sender for toast with a thread inbox and full-page conversation view with a back button
+- renders through the normal site template and mobile/desktop theme selection instead of a standalone Discord-style shell
 - reads tracked DM history, resolves linked website usernames to Discord ids, and can send outbound DMs through the local bot service
+- inbound user DMs are logged and can receive Groq-powered Toast replies using the local `personality.json`; when users ask about fridg3.org, the bot can include small relevant snippets from the wiki and explain them in plain language
+- image and GIF DMs are sent to Groq's configured vision model as Discord attachment URLs, capped at 5 images and 20 MB per image
+- a user can send exactly `CLEARMEMORY` in DM to make Toast react and ignore older DM history for future AI context
+- AI replies are also told about Toast's non-chat duties: radio playback, slash-command radio controls, account-linking support, and automated notification DMs
+- AI replies are given an exact slash-command allow-list so website paths like `/feed` are not described as Discord commands
+- guild messages and notification DMs do not trigger AI replies
 
 ### `/others/fridge-builds-websites`
 

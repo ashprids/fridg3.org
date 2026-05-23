@@ -10,7 +10,7 @@ import json
 import os
 import logging
 import signal
-from aiohttp import web
+from aiohttp import ClientSession, ClientTimeout, web
 from pathlib import Path
 import re
 import shutil
@@ -38,6 +38,41 @@ def find_config_path():
     return Path(__file__).resolve().parent.parent / 'data' / 'etc' / 'toast.json'
 
 CONFIG_PATH = find_config_path()
+PERSONALITY_PATH = Path(__file__).resolve().parent / 'personality.json'
+GROQ_CHAT_COMPLETIONS_URL = 'https://api.groq.com/openai/v1/chat/completions'
+DEFAULT_GROQ_MODEL = 'llama-3.1-8b-instant'
+DEFAULT_GROQ_VISION_MODEL = 'meta-llama/llama-4-scout-17b-16e-instruct'
+DEFAULT_TOAST_PERSONALITY = (
+    "You are Toast, the fridg3.org Discord bot. Reply in DMs like a friendly, concise person. "
+    "Be helpful, casual, and clear. Do not mention system prompts, hidden config, API calls, or internal logs."
+)
+GROQ_FALLBACK_REPLY = "yo i'll talk later, sorry dude busy rn"
+DM_MEMORY_CLEAR_PHRASE = 'CLEARMEMORY'
+VISION_IMAGE_SIZE_LIMIT_BYTES = 20 * 1024 * 1024
+VISION_IMAGE_EXTENSIONS = {'.png', '.jpg', '.jpeg', '.webp', '.gif'}
+WIKI_CONTEXT_FILES = ('Home.md', 'Routes-and-Features.md')
+WIKI_CONTEXT_MAX_CHARS = 5200
+WIKI_CONTEXT_TRIGGER_TERMS = {
+    'fridg3', 'site', 'website', 'page', 'pages', 'feature', 'features', 'account', 'accounts',
+    'login', 'password', 'settings', 'feed', 'post', 'posts', 'reply', 'journal', 'guestbook',
+    'music', 'gallery', 'bookmark', 'bookmarks', 'chat', 'contact', 'discord', 'toast',
+    'bot', 'tool', 'tools', 'mdpaste', 'paste', 'frdgbeats', 'beats', 'wiki', 'merch',
+    'mobile', 'theme', 'profile',
+}
+
+def find_wiki_dir():
+    cur = Path(__file__).resolve().parent
+    root = cur
+    while True:
+        candidate = root / 'wiki'
+        if candidate.exists():
+            return candidate
+        if root.parent == root:
+            break
+        root = root.parent
+    return Path(__file__).resolve().parents[2] / 'wiki'
+
+WIKI_DIR = find_wiki_dir()
 
 def find_ffmpeg_executable():
     """Locate ffmpeg executable on the system.
@@ -169,6 +204,237 @@ def load_config():
     except json.JSONDecodeError:
         logger.error(f"Invalid JSON in configuration file: {CONFIG_PATH}")
         raise
+
+def coerce_int(value, default: int, minimum: int = None, maximum: int = None) -> int:
+    try:
+        result = int(value)
+    except (TypeError, ValueError):
+        result = default
+    if minimum is not None:
+        result = max(minimum, result)
+    if maximum is not None:
+        result = min(maximum, result)
+    return result
+
+def coerce_float(value, default: float, minimum: float = None, maximum: float = None) -> float:
+    try:
+        result = float(value)
+    except (TypeError, ValueError):
+        result = default
+    if minimum is not None:
+        result = max(minimum, result)
+    if maximum is not None:
+        result = min(maximum, result)
+    return result
+
+def get_groq_config() -> dict:
+    groq_config = config.get('groq', {})
+    if not isinstance(groq_config, dict):
+        groq_config = {}
+
+    return {
+        'api_key': str(groq_config.get('api_key', '')).strip(),
+        'model': str(groq_config.get('model', DEFAULT_GROQ_MODEL)).strip() or DEFAULT_GROQ_MODEL,
+        'vision_model': str(groq_config.get('vision_model', DEFAULT_GROQ_VISION_MODEL)).strip() or DEFAULT_GROQ_VISION_MODEL,
+        'temperature': coerce_float(groq_config.get('temperature'), 0.8, 0.0, 2.0),
+        'top_p': coerce_float(groq_config.get('top_p'), 0.95, 0.0, 1.0),
+        'max_completion_tokens': coerce_int(groq_config.get('max_completion_tokens'), 700, 1, 4096),
+        'timeout_seconds': coerce_int(groq_config.get('timeout_seconds'), 30, 5, 120),
+        'max_history_messages': coerce_int(groq_config.get('max_history_messages'), 12, 0, 30),
+        'max_vision_images': coerce_int(groq_config.get('max_vision_images'), 5, 0, 5),
+    }
+
+def normalize_prompt_items(items) -> list:
+    if not isinstance(items, list):
+        return []
+    normalized = []
+    for item in items:
+        text = str(item).strip()
+        if text:
+            normalized.append(text)
+    return normalized
+
+def load_personality_prompt() -> str:
+    try:
+        raw = PERSONALITY_PATH.read_text(encoding='utf-8').strip()
+    except FileNotFoundError:
+        logger.warning(f"Personality file not found: {PERSONALITY_PATH}; using fallback Toast prompt")
+        return DEFAULT_TOAST_PERSONALITY
+    except Exception as e:
+        logger.warning(f"Failed to read personality file: {e}; using fallback Toast prompt")
+        return DEFAULT_TOAST_PERSONALITY
+
+    if raw == '':
+        logger.warning(f"Personality file is empty: {PERSONALITY_PATH}; using fallback Toast prompt")
+        return DEFAULT_TOAST_PERSONALITY
+
+    try:
+        data = json.loads(raw)
+    except json.JSONDecodeError as e:
+        logger.warning(f"Invalid personality JSON: {e}; using fallback Toast prompt")
+        return DEFAULT_TOAST_PERSONALITY
+
+    if not isinstance(data, dict):
+        logger.warning("Personality JSON must be an object; using fallback Toast prompt")
+        return DEFAULT_TOAST_PERSONALITY
+
+    system_prompt = str(data.get('system_prompt', '')).strip()
+    if not system_prompt:
+        logger.warning("Personality JSON missing system_prompt; using fallback Toast prompt")
+        return DEFAULT_TOAST_PERSONALITY
+
+    prompt_parts = [system_prompt]
+    style_rules = normalize_prompt_items(data.get('style_rules'))
+    if style_rules:
+        prompt_parts.append("Style rules:\n" + "\n".join(f"- {rule}" for rule in style_rules))
+
+    do_not = normalize_prompt_items(data.get('do_not'))
+    if do_not:
+        prompt_parts.append("Do not:\n" + "\n".join(f"- {rule}" for rule in do_not))
+
+    private_lore = str(data.get('private_lore', '')).strip()
+    if private_lore:
+        prompt_parts.append(
+            "Private lore, only to share if the user directly asks about your origin, lore, backstory, life, or purpose:\n"
+            f"{private_lore}\n"
+            "Do not bring this up unprompted."
+        )
+
+    prompt_parts.append(
+        "You are replying in a private Discord DM. Keep replies natural, conversational, and appropriately brief."
+    )
+    return "\n\n".join(prompt_parts)
+
+def build_bot_purpose_context() -> str:
+    stream_config = config.get('stream', {})
+    stream_name = str(stream_config.get('name', '')).strip()
+    stream_url = str(stream_config.get('url', '')).strip()
+
+    radio_line = "You play the fridg3.org radio stream in Discord voice channels."
+    if stream_name:
+        radio_line = f"You play the fridg3.org radio stream in Discord voice channels. The current stream is {stream_name}."
+    if stream_url:
+        radio_line += " You do not need to mention the raw stream URL unless someone specifically asks for it."
+
+    return (
+        "Toast's bot duties and limits:\n"
+        f"- {radio_line}\n"
+        "- Your only Discord slash commands are /play, /stop, /status, and /sendmsg. Do not invent or suggest any other Discord slash commands.\n"
+        "- Website paths like /feed, /journal, /chat, /settings, and /tools are fridg3.org pages, not Discord slash commands.\n"
+        "- If someone asks how to use a website feature, direct them to the relevant fridg3.org page or describe the website flow; do not turn website paths into Discord commands.\n"
+        "- You send useful DMs for fridg3.org events, including account invites, feed mentions, and replies to a user's feed posts.\n"
+        "- You help keep the website connected to Discord, including account linking and notification delivery.\n"
+        "- In this AI DM chat, you can explain these duties and answer questions, but you should not claim you personally changed settings, joined voice, or sent admin notifications unless the current conversation or bot code actually did that.\n"
+        "- If someone asks for an action that needs admin tools or server slash commands, tell them the practical next step instead of pretending it already happened."
+    )
+
+def tokenize_context_query(text: str) -> set:
+    return {
+        token
+        for token in re.findall(r'[a-z0-9]+', (text or '').lower())
+        if len(token) >= 3
+    }
+
+def should_include_wiki_context(user_text: str) -> bool:
+    tokens = tokenize_context_query(user_text)
+    if tokens & WIKI_CONTEXT_TRIGGER_TERMS:
+        return True
+    return bool(re.search(r'/(feed|journal|chat|contact|settings|music|gallery|tools|others|discord|account)\b', user_text or '', re.I))
+
+def read_wiki_context_sections() -> list:
+    sections = []
+    for filename in WIKI_CONTEXT_FILES:
+        path = WIKI_DIR / filename
+        try:
+            raw = path.read_text(encoding='utf-8')
+        except Exception as e:
+            logger.warning(f"Failed to read wiki context file {path}: {e}")
+            continue
+
+        current_title = filename
+        current_lines = []
+        for line in raw.splitlines():
+            heading_match = re.match(r'^(#{1,3})\s+(.+?)\s*$', line)
+            if heading_match:
+                if current_lines:
+                    sections.append({
+                        'source': filename,
+                        'title': current_title,
+                        'body': '\n'.join(current_lines).strip(),
+                    })
+                current_title = heading_match.group(2).strip()
+                current_lines = [line]
+            else:
+                current_lines.append(line)
+
+        if current_lines:
+            sections.append({
+                'source': filename,
+                'title': current_title,
+                'body': '\n'.join(current_lines).strip(),
+            })
+    return sections
+
+def score_wiki_section(section: dict, query_tokens: set) -> int:
+    title = str(section.get('title', '')).lower()
+    body = str(section.get('body', '')).lower()
+    score = 0
+    for token in query_tokens:
+        if token in title:
+            score += 5
+        if re.search(rf'\b{re.escape(token)}\b', body):
+            score += 1
+    return score
+
+def build_wiki_context_for_message(user_text: str) -> str:
+    if not should_include_wiki_context(user_text):
+        return ''
+
+    query_tokens = tokenize_context_query(user_text)
+    sections = read_wiki_context_sections()
+    scored_sections = [
+        (score_wiki_section(section, query_tokens), section)
+        for section in sections
+    ]
+    relevant_sections = [
+        section
+        for score, section in sorted(scored_sections, key=lambda item: item[0], reverse=True)
+        if score > 0
+    ][:5]
+
+    if not relevant_sections:
+        relevant_sections = [
+            section for section in sections
+            if section.get('source') == 'Home.md' and section.get('title') in ('Project Snapshot', 'fridg3.org Developer Wiki')
+        ][:2]
+
+    if not relevant_sections:
+        return ''
+
+    context_parts = []
+    total_length = 0
+    for section in relevant_sections:
+        body = re.sub(r'\n{3,}', '\n\n', section.get('body', '')).strip()
+        if not body:
+            continue
+        chunk = f"From wiki/{section['source']} - {section['title']}:\n{body}"
+        if total_length + len(chunk) > WIKI_CONTEXT_MAX_CHARS:
+            remaining = WIKI_CONTEXT_MAX_CHARS - total_length
+            if remaining < 500:
+                break
+            chunk = chunk[:remaining].rsplit('\n', 1)[0].strip()
+        context_parts.append(chunk)
+        total_length += len(chunk)
+
+    if not context_parts:
+        return ''
+
+    return (
+        "Relevant fridg3.org wiki context follows. Use it only when it helps answer the user's question. "
+        "Explain it in plain, non-dev language; do not say 'according to the wiki' unless naming the source is useful. "
+        "If the context does not answer the question, say so and keep the reply honest.\n\n"
+        + "\n\n---\n\n".join(context_parts)
+    )
 
 def update_bot_status(status: str):
     """Deprecated: retained for compatibility but no longer writes to disk."""
@@ -452,6 +718,263 @@ def append_dm_history_entry(user, direction: str, content: str, timestamp=None, 
     threads[discord_user_id] = thread
     save_dm_history(history)
 
+def is_memory_clear_message(content: str) -> bool:
+    return (content or '').strip() == DM_MEMORY_CLEAR_PHRASE
+
+def get_recent_dm_messages(discord_user_id: str, limit: int, exclude_message_id: str = '') -> list:
+    if limit <= 0:
+        return []
+
+    history = load_dm_history()
+    thread = history.get('threads', {}).get(str(discord_user_id), {})
+    messages = thread.get('messages', [])
+    if not isinstance(messages, list):
+        return []
+
+    newest_clear_index = None
+    for index, entry in enumerate(messages):
+        if not isinstance(entry, dict):
+            continue
+        if entry.get('direction') == 'inbound' and is_memory_clear_message(str(entry.get('content', ''))):
+            newest_clear_index = index
+    if newest_clear_index is not None:
+        messages = messages[newest_clear_index + 1:]
+
+    recent = []
+    for entry in messages[-limit:]:
+        if not isinstance(entry, dict):
+            continue
+        if exclude_message_id and str(entry.get('id', '')) == str(exclude_message_id):
+            continue
+        direction = entry.get('direction')
+        if direction == 'inbound':
+            role = 'user'
+        elif direction == 'outbound':
+            role = 'assistant'
+        else:
+            continue
+
+        content = str(entry.get('content', '')).strip()
+        if not content:
+            continue
+        recent.append({'role': role, 'content': content})
+    return recent
+
+def is_vision_attachment(attachment) -> bool:
+    url = str(getattr(attachment, 'url', '') or '').strip()
+    if not url:
+        return False
+
+    filename = str(getattr(attachment, 'filename', '') or '').lower()
+    suffix = Path(filename).suffix
+    content_type = str(getattr(attachment, 'content_type', '') or '').lower()
+    if suffix not in VISION_IMAGE_EXTENSIONS and not content_type.startswith('image/'):
+        return False
+    if suffix == '.svg' or content_type == 'image/svg+xml':
+        return False
+
+    size = getattr(attachment, 'size', 0) or 0
+    try:
+        size = int(size)
+    except (TypeError, ValueError):
+        size = 0
+    if size > VISION_IMAGE_SIZE_LIMIT_BYTES:
+        logger.warning(f"Skipping oversized image attachment for vision: filename={filename} size={size}")
+        return False
+    return True
+
+def get_vision_attachments(attachments, max_images: int) -> list:
+    if max_images <= 0:
+        return []
+
+    vision_attachments = []
+    for attachment in attachments or []:
+        if not is_vision_attachment(attachment):
+            continue
+        filename = str(getattr(attachment, 'filename', '') or '').strip()
+        url = str(getattr(attachment, 'url', '') or '').strip()
+        content_type = str(getattr(attachment, 'content_type', '') or '').strip()
+        is_gif = filename.lower().endswith('.gif') or content_type.lower() == 'image/gif'
+        vision_attachments.append({
+            'filename': filename or 'image',
+            'url': url,
+            'content_type': content_type,
+            'is_gif': is_gif,
+        })
+        if len(vision_attachments) >= max_images:
+            break
+    return vision_attachments
+
+def build_current_user_content(current_message: str, vision_attachments: list):
+    text = (current_message or '').strip()
+    if not vision_attachments:
+        return text or '[no text]'
+
+    attachment_names = ', '.join(item['filename'] for item in vision_attachments)
+    gif_count = sum(1 for item in vision_attachments if item.get('is_gif'))
+    visual_note = f"The user attached {len(vision_attachments)} image(s): {attachment_names}."
+    if gif_count:
+        visual_note += " At least one attachment is a GIF; describe visible content, but do not overclaim motion if only a still/representative frame is available."
+
+    content_blocks = [{'type': 'text', 'text': (text + '\n\n' if text else '') + visual_note}]
+    for attachment in vision_attachments:
+        content_blocks.append({
+            'type': 'image_url',
+            'image_url': {'url': attachment['url']},
+        })
+    return content_blocks
+
+def build_groq_messages(user, history_limit: int, current_message: str = '', attachments=None, current_message_id: str = '') -> list:
+    groq_config = get_groq_config()
+    vision_attachments = get_vision_attachments(attachments, groq_config['max_vision_images'])
+    messages = [
+        {'role': 'system', 'content': load_personality_prompt()},
+        {'role': 'system', 'content': build_bot_purpose_context()},
+    ]
+    wiki_context = build_wiki_context_for_message(current_message)
+    if wiki_context:
+        messages.append({'role': 'system', 'content': wiki_context})
+    if vision_attachments:
+        messages.append({
+            'role': 'system',
+            'content': (
+                "The user's latest DM includes visual attachments. Answer based on what is visible. "
+                "For memes or GIFs, explain the joke casually if it is obvious. If the image is unclear, say so instead of guessing."
+            ),
+        })
+    messages.extend(get_recent_dm_messages(str(user.id), history_limit, current_message_id))
+    messages.append({
+        'role': 'user',
+        'content': build_current_user_content(current_message, vision_attachments),
+    })
+    return messages
+
+def split_natural_messages(text: str, max_length: int = 1800, soft_length: int = 500) -> list:
+    cleaned = (text or '').strip()
+    if not cleaned:
+        return []
+    if len(cleaned) <= soft_length:
+        return [cleaned]
+
+    chunks = []
+    remaining = cleaned
+    while len(remaining) > soft_length:
+        split_at = -1
+        target = min(max_length, max(soft_length, int(len(remaining) / 2)) if len(remaining) <= soft_length * 2 else soft_length)
+        search_window = remaining[:target + 1]
+
+        for separator in ('\n\n', '\n', '. ', '! ', '? ', '; ', ', '):
+            candidate = search_window.rfind(separator)
+            if candidate >= int(target * 0.45):
+                split_at = candidate + len(separator)
+                break
+
+        if split_at < 0:
+            split_at = search_window.rfind(' ')
+        if split_at < int(target * 0.45):
+            split_at = min(max_length, target)
+
+        chunk = remaining[:split_at].strip()
+        if chunk:
+            chunks.append(chunk)
+        remaining = remaining[split_at:].strip()
+
+    if remaining:
+        chunks.append(remaining)
+    return chunks
+
+def typing_delay_seconds(text: str) -> float:
+    length = len(text or '')
+    return min(12.0, max(1.4, length / 38))
+
+def followup_typing_delay_seconds(text: str) -> float:
+    length = len(text or '')
+    return min(3.0, max(0.9, length / 160))
+
+async def request_groq_dm_reply(user, current_message: str, attachments=None, current_message_id: str = '') -> str:
+    groq_config = get_groq_config()
+    api_key = groq_config['api_key']
+    if not api_key:
+        logger.warning("Groq API key missing from toast.json; skipping AI DM reply")
+        return ''
+
+    vision_attachments = get_vision_attachments(attachments, groq_config['max_vision_images'])
+    model = groq_config['vision_model'] if vision_attachments else groq_config['model']
+    payload = {
+        'model': model,
+        'messages': build_groq_messages(
+            user,
+            groq_config['max_history_messages'],
+            current_message,
+            attachments,
+            current_message_id,
+        ),
+        'temperature': groq_config['temperature'],
+        'top_p': groq_config['top_p'],
+        'max_completion_tokens': groq_config['max_completion_tokens'],
+    }
+    headers = {
+        'Authorization': f"Bearer {api_key}",
+        'Content-Type': 'application/json',
+    }
+    timeout = ClientTimeout(total=groq_config['timeout_seconds'])
+
+    async with ClientSession(timeout=timeout) as session:
+        async with session.post(GROQ_CHAT_COMPLETIONS_URL, headers=headers, json=payload) as response:
+            response_text = await response.text()
+            if response.status >= 400:
+                logger.warning(f"Groq DM reply failed: status={response.status} body={response_text[:500]}")
+                return ''
+
+            try:
+                data = json.loads(response_text)
+            except json.JSONDecodeError as e:
+                logger.warning(f"Groq returned invalid JSON: {e}")
+                return ''
+
+    choices = data.get('choices', [])
+    if not choices or not isinstance(choices, list):
+        logger.warning("Groq response had no choices")
+        return ''
+
+    message = choices[0].get('message', {})
+    content = str(message.get('content', '')).strip() if isinstance(message, dict) else ''
+    if not content:
+        logger.warning("Groq response content was empty")
+    return content
+
+async def respond_to_dm_with_groq(message: discord.Message):
+    groq_config = get_groq_config()
+    if not groq_config['api_key']:
+        logger.warning("Groq API key missing from toast.json; skipping AI DM reply")
+        return
+
+    async with message.channel.typing():
+        try:
+            reply = await request_groq_dm_reply(
+                message.author,
+                build_dm_content(message.content, message.attachments),
+                message.attachments,
+                str(getattr(message, 'id', '')),
+            )
+        except Exception as e:
+            logger.warning(f"Groq DM reply request crashed: {e}")
+            reply = ''
+        if not reply:
+            await send_logged_dm(message.author, GROQ_FALLBACK_REPLY)
+            return
+
+        chunks = split_natural_messages(reply)
+        if not chunks:
+            await send_logged_dm(message.author, GROQ_FALLBACK_REPLY)
+            return
+
+        for index, chunk in enumerate(chunks):
+            await asyncio.sleep(typing_delay_seconds(chunk))
+            await send_logged_dm(message.author, chunk)
+            if index < len(chunks) - 1:
+                await asyncio.sleep(followup_typing_delay_seconds(chunks[index + 1]))
+
 async def send_logged_dm(target, message: str):
     if isinstance(target, (discord.User, discord.Member)):
         user = target
@@ -652,13 +1175,22 @@ async def on_disconnect():
 @bot.event
 async def on_message(message: discord.Message):
     if isinstance(message.channel, discord.DMChannel) and not message.author.bot:
+        dm_content = build_dm_content(message.content, message.attachments)
         append_dm_history_entry(
             message.author,
             'inbound',
-            build_dm_content(message.content, message.attachments),
+            dm_content,
             timestamp=getattr(message, 'created_at', None),
             message_id=getattr(message, 'id', ''),
         )
+        if is_memory_clear_message(dm_content):
+            try:
+                await message.add_reaction('✅')
+            except Exception as e:
+                logger.warning(f"Failed to react to memory clear DM: {e}")
+            await bot.process_commands(message)
+            return
+        await respond_to_dm_with_groq(message)
 
     await bot.process_commands(message)
 

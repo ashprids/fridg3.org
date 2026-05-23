@@ -30,6 +30,46 @@ function find_template_file($filename) {
     return null;
 }
 
+function render_toast_messages_page(string $title, string $description, string $content): void {
+    $renderHelperPath = find_template_file('lib/render.php');
+    if ($renderHelperPath) {
+        require_once $renderHelperPath;
+    }
+
+    $templateName = function_exists('get_preferred_template_name')
+        ? get_preferred_template_name(__DIR__)
+        : 'template.html';
+    $templatePath = find_template_file($templateName);
+    if (!$templatePath && $templateName !== 'template.html') {
+        $templatePath = find_template_file('template.html');
+    }
+    if (!$templatePath) {
+        die('page template not found. report this issue to me@fridg3.org.');
+    }
+
+    $template = (string) file_get_contents($templatePath);
+    if (function_exists('apply_preferred_theme_stylesheet')) {
+        $template = apply_preferred_theme_stylesheet($template, __DIR__);
+    }
+
+    $html = str_replace('{content}', $content, $template);
+    $html = str_replace('{title}', $title, $html);
+    $html = str_replace('{description}', $description, $html);
+
+    $userGreeting = '';
+    if (isset($_SESSION['user']) && isset($_SESSION['user']['name'])) {
+        $userGreeting = '<div id="user-greeting">Hello, '
+            . htmlspecialchars((string) $_SESSION['user']['name'], ENT_QUOTES, 'UTF-8')
+            . '!</div>';
+        $accountBtn = '<a href="/account"><div id="footer-button" data-tooltip="access your fridg3.org account"><i class="fa-solid fa-user"></i></div></a>';
+        $logoutBtn = '<a href="/account/logout"><div id="footer-button" data-tooltip="log out"><i class="fa-solid fa-right-from-bracket"></i></div></a>';
+        $html = str_replace($accountBtn, $logoutBtn, $html);
+    }
+
+    $html = str_replace('{user_greeting}', $userGreeting, $html);
+    echo $html;
+}
+
 function local_bot_post(string $path, array $payload): array {
     $url = 'http://127.0.0.1:8765' . $path;
     $payloadJson = json_encode($payload, JSON_UNESCAPED_SLASHES);
@@ -365,15 +405,12 @@ foreach ($threads as $thread) {
     $threadsById[$thread['discord_user_id']] = $thread;
 }
 
-if ($selectedUserId === '' && $threads !== []) {
-    $selectedUserId = (string) $threads[0]['discord_user_id'];
-}
-
 if ($composeTargetValue === '') {
     $composeTargetValue = $selectedUserId;
 }
 
 $selectedThread = ($selectedUserId !== '' && isset($threadsById[$selectedUserId])) ? $threadsById[$selectedUserId] : null;
+$hasConversationView = $selectedUserId !== '';
 
 $threadCards = [];
 foreach ($threads as $thread) {
@@ -423,9 +460,9 @@ if ($selectedThread !== null) {
             . '</div>';
     }
 }
-$messageListHtml = $messageItems !== [] ? implode("\n", $messageItems) : '<div class="toast-dm-empty">pick a thread or type a discord user id to start a dm.</div>';
+$messageListHtml = $messageItems !== [] ? implode("\n", $messageItems) : '<div class="toast-dm-empty">no messages in this thread yet. send the first one if you need to kick the door open.</div>';
 
-$selectedThreadLabel = $selectedThread !== null ? build_thread_label($selectedThread) : 'new message';
+$selectedThreadLabel = $selectedThread !== null ? build_thread_label($selectedThread) : 'new dm';
 $selectedThreadMeta = '';
 $selectedThreadAvatar = '<div class="toast-dm-header-avatar toast-dm-avatar fallback">?</div>';
 if ($selectedThread !== null) {
@@ -435,6 +472,8 @@ if ($selectedThread !== null) {
         $selectedThreadMeta .= ' • ' . htmlspecialchars('@' . implode(', @', $linkedAccounts), ENT_QUOTES, 'UTF-8');
     }
     $selectedThreadAvatar = build_avatar_html($selectedThread, 'toast-dm-header-avatar');
+} elseif ($selectedUserId !== '') {
+    $selectedThreadMeta = htmlspecialchars($selectedUserId, ENT_QUOTES, 'UTF-8');
 }
 
 $content_path = find_template_file('content.html');
@@ -449,6 +488,8 @@ $content = str_replace(
         '{error_message}',
         '{success_style}',
         '{success_message}',
+        '{inbox_style}',
+        '{conversation_style}',
         '{thread_list}',
         '{selected_thread_avatar}',
         '{selected_thread_label}',
@@ -462,6 +503,8 @@ $content = str_replace(
         htmlspecialchars($errorMessage, ENT_QUOTES, 'UTF-8'),
         $successMessage !== '' ? 'display:block;' : 'display:none;',
         htmlspecialchars($successMessage, ENT_QUOTES, 'UTF-8'),
+        $hasConversationView ? 'display:none;' : 'display:block;',
+        $hasConversationView ? 'display:block;' : 'display:none;',
         $threadListHtml,
         $selectedThreadAvatar,
         htmlspecialchars($selectedThreadLabel, ENT_QUOTES, 'UTF-8'),
@@ -473,54 +516,5 @@ $content = str_replace(
     $content
 );
 
-echo '<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>' . htmlspecialchars($title, ENT_QUOTES, 'UTF-8') . ' | fridg3.org</title>
-    <meta name="description" content="' . htmlspecialchars($description, ENT_QUOTES, 'UTF-8') . '">
-    <link rel="stylesheet" href="/style.css">
-    <link rel="icon" type="image/png" href="/resources/favicon-96x96.png" sizes="96x96" />
-    <link rel="shortcut icon" href="/resources/favicon-96x96.png" />
-    <link rel="apple-touch-icon" sizes="180x180" href="/resources/apple-touch-icon.png" />
-    <meta name="apple-mobile-web-app-title" content="fridg3.org" />
-    <link rel="manifest" href="/resources/site.webmanifest" />
-    <style>
-        html, body {
-            margin: 0;
-            width: 100%;
-            min-height: 100%;
-            background: #1e1f22;
-            overflow: hidden;
-        }
-
-        body {
-            font-family: "MainRegular", monospace;
-        }
-
-        .toast-dm-page {
-            margin: 0 !important;
-            min-height: 100vh;
-        }
-
-        .toast-dm-shell {
-            min-height: 100vh !important;
-            border-radius: 0 !important;
-            border: 0 !important;
-            box-shadow: none !important;
-        }
-    </style>
-</head>
-<body>' . $content . '
-<script>
-    (function () {
-        const messageList = document.querySelector(".toast-dm-message-list");
-        if (messageList) {
-            messageList.scrollTop = messageList.scrollHeight;
-        }
-    })();
-</script>
-</body>
-</html>';
+render_toast_messages_page($title, $description, $content);
 ?>
