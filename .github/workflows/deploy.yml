@@ -56,7 +56,7 @@ jobs:
           BOT_DIR="$TARGET/others/toast-discord-bot/bot"
           START_SCRIPT="$BOT_DIR/start.sh"
           LOG_FILE="$BOT_DIR/toast-bot.log"
-          SCREEN_DIR="/tmp/toast-screen"
+          SCREEN_DIR="/tmp/toast-screen-$RUNTIME_USER"
 
           if ! sudo -n -u "$RUNTIME_USER" true; then
             echo "deploy must have passwordless sudo permission to run Toast as $RUNTIME_USER."
@@ -83,9 +83,8 @@ jobs:
           fi
 
           echo "Preparing screen socket directory for $RUNTIME_USER..."
-          mkdir -p "$SCREEN_DIR"
-          chgrp "$RUNTIME_USER" "$SCREEN_DIR"
-          chmod 770 "$SCREEN_DIR"
+          sudo -n -u "$RUNTIME_USER" mkdir -p "$SCREEN_DIR"
+          sudo -n -u "$RUNTIME_USER" chmod 700 "$SCREEN_DIR"
 
           if sudo -n -u "$RUNTIME_USER" env SCREENDIR="$SCREEN_DIR" screen -list | grep -q "\.${SCREEN_SESSION}[[:space:]]"; then
             echo "Stopping $RUNTIME_USER-owned Toast bot screen session '$SCREEN_SESSION'..."
