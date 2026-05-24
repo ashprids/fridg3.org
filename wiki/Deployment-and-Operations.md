@@ -23,7 +23,8 @@ main details:
 - installs `rsync` and `openssh-client`
 - uses `DEPLOY_KEY`
 - deploy target is `deploy@45.76.134.105:/var/www/fridg3.org`
-- after rsync, ssh sends Ctrl-C to the `toast` GNU screen session, waits up to 30 seconds for `main.py` to shut down cleanly, then runs `/var/www/fridg3.org/others/toast-discord-bot/bot/start.sh`
+- after rsync, ssh stops any `toast` GNU screen session owned by `deploy`, stops any `toast` session owned by `http`, prepares `others/toast-discord-bot/bot/toast-bot.log` for `http`, then runs `/var/www/fridg3.org/others/toast-discord-bot/bot/start.sh` as `http`
+- the restart step needs passwordless sudo for `deploy` to run the Toast bot as `http`; Toast writes DM history and feed notification state under `/data`, which is owned by `http:http`
 
 ## What Does Not Deploy
 
@@ -47,6 +48,16 @@ from `README.md`:
 - directories should be `755`
 - files should be `644`
 - `/data` and `sitemap.xml` need `http:http` ownership for webserver writes
+- Toast runs as `http` in production so it can update `/data/etc/toast-dm-history.json` and `/data/etc/toast-feed-notify-state.json`; only `toast-bot.log` in the bot code directory is made writable for that runtime user
+
+the deploy user needs passwordless sudo for the Toast restart step:
+
+```sudoers
+deploy ALL=(http) NOPASSWD: ALL
+deploy ALL=(root) NOPASSWD: /usr/bin/touch, /usr/bin/chown, /usr/bin/chmod
+```
+
+install that with `visudo`, preferably as a small file under `/etc/sudoers.d/`, because typoing sudoers directly is how servers become decorative bricks.
 
 ## Nginx Config Source
 
@@ -82,11 +93,12 @@ location /tools/mdpaste/   { try_files $uri $uri/ /tools/mdpaste/index.php?$args
 what it does:
 
 1. ssh to the server
-2. zip `/var/www/fridg3.org/data`
-3. download the archive to the runner
-4. upload it to Google Drive using `rclone`
-5. keep only the 10 newest backups
-6. delete temp archives from runner and server
+2. remove stale temporary backup zips from `/home/deploy`
+3. zip `/var/www/fridg3.org/data` into a temporary archive under `/home/deploy`
+4. download the archive to the runner
+5. upload it to Google Drive using `rclone`
+6. keep only the 10 newest backups
+7. delete temp archives from runner and server
 
 triggers:
 

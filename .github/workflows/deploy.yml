@@ -52,11 +52,18 @@ jobs:
           set -euo pipefail
 
           SCREEN_SESSION="toast"
+          RUNTIME_USER="http"
           BOT_DIR="$TARGET/others/toast-discord-bot/bot"
           START_SCRIPT="$BOT_DIR/start.sh"
+          LOG_FILE="$BOT_DIR/toast-bot.log"
+
+          if ! sudo -n -u "$RUNTIME_USER" true; then
+            echo "deploy must have passwordless sudo permission to run Toast as $RUNTIME_USER."
+            exit 1
+          fi
 
           if screen -list | grep -q "\.${SCREEN_SESSION}[[:space:]]"; then
-            echo "Stopping Toast bot screen session '$SCREEN_SESSION'..."
+            echo "Stopping deploy-owned Toast bot screen session '$SCREEN_SESSION'..."
             screen -S "$SCREEN_SESSION" -X stuff $'\003'
 
             for _ in $(seq 1 30); do
@@ -71,9 +78,33 @@ jobs:
               exit 1
             fi
           else
-            echo "Toast bot screen session '$SCREEN_SESSION' is not running."
+            echo "Deploy-owned Toast bot screen session '$SCREEN_SESSION' is not running."
           fi
 
-          echo "Starting Toast bot with $START_SCRIPT..."
-          bash "$START_SCRIPT"
+          if sudo -n -u "$RUNTIME_USER" screen -list | grep -q "\.${SCREEN_SESSION}[[:space:]]"; then
+            echo "Stopping $RUNTIME_USER-owned Toast bot screen session '$SCREEN_SESSION'..."
+            sudo -n -u "$RUNTIME_USER" screen -S "$SCREEN_SESSION" -X stuff $'\003'
+
+            for _ in $(seq 1 30); do
+              if ! sudo -n -u "$RUNTIME_USER" screen -list | grep -q "\.${SCREEN_SESSION}[[:space:]]"; then
+                break
+              fi
+              sleep 1
+            done
+
+            if sudo -n -u "$RUNTIME_USER" screen -list | grep -q "\.${SCREEN_SESSION}[[:space:]]"; then
+              echo "Toast bot did not stop within 30 seconds; refusing to force-kill it."
+              exit 1
+            fi
+          else
+            echo "$RUNTIME_USER-owned Toast bot screen session '$SCREEN_SESSION' is not running."
+          fi
+
+          echo "Preparing Toast bot log for $RUNTIME_USER..."
+          sudo -n touch "$LOG_FILE"
+          sudo -n chown "$RUNTIME_USER:$RUNTIME_USER" "$LOG_FILE"
+          sudo -n chmod 664 "$LOG_FILE"
+
+          echo "Starting Toast bot as $RUNTIME_USER with $START_SCRIPT..."
+          sudo -n -u "$RUNTIME_USER" bash "$START_SCRIPT"
           EOF

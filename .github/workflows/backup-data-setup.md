@@ -108,8 +108,11 @@ The remote server must have the `zip` command installed, because the archive is 
 The backup archive is created in:
 
 ```text
-/tmp
+/home/deploy
 ```
+
+During archive creation, the workflow prints the target archive path, backup filesystem disk usage, and the zip error log if compression fails.
+Before creating a new archive, the workflow removes stale `DD-MM-YY_hh-mm-ss.zip` files from `/home/deploy`; the server copy is temporary, while Google Drive is the retained backup store.
 
 The archive contains the `data` directory from:
 
@@ -136,3 +139,4 @@ If the workflow fails on archive creation:
 1. Verify `/var/www/fridg3.org/data` exists on the server
 2. Verify the `deploy` user can read that directory
 3. Verify `zip` is installed on the server
+4. Verify `/home/deploy` is writable and has enough free space for the archive

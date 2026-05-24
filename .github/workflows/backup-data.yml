@@ -40,16 +40,42 @@ jobs:
           set -euo pipefail
 
           remote_archive_path="$(
-            ssh "$REMOTE" "bash -lc '
+            ssh "$REMOTE" TARGET="$TARGET" REMOTE_BACKUP_DIR="$REMOTE_BACKUP_DIR" bash -s <<'EOF'
               set -euo pipefail
-              cd \"$TARGET\"
-              command -v zip >/dev/null 2>&1 || { echo \"zip is not installed on the server\" >&2; exit 1; }
-              archive_name=\$(date +\"%d-%m-%y_%H-%M-%S\").zip
-              archive_path=\"${REMOTE_BACKUP_DIR}/\$archive_name\"
-              rm -f \"\$archive_path\"
-              zip -rq \"\$archive_path\" data
-              printf \"%s\" \"\$archive_path\"
-            '"
+
+              cd "$TARGET"
+              command -v zip >/dev/null 2>&1 || { echo "zip is not installed on the server" >&2; exit 1; }
+              [ -d data ] || { echo "data directory not found at $TARGET/data" >&2; exit 1; }
+              [ -w "$REMOTE_BACKUP_DIR" ] || { echo "remote backup directory is not writable: $REMOTE_BACKUP_DIR" >&2; exit 1; }
+
+              echo "Removing stale remote backup archives from $REMOTE_BACKUP_DIR" >&2
+              find "$REMOTE_BACKUP_DIR" -maxdepth 1 -type f \
+                -regextype posix-extended \
+                -regex ".*/[0-9]{2}-[0-9]{2}-[0-9]{2}_[0-9]{2}-[0-9]{2}-[0-9]{2}\\.zip" \
+                -delete
+
+              archive_name="$(date +"%d-%m-%y_%H-%M-%S").zip"
+              archive_path="${REMOTE_BACKUP_DIR%/}/$archive_name"
+              zip_log="$(mktemp)"
+              trap 'rm -f "$zip_log"' EXIT
+
+              echo "Creating backup archive at $archive_path" >&2
+              df -h "$REMOTE_BACKUP_DIR" >&2
+              rm -f "$archive_path"
+
+              if zip -r "$archive_path" data >"$zip_log" 2>&1; then
+                :
+              else
+                status=$?
+                echo "zip failed with exit code $status" >&2
+                cat "$zip_log" >&2
+                rm -f "$archive_path"
+                exit "$status"
+              fi
+
+              ls -lh "$archive_path" >&2
+              printf "%s" "$archive_path"
+          EOF
           )"
 
           archive_name="$(basename "$remote_archive_path")"
@@ -70,6 +96,7 @@ jobs:
             --drive-root-folder-id "${GDRIVE_FOLDER_ID}"
 
       - name: remove remote backup archive
+        if: always()
         run: |
           set -euo pipefail
           remote_archive_path="${{ steps.remote-backup.outputs.remote_archive_path }}"
