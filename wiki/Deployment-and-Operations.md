@@ -25,6 +25,7 @@ main details:
 - deploy target is `deploy@45.76.134.105:/var/www/fridg3.org`
 - after rsync, ssh stops any `toast` GNU screen session owned by `deploy`, stops any `toast` session owned by `http`, prepares `others/toast-discord-bot/bot/toast-bot.log` for `http`, then runs `/var/www/fridg3.org/others/toast-discord-bot/bot/start.sh` as `http`
 - the restart step needs passwordless sudo for `deploy` to run the Toast bot as `http`; Toast writes DM history and feed notification state under `/data`, which is owned by `http:http`
+- because the `http` user home is not a normal login home, the workflow sets `SCREENDIR=/tmp/toast-screen` for `http`-owned screen commands and prepares that socket directory before start
 
 ## What Does Not Deploy
 
