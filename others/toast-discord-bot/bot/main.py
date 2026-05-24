@@ -50,6 +50,10 @@ GROQ_FALLBACK_REPLY = "yo i'll talk later, sorry dude busy rn"
 DM_MEMORY_CLEAR_PHRASE = 'CLEARMEMORY'
 VISION_IMAGE_SIZE_LIMIT_BYTES = 20 * 1024 * 1024
 VISION_IMAGE_EXTENSIONS = {'.png', '.jpg', '.jpeg', '.webp', '.gif'}
+LINKED_FEED_CONTEXT_MAX_POSTS = 6
+LINKED_FEED_CONTEXT_MAX_REPLIES = 8
+LINKED_FEED_CONTEXT_MAX_CHARS = 3500
+LINKED_FEED_CONTEXT_SNIPPET_CHARS = 420
 WIKI_CONTEXT_FILES = ('Home.md', 'Routes-and-Features.md')
 WIKI_CONTEXT_MAX_CHARS = 5200
 WIKI_CONTEXT_TRIGGER_TERMS = {
@@ -515,6 +519,16 @@ def load_accounts_index():
         }
     return index
 
+def find_account_by_discord_user_id(discord_user_id: str):
+    target_id = str(discord_user_id or '').strip()
+    if not target_id:
+        return None
+
+    for account in load_accounts_index().values():
+        if str(account.get('discord_user_id', '')).strip() == target_id:
+            return account
+    return None
+
 def parse_feed_post(post_path: Path):
     try:
         raw = post_path.read_text(encoding='utf-8')
@@ -603,6 +617,91 @@ def extract_mentions(body: str, accounts_index: dict):
         seen.add(key)
         mentions.append(account)
     return mentions
+
+def clean_feed_context_text(text: str) -> str:
+    cleaned = str(text or '')
+    cleaned = re.sub(r'\[audio=([^\]]+)\]\[name:([^\]]+)\]', r'[voice note: \2]', cleaned, flags=re.I)
+    cleaned = re.sub(r'\[img(?:=[^\]]+)?\].*?\[/img\]', '[image]', cleaned, flags=re.I | re.S)
+    cleaned = re.sub(r'\[image(?:=[^\]]+)?\].*?\[/image\]', '[image]', cleaned, flags=re.I | re.S)
+    cleaned = re.sub(r'\[url=([^\]]+)\](.*?)\[/url\]', r'\2 (\1)', cleaned, flags=re.I | re.S)
+    cleaned = re.sub(r'\[([a-z][a-z0-9_-]*)(?:=[^\]]*)?\](.*?)\[/\1\]', r'\2', cleaned, flags=re.I | re.S)
+    cleaned = re.sub(r'\[/?[a-z][a-z0-9_-]*(?:=[^\]]*)?\]', '', cleaned, flags=re.I)
+    cleaned = re.sub(r'https?://[^\s)]+', '[link]', cleaned)
+    cleaned = re.sub(r'\s+', ' ', cleaned).strip()
+    return cleaned
+
+def truncate_context_snippet(text: str, max_chars: int = LINKED_FEED_CONTEXT_SNIPPET_CHARS) -> str:
+    cleaned = clean_feed_context_text(text)
+    if len(cleaned) <= max_chars:
+        return cleaned
+    return cleaned[:max_chars].rsplit(' ', 1)[0].strip() + '...'
+
+def feed_context_sort_key(item: dict):
+    return (
+        str(item.get('date', '')),
+        str(item.get('id', '')),
+        str(item.get('post_id', '')),
+    )
+
+def build_linked_feed_context_for_user(discord_user_id: str) -> str:
+    account = find_account_by_discord_user_id(discord_user_id)
+    if not account:
+        return ''
+
+    username = str(account.get('username', '')).strip()
+    if not username:
+        return ''
+    username_key = username.lower()
+
+    posts = [
+        post for post in load_feed_posts().values()
+        if str(post.get('username', '')).strip().lower() == username_key
+    ]
+    posts.sort(key=feed_context_sort_key, reverse=True)
+
+    replies = []
+    for post_id, post_replies in load_feed_replies().items():
+        for reply in post_replies:
+            if str(reply.get('username', '')).strip().lower() != username_key:
+                continue
+            reply_copy = dict(reply)
+            reply_copy['post_id'] = str(post_id)
+            replies.append(reply_copy)
+    replies.sort(key=feed_context_sort_key, reverse=True)
+
+    if not posts and not replies:
+        return ''
+
+    lines = [
+        (
+            f"Private linked fridg3.org context for this Discord user: they are linked to "
+            f"the website account @{username}. Use this only to understand their vibe, interests, "
+            "projects, and recent site activity. Do not quote this context verbatim, do not act "
+            "creepy about knowing it, and do not claim you can see anything beyond their public "
+            "/feed posts and replies."
+        )
+    ]
+
+    if posts:
+        lines.append(f"Recent /feed posts by @{username}:")
+        for post in posts[:LINKED_FEED_CONTEXT_MAX_POSTS]:
+            snippet = truncate_context_snippet(post.get('body', ''))
+            if not snippet:
+                continue
+            lines.append(f"- {post.get('date', 'unknown date')} /feed/posts/{post.get('id', '')}: {snippet}")
+
+    if replies:
+        lines.append(f"Recent /feed replies by @{username}:")
+        for reply in replies[:LINKED_FEED_CONTEXT_MAX_REPLIES]:
+            snippet = truncate_context_snippet(reply.get('body', ''))
+            if not snippet:
+                continue
+            lines.append(f"- {reply.get('date', 'unknown date')} on /feed/posts/{reply.get('post_id', '')}: {snippet}")
+
+    context = '\n'.join(lines).strip()
+    if len(context) <= LINKED_FEED_CONTEXT_MAX_CHARS:
+        return context
+    return context[:LINKED_FEED_CONTEXT_MAX_CHARS].rsplit('\n', 1)[0].strip()
 
 def load_notify_state():
     if not feed_notify_state_path.exists():
@@ -834,6 +933,9 @@ def build_groq_messages(user, history_limit: int, current_message: str = '', att
     wiki_context = build_wiki_context_for_message(current_message)
     if wiki_context:
         messages.append({'role': 'system', 'content': wiki_context})
+    linked_feed_context = build_linked_feed_context_for_user(str(user.id))
+    if linked_feed_context:
+        messages.append({'role': 'system', 'content': linked_feed_context})
     if vision_attachments:
         messages.append({
             'role': 'system',
