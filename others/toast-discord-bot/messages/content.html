@@ -28,6 +28,11 @@
     white-space: nowrap;
 }
 
+.toast-dm-inline-form {
+    display: inline-flex;
+    margin: 0;
+}
+
 .toast-dm-action-button::before {
     content: ">> ";
     color: var(--links);
@@ -57,6 +62,17 @@
 .toast-dm-message-time,
 .toast-dm-empty {
     color: var(--subtle);
+}
+
+.toast-dm-ai-muted {
+    display: inline-flex;
+    width: fit-content;
+    margin-top: 4px;
+    padding: 2px 6px;
+    border: 1px solid var(--border);
+    color: var(--links);
+    font-size: 12px;
+    line-height: 1.3;
 }
 
 .toast-dm-thread-list {
@@ -306,6 +322,7 @@
     <section class="toast-dm-conversation-view" style="{conversation_style}">
         <div class="toast-dm-conversation-actions">
             <a id="two-buttons" class="toast-dm-action-button" href="/others/toast-discord-bot/messages">back to threads</a>
+            {ai_mute_button}
         </div>
 
         <br>
@@ -316,6 +333,7 @@
                 <div class="toast-dm-header-copy">
                     <strong>{selected_thread_label}</strong><br>
                     <span class="toast-dm-muted">{selected_thread_meta}</span>
+                    {selected_thread_ai_status}
                 </div>
             </div>
 

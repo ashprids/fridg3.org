@@ -42,3 +42,38 @@ jobs:
             --exclude "LICENSE" \
             --exclude ".gitignore" \
             "$DEPLOY_DIR"/ "$REMOTE":"$TARGET"/
+
+      - name: restart toast bot
+        env:
+          REMOTE: deploy@45.76.134.105
+          TARGET: /var/www/fridg3.org
+        run: |
+          ssh "$REMOTE" TARGET="$TARGET" bash -s <<'EOF'
+          set -euo pipefail
+
+          SCREEN_SESSION="toast"
+          BOT_DIR="$TARGET/others/toast-discord-bot/bot"
+          START_SCRIPT="$BOT_DIR/start.sh"
+
+          if screen -list | grep -q "\.${SCREEN_SESSION}[[:space:]]"; then
+            echo "Stopping Toast bot screen session '$SCREEN_SESSION'..."
+            screen -S "$SCREEN_SESSION" -X stuff $'\003'
+
+            for _ in $(seq 1 30); do
+              if ! screen -list | grep -q "\.${SCREEN_SESSION}[[:space:]]"; then
+                break
+              fi
+              sleep 1
+            done
+
+            if screen -list | grep -q "\.${SCREEN_SESSION}[[:space:]]"; then
+              echo "Toast bot did not stop within 30 seconds; refusing to force-kill it."
+              exit 1
+            fi
+          else
+            echo "Toast bot screen session '$SCREEN_SESSION' is not running."
+          fi
+
+          echo "Starting Toast bot with $START_SCRIPT..."
+          bash "$START_SCRIPT"
+          EOF

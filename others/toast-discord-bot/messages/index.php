@@ -253,6 +253,7 @@ function load_dm_threads(string $historyPath): array {
             'global_name' => trim((string) ($thread['global_name'] ?? '')),
             'display_name' => trim((string) ($thread['display_name'] ?? '')),
             'avatar_url' => trim((string) ($thread['avatar_url'] ?? '')),
+            'ai_muted' => !empty($thread['ai_muted']),
             'updated_at' => $updatedAt,
             'messages' => $messages,
         ];
@@ -369,12 +370,30 @@ $selectedUserId = trim((string) ($_GET['user'] ?? ''));
 $composeTargetValue = $selectedUserId;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $action = trim((string) ($_POST['action'] ?? 'send_dm'));
     $composeTargetValue = trim((string) ($_POST['discord_user_id'] ?? ''));
     $composeMessage = trim((string) ($_POST['message'] ?? ''));
     $accountsByUsername = load_accounts_by_username((string) $accountsPath);
     $selectedUserId = resolve_compose_target($composeTargetValue, $accountsByUsername);
 
-    if ($selectedUserId === '') {
+    if ($action === 'toggle_ai_mute') {
+        $muted = trim((string) ($_POST['ai_muted'] ?? '0')) === '1';
+        if ($selectedUserId === '') {
+            $errorMessage = 'enter a linked website username or a valid discord user id.';
+        } else {
+            $botResponse = local_bot_post('/messages/ai-mute', [
+                'discord_user_id' => $selectedUserId,
+                'muted' => $muted,
+            ]);
+
+            if (!empty($botResponse['ok'])) {
+                header('Location: /others/toast-discord-bot/messages?user=' . rawurlencode($selectedUserId) . '&ai_muted=' . ($muted ? '1' : '0'));
+                exit;
+            }
+
+            $errorMessage = (string) ($botResponse['error'] ?? 'failed to update ai reply setting.');
+        }
+    } elseif ($selectedUserId === '') {
         $errorMessage = 'enter a linked website username or a valid discord user id.';
     } elseif ($composeMessage === '') {
         $errorMessage = 'message cannot be empty.';
@@ -395,6 +414,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 if (isset($_GET['sent']) && $_GET['sent'] === '1') {
     $successMessage = 'dm sent.';
+}
+if (isset($_GET['ai_muted'])) {
+    $successMessage = $_GET['ai_muted'] === '1'
+        ? 'toast is airing this person now.'
+        : 'toast can generate replies for this person again.';
 }
 
 $accountsByDiscordId = load_accounts_by_discord_id((string) $accountsPath);
@@ -423,6 +447,9 @@ foreach ($threads as $thread) {
     $siteUsernames = $accountsByDiscordId[$discordUserId] ?? [];
     $siteLabel = $siteUsernames !== [] ? '@' . implode(', @', $siteUsernames) : '';
     $threadMeta = $siteLabel !== '' ? htmlspecialchars($siteLabel, ENT_QUOTES, 'UTF-8') : htmlspecialchars($discordUserId, ENT_QUOTES, 'UTF-8');
+    if (!empty($thread['ai_muted'])) {
+        $threadMeta .= ' • aired';
+    }
     $threadCards[] = '<a class="toast-dm-thread' . ($isActive ? ' active' : '') . '" href="/others/toast-discord-bot/messages?user=' . rawurlencode($discordUserId) . '">'
         . build_avatar_html($thread)
         . '<div class="toast-dm-thread-copy">'
@@ -465,15 +492,32 @@ $messageListHtml = $messageItems !== [] ? implode("\n", $messageItems) : '<div c
 $selectedThreadLabel = $selectedThread !== null ? build_thread_label($selectedThread) : 'new dm';
 $selectedThreadMeta = '';
 $selectedThreadAvatar = '<div class="toast-dm-header-avatar toast-dm-avatar fallback">?</div>';
+$selectedThreadAiMuted = $selectedThread !== null && !empty($selectedThread['ai_muted']);
+$aiMuteButtonHtml = '';
+$aiMuteStatusHtml = '';
 if ($selectedThread !== null) {
     $linkedAccounts = $accountsByDiscordId[$selectedUserId] ?? [];
     $selectedThreadMeta = htmlspecialchars($selectedUserId, ENT_QUOTES, 'UTF-8');
     if ($linkedAccounts !== []) {
         $selectedThreadMeta .= ' • ' . htmlspecialchars('@' . implode(', @', $linkedAccounts), ENT_QUOTES, 'UTF-8');
     }
+    if ($selectedThreadAiMuted) {
+        $selectedThreadMeta .= ' • aired';
+        $aiMuteStatusHtml = '<span class="toast-dm-ai-muted">toast is airing them</span>';
+    }
     $selectedThreadAvatar = build_avatar_html($selectedThread, 'toast-dm-header-avatar');
 } elseif ($selectedUserId !== '') {
     $selectedThreadMeta = htmlspecialchars($selectedUserId, ENT_QUOTES, 'UTF-8');
+}
+if ($selectedUserId !== '') {
+    $aiMuteButtonHtml = '<form class="toast-dm-inline-form" method="post">'
+        . '<input type="hidden" name="action" value="toggle_ai_mute">'
+        . '<input type="hidden" name="discord_user_id" value="' . htmlspecialchars($selectedUserId, ENT_QUOTES, 'UTF-8') . '">'
+        . '<input type="hidden" name="ai_muted" value="' . ($selectedThreadAiMuted ? '0' : '1') . '">'
+        . '<button id="two-buttons" class="toast-dm-action-button toast-dm-air-button" type="submit">'
+        . ($selectedThreadAiMuted ? 'stop airing them' : 'air them')
+        . '</button>'
+        . '</form>';
 }
 
 $content_path = find_template_file('content.html');
@@ -494,6 +538,8 @@ $content = str_replace(
         '{selected_thread_avatar}',
         '{selected_thread_label}',
         '{selected_thread_meta}',
+        '{selected_thread_ai_status}',
+        '{ai_mute_button}',
         '{message_list}',
         '{discord_user_id}',
         '{message}',
@@ -509,6 +555,8 @@ $content = str_replace(
         $selectedThreadAvatar,
         htmlspecialchars($selectedThreadLabel, ENT_QUOTES, 'UTF-8'),
         $selectedThreadMeta,
+        $aiMuteStatusHtml,
+        $aiMuteButtonHtml,
         $messageListHtml,
         htmlspecialchars($composeTargetValue, ENT_QUOTES, 'UTF-8'),
         htmlspecialchars($composeMessage, ENT_QUOTES, 'UTF-8'),

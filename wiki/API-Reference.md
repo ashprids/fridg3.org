@@ -126,4 +126,5 @@ all API routes live under `/api/*` and are handled by PHP.
 - write-heavy endpoints should be treated carefully because there is no database transaction safety blanket here
 - `/api/page-view` already uses file locking, which is the sane move
 - some account, contact, and toast integrations also talk to a localhost-only bot HTTP service on `127.0.0.1:8765`, but those are not public `/api/*` routes
+- the toast DM inbox uses that local bot service to send manual DMs and toggle per-thread AI reply muting
 - contact submissions call `POST /contact/notify` on that local toast service after successful storage so toast can notify the configured Discord channel

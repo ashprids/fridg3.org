@@ -10,6 +10,7 @@ current chain:
 2. `code lint` workflow runs
 3. if lint passes, `deploy to fridg3.org` runs from the successful workflow event
 4. repo is rsynced to `/var/www/fridg3.org`
+5. the Toast Discord bot is gracefully restarted from the deployed copy
 
 ## Deploy Workflow
 
@@ -22,6 +23,7 @@ main details:
 - installs `rsync` and `openssh-client`
 - uses `DEPLOY_KEY`
 - deploy target is `deploy@45.76.134.105:/var/www/fridg3.org`
+- after rsync, ssh sends Ctrl-C to the `toast` GNU screen session, waits up to 30 seconds for `main.py` to shut down cleanly, then runs `/var/www/fridg3.org/others/toast-discord-bot/bot/start.sh`
 
 ## What Does Not Deploy
 

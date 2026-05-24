@@ -259,8 +259,11 @@ The bot also exposes localhost-only service endpoints on `127.0.0.1:8765`, inclu
 - renders through the normal site template and mobile/desktop theme selection instead of a standalone Discord-style shell
 - reads tracked DM history, resolves linked website usernames to Discord ids, and can send outbound DMs through the local bot service
 - inbound user DMs are logged and can receive Groq-powered Toast replies using the local `personality.json`; when users ask about fridg3.org, the bot can include small relevant snippets from the wiki and explain them in plain language
+- rapid inbound DMs from the same user are batched into one AI prompt; if Toast is still generating or pacing an unsent reply chunk when another DM arrives, it cancels the unfinished reply and regenerates from the queued messages
+- admins can toggle an "air them" state per thread; aired users are still logged, but Toast does not generate AI replies for them
 - if the Discord user is linked to a fridg3.org account, AI replies also receive compact context from that account's own recent feed posts and replies
 - image and GIF DMs are sent to Groq's configured vision model as Discord attachment URLs, capped at 5 images and 20 MB per image
+- AI replies are split into natural 2-4 sentence chunks and wait at least 5 seconds before each chunk is sent
 - a user can send exactly `CLEARMEMORY` in DM to make Toast react and ignore older DM history for future AI context
 - AI replies are also told about Toast's non-chat duties: radio playback, slash-command radio controls, account-linking support, and automated notification DMs
 - AI replies are given an exact slash-command allow-list so website paths like `/feed` are not described as Discord commands

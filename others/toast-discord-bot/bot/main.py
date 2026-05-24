@@ -50,6 +50,10 @@ GROQ_FALLBACK_REPLY = "yo i'll talk later, sorry dude busy rn"
 DM_MEMORY_CLEAR_PHRASE = 'CLEARMEMORY'
 VISION_IMAGE_SIZE_LIMIT_BYTES = 20 * 1024 * 1024
 VISION_IMAGE_EXTENSIONS = {'.png', '.jpg', '.jpeg', '.webp', '.gif'}
+AI_DM_MIN_SEND_DELAY_SECONDS = 5.0
+AI_DM_MAX_CHUNK_LENGTH = 1800
+AI_DM_SHORT_SENTENCE_CHARS = 140
+AI_DM_MEDIUM_SENTENCE_CHARS = 230
 LINKED_FEED_CONTEXT_MAX_POSTS = 6
 LINKED_FEED_CONTEXT_MAX_REPLIES = 8
 LINKED_FEED_CONTEXT_MAX_CHARS = 3500
@@ -469,6 +473,8 @@ intents.members = True
 
 bot = commands.Bot(command_prefix="!", intents=intents)
 bot_online = False
+ai_dm_reply_tasks = {}
+ai_dm_pending_batches = {}
 
 MENTION_PATTERN = re.compile(r'@([A-Za-z0-9_-]{1,50})')
 
@@ -739,6 +745,33 @@ def save_dm_history(history: dict):
     except Exception as e:
         logger.error(f"Failed to save DM history: {e}")
 
+def get_dm_thread(discord_user_id: str) -> dict:
+    history = load_dm_history()
+    thread = history.get('threads', {}).get(str(discord_user_id), {})
+    return thread if isinstance(thread, dict) else {}
+
+def is_ai_muted_for_user(discord_user_id: str) -> bool:
+    return bool(get_dm_thread(str(discord_user_id)).get('ai_muted', False))
+
+def set_ai_muted_for_user(discord_user_id: str, muted: bool) -> bool:
+    if not re.fullmatch(r'\d{17,20}', str(discord_user_id)):
+        return False
+
+    history = load_dm_history()
+    threads = history.setdefault('threads', {})
+    thread = threads.get(str(discord_user_id))
+    if not isinstance(thread, dict):
+        thread = {
+            'discord_user_id': str(discord_user_id),
+            'messages': [],
+        }
+
+    thread['discord_user_id'] = str(discord_user_id)
+    thread['ai_muted'] = bool(muted)
+    threads[str(discord_user_id)] = thread
+    save_dm_history(history)
+    return True
+
 def build_dm_content(content: str, attachments=None) -> str:
     parts = []
     text = (content or '').strip()
@@ -820,10 +853,15 @@ def append_dm_history_entry(user, direction: str, content: str, timestamp=None, 
 def is_memory_clear_message(content: str) -> bool:
     return (content or '').strip() == DM_MEMORY_CLEAR_PHRASE
 
-def get_recent_dm_messages(discord_user_id: str, limit: int, exclude_message_id: str = '') -> list:
+def get_recent_dm_messages(discord_user_id: str, limit: int, exclude_message_ids=None) -> list:
     if limit <= 0:
         return []
 
+    excluded_ids = {
+        str(message_id)
+        for message_id in (exclude_message_ids or [])
+        if str(message_id)
+    }
     history = load_dm_history()
     thread = history.get('threads', {}).get(str(discord_user_id), {})
     messages = thread.get('messages', [])
@@ -843,7 +881,7 @@ def get_recent_dm_messages(discord_user_id: str, limit: int, exclude_message_id:
     for entry in messages[-limit:]:
         if not isinstance(entry, dict):
             continue
-        if exclude_message_id and str(entry.get('id', '')) == str(exclude_message_id):
+        if str(entry.get('id', '')) in excluded_ids:
             continue
         direction = entry.get('direction')
         if direction == 'inbound':
@@ -904,6 +942,28 @@ def get_vision_attachments(attachments, max_images: int) -> list:
             break
     return vision_attachments
 
+def flatten_batch_attachments(batch: list) -> list:
+    attachments = []
+    for entry in batch or []:
+        attachments.extend(entry.get('attachments') or [])
+    return attachments
+
+def combine_batched_dm_content(batch: list) -> str:
+    message_parts = []
+    for index, entry in enumerate(batch or [], start=1):
+        content = str(entry.get('content', '')).strip()
+        if not content:
+            content = '[no text]'
+        message_parts.append(f"Message {index}:\n{content}")
+    return "\n\n---\n\n".join(message_parts).strip()
+
+def get_batch_message_ids(batch: list) -> list:
+    return [
+        str(entry.get('message_id', ''))
+        for entry in batch or []
+        if str(entry.get('message_id', ''))
+    ]
+
 def build_current_user_content(current_message: str, vision_attachments: list):
     text = (current_message or '').strip()
     if not vision_attachments:
@@ -923,7 +983,7 @@ def build_current_user_content(current_message: str, vision_attachments: list):
         })
     return content_blocks
 
-def build_groq_messages(user, history_limit: int, current_message: str = '', attachments=None, current_message_id: str = '') -> list:
+def build_groq_messages(user, history_limit: int, current_message: str = '', attachments=None, current_message_ids=None) -> list:
     groq_config = get_groq_config()
     vision_attachments = get_vision_attachments(attachments, groq_config['max_vision_images'])
     messages = [
@@ -944,38 +1004,27 @@ def build_groq_messages(user, history_limit: int, current_message: str = '', att
                 "For memes or GIFs, explain the joke casually if it is obvious. If the image is unclear, say so instead of guessing."
             ),
         })
-    messages.extend(get_recent_dm_messages(str(user.id), history_limit, current_message_id))
+    messages.extend(get_recent_dm_messages(str(user.id), history_limit, current_message_ids))
     messages.append({
         'role': 'user',
         'content': build_current_user_content(current_message, vision_attachments),
     })
     return messages
 
-def split_natural_messages(text: str, max_length: int = 1800, soft_length: int = 500) -> list:
+def split_oversized_message(text: str, max_length: int = AI_DM_MAX_CHUNK_LENGTH) -> list:
     cleaned = (text or '').strip()
     if not cleaned:
         return []
-    if len(cleaned) <= soft_length:
+    if len(cleaned) <= max_length:
         return [cleaned]
 
     chunks = []
     remaining = cleaned
-    while len(remaining) > soft_length:
-        split_at = -1
-        target = min(max_length, max(soft_length, int(len(remaining) / 2)) if len(remaining) <= soft_length * 2 else soft_length)
-        search_window = remaining[:target + 1]
-
-        for separator in ('\n\n', '\n', '. ', '! ', '? ', '; ', ', '):
-            candidate = search_window.rfind(separator)
-            if candidate >= int(target * 0.45):
-                split_at = candidate + len(separator)
-                break
-
-        if split_at < 0:
-            split_at = search_window.rfind(' ')
-        if split_at < int(target * 0.45):
-            split_at = min(max_length, target)
-
+    while len(remaining) > max_length:
+        search_window = remaining[:max_length + 1]
+        split_at = search_window.rfind(' ')
+        if split_at < int(max_length * 0.45):
+            split_at = max_length
         chunk = remaining[:split_at].strip()
         if chunk:
             chunks.append(chunk)
@@ -985,15 +1034,102 @@ def split_natural_messages(text: str, max_length: int = 1800, soft_length: int =
         chunks.append(remaining)
     return chunks
 
+def split_paragraph_sentences(paragraph: str) -> list:
+    cleaned = ' '.join((paragraph or '').strip().split())
+    if not cleaned:
+        return []
+
+    sentences = []
+    start = 0
+    for match in re.finditer(r'(?<=[.!?])["\')\]]*\s+', cleaned):
+        end = match.end()
+        sentence = cleaned[start:end].strip()
+        if sentence:
+            sentences.append(sentence)
+        start = end
+
+    tail = cleaned[start:].strip()
+    if tail:
+        sentences.append(tail)
+    return sentences
+
+def preferred_sentence_count(sentences: list) -> int:
+    if not sentences:
+        return 4
+    average_length = sum(len(sentence) for sentence in sentences) / len(sentences)
+    if average_length > AI_DM_MEDIUM_SENTENCE_CHARS:
+        return 2
+    if average_length > AI_DM_SHORT_SENTENCE_CHARS:
+        return 3
+    return 4
+
+def append_sentence_chunk(chunks: list, pending_sentences: list):
+    if not pending_sentences:
+        return
+    chunk = ' '.join(pending_sentences).strip()
+    if not chunk:
+        return
+    chunks.extend(split_oversized_message(chunk))
+
+def split_natural_messages(text: str, max_length: int = AI_DM_MAX_CHUNK_LENGTH) -> list:
+    cleaned = re.sub(r'\n{3,}', '\n\n', (text or '').strip())
+    if not cleaned:
+        return []
+
+    chunks = []
+    current = []
+    current_length = 0
+    current_sentence_limit = 4
+
+    for paragraph in re.split(r'\n\s*\n', cleaned):
+        sentences = split_paragraph_sentences(paragraph)
+        if not sentences:
+            continue
+        paragraph_sentence_limit = preferred_sentence_count(sentences)
+
+        if current and len(current) >= current_sentence_limit:
+            append_sentence_chunk(chunks, current)
+            current = []
+            current_length = 0
+
+        for sentence in sentences:
+            sentence_parts = split_oversized_message(sentence, max_length)
+            if len(sentence_parts) > 1:
+                append_sentence_chunk(chunks, current)
+                current = []
+                current_length = 0
+                chunks.extend(sentence_parts)
+                continue
+
+            sentence_length = len(sentence)
+            projected_length = current_length + sentence_length + (1 if current else 0)
+            if current and (
+                len(current) >= current_sentence_limit
+                or projected_length > max_length
+                or paragraph_sentence_limit != current_sentence_limit
+            ):
+                append_sentence_chunk(chunks, current)
+                current = []
+                current_length = 0
+
+            if not current:
+                current_sentence_limit = paragraph_sentence_limit
+            current.append(sentence)
+            current_length += sentence_length + (1 if len(current) > 1 else 0)
+
+        if current and len(current) >= current_sentence_limit:
+            append_sentence_chunk(chunks, current)
+            current = []
+            current_length = 0
+
+    append_sentence_chunk(chunks, current)
+    return chunks
+
 def typing_delay_seconds(text: str) -> float:
     length = len(text or '')
-    return min(12.0, max(1.4, length / 38))
+    return min(12.0, max(AI_DM_MIN_SEND_DELAY_SECONDS, length / 38))
 
-def followup_typing_delay_seconds(text: str) -> float:
-    length = len(text or '')
-    return min(3.0, max(0.9, length / 160))
-
-async def request_groq_dm_reply(user, current_message: str, attachments=None, current_message_id: str = '') -> str:
+async def request_groq_dm_reply(user, current_message: str, attachments=None, current_message_ids=None) -> str:
     groq_config = get_groq_config()
     api_key = groq_config['api_key']
     if not api_key:
@@ -1009,7 +1145,7 @@ async def request_groq_dm_reply(user, current_message: str, attachments=None, cu
             groq_config['max_history_messages'],
             current_message,
             attachments,
-            current_message_id,
+            current_message_ids,
         ),
         'temperature': groq_config['temperature'],
         'top_p': groq_config['top_p'],
@@ -1045,37 +1181,115 @@ async def request_groq_dm_reply(user, current_message: str, attachments=None, cu
         logger.warning("Groq response content was empty")
     return content
 
-async def respond_to_dm_with_groq(message: discord.Message):
+def remove_completed_ai_batch(discord_user_id: str, completed_batch: list):
+    pending = ai_dm_pending_batches.get(discord_user_id, [])
+    if not pending:
+        return
+
+    completed_ids = get_batch_message_ids(completed_batch)
+    if completed_ids:
+        ai_dm_pending_batches[discord_user_id] = [
+            entry
+            for entry in pending
+            if str(entry.get('message_id', '')) not in completed_ids
+        ]
+    else:
+        ai_dm_pending_batches[discord_user_id] = pending[len(completed_batch):]
+
+    if not ai_dm_pending_batches.get(discord_user_id):
+        ai_dm_pending_batches.pop(discord_user_id, None)
+
+async def process_ai_dm_batch(user, channel, discord_user_id: str):
     groq_config = get_groq_config()
     if not groq_config['api_key']:
         logger.warning("Groq API key missing from toast.json; skipping AI DM reply")
         return
 
-    async with message.channel.typing():
-        try:
-            reply = await request_groq_dm_reply(
-                message.author,
-                build_dm_content(message.content, message.attachments),
-                message.attachments,
-                str(getattr(message, 'id', '')),
-            )
-        except Exception as e:
-            logger.warning(f"Groq DM reply request crashed: {e}")
-            reply = ''
-        if not reply:
-            await send_logged_dm(message.author, GROQ_FALLBACK_REPLY)
-            return
+    batch = list(ai_dm_pending_batches.get(discord_user_id, []))
+    if not batch:
+        return
 
-        chunks = split_natural_messages(reply)
-        if not chunks:
-            await send_logged_dm(message.author, GROQ_FALLBACK_REPLY)
-            return
+    current_message = combine_batched_dm_content(batch)
+    attachments = flatten_batch_attachments(batch)
+    current_message_ids = get_batch_message_ids(batch)
 
-        for index, chunk in enumerate(chunks):
-            await asyncio.sleep(typing_delay_seconds(chunk))
-            await send_logged_dm(message.author, chunk)
-            if index < len(chunks) - 1:
-                await asyncio.sleep(followup_typing_delay_seconds(chunks[index + 1]))
+    try:
+        async with channel.typing():
+            try:
+                reply = await request_groq_dm_reply(
+                    user,
+                    current_message,
+                    attachments,
+                    current_message_ids,
+                )
+            except Exception as e:
+                logger.warning(f"Groq DM reply request crashed: {e}")
+                reply = ''
+
+            if not reply:
+                await asyncio.sleep(AI_DM_MIN_SEND_DELAY_SECONDS)
+                await send_logged_dm(user, GROQ_FALLBACK_REPLY)
+                remove_completed_ai_batch(discord_user_id, batch)
+                return
+
+            chunks = split_natural_messages(reply)
+            if not chunks:
+                await asyncio.sleep(AI_DM_MIN_SEND_DELAY_SECONDS)
+                await send_logged_dm(user, GROQ_FALLBACK_REPLY)
+                remove_completed_ai_batch(discord_user_id, batch)
+                return
+
+            for chunk in chunks:
+                await asyncio.sleep(typing_delay_seconds(chunk))
+                await send_logged_dm(user, chunk)
+
+            remove_completed_ai_batch(discord_user_id, batch)
+    except asyncio.CancelledError:
+        logger.info(f"Cancelled in-progress AI DM reply for user {discord_user_id}; regenerating from queued messages")
+        raise
+    except Exception as e:
+        logger.warning(f"Failed to send AI DM reply for user {discord_user_id}: {e}")
+        remove_completed_ai_batch(discord_user_id, batch)
+    finally:
+        current_task = asyncio.current_task()
+        if ai_dm_reply_tasks.get(discord_user_id) is current_task:
+            ai_dm_reply_tasks.pop(discord_user_id, None)
+
+def log_ai_dm_task_result(discord_user_id: str, task: asyncio.Task):
+    try:
+        task.result()
+    except asyncio.CancelledError:
+        pass
+    except Exception as e:
+        logger.warning(f"AI DM reply task failed for user {discord_user_id}: {e}")
+
+def queue_ai_dm_reply(message: discord.Message, dm_content: str):
+    groq_config = get_groq_config()
+    if not groq_config['api_key']:
+        logger.warning("Groq API key missing from toast.json; skipping AI DM reply")
+        return
+
+    discord_user_id = str(message.author.id)
+    pending = ai_dm_pending_batches.setdefault(discord_user_id, [])
+    pending.append({
+        'content': dm_content,
+        'attachments': list(message.attachments or []),
+        'message_id': str(getattr(message, 'id', '')),
+    })
+
+    active_task = ai_dm_reply_tasks.get(discord_user_id)
+    if active_task and not active_task.done():
+        active_task.cancel()
+
+    task = asyncio.create_task(process_ai_dm_batch(message.author, message.channel, discord_user_id))
+    task.add_done_callback(lambda completed_task: log_ai_dm_task_result(discord_user_id, completed_task))
+    ai_dm_reply_tasks[discord_user_id] = task
+
+async def respond_to_dm_with_groq(message: discord.Message):
+    queue_ai_dm_reply(
+        message,
+        build_dm_content(message.content, message.attachments),
+    )
 
 async def send_logged_dm(target, message: str):
     if isinstance(target, (discord.User, discord.Member)):
@@ -1290,6 +1504,10 @@ async def on_message(message: discord.Message):
                 await message.add_reaction('✅')
             except Exception as e:
                 logger.warning(f"Failed to react to memory clear DM: {e}")
+            await bot.process_commands(message)
+            return
+        if is_ai_muted_for_user(str(message.author.id)):
+            logger.info(f"Skipping AI DM reply for muted user {message.author.id}")
             await bot.process_commands(message)
             return
         await respond_to_dm_with_groq(message)
@@ -1618,6 +1836,35 @@ async def send_message_handler(request):
         'message_id': str(sent_message.id),
     })
 
+async def set_ai_mute_handler(request):
+    if request.remote not in ('127.0.0.1', '::1'):
+        return web.json_response({'ok': False, 'error': 'forbidden'}, status=403)
+
+    try:
+        payload = await request.json()
+    except Exception:
+        return web.json_response({'ok': False, 'error': 'invalid json'}, status=400)
+
+    discord_user_id = str(payload.get('discord_user_id', '')).strip()
+    muted = bool(payload.get('muted', False))
+    if not re.fullmatch(r'\d{17,20}', discord_user_id):
+        return web.json_response({'ok': False, 'error': 'invalid discord user id'}, status=400)
+
+    if not set_ai_muted_for_user(discord_user_id, muted):
+        return web.json_response({'ok': False, 'error': 'failed to update AI reply mute'}, status=500)
+
+    if muted:
+        ai_dm_pending_batches.pop(discord_user_id, None)
+        active_task = ai_dm_reply_tasks.pop(discord_user_id, None)
+        if active_task and not active_task.done():
+            active_task.cancel()
+
+    return web.json_response({
+        'ok': True,
+        'discord_user_id': discord_user_id,
+        'ai_muted': muted,
+    })
+
 async def contact_notify_handler(request):
     if request.remote not in ('127.0.0.1', '::1'):
         return web.json_response({'ok': False, 'error': 'forbidden'}, status=403)
@@ -1683,6 +1930,7 @@ async def start_status_server():
     status_app.router.add_post('/link-discord', link_discord_handler)
     status_app.router.add_post('/send-account-invite', send_account_invite_handler)
     status_app.router.add_post('/messages/send', send_message_handler)
+    status_app.router.add_post('/messages/ai-mute', set_ai_mute_handler)
     status_app.router.add_post('/contact/notify', contact_notify_handler)
     runner = web.AppRunner(status_app)
     await runner.setup()
