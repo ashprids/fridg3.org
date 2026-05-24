@@ -101,9 +101,9 @@ jobs:
           fi
 
           echo "Preparing Toast bot log for $RUNTIME_USER..."
-          sudo -n touch "$LOG_FILE"
-          sudo -n chown "$RUNTIME_USER:$RUNTIME_USER" "$LOG_FILE"
-          sudo -n chmod 664 "$LOG_FILE"
+          touch "$LOG_FILE"
+          chgrp "$RUNTIME_USER" "$LOG_FILE"
+          chmod 664 "$LOG_FILE"
 
           echo "Starting Toast bot as $RUNTIME_USER with $START_SCRIPT..."
           sudo -n -u "$RUNTIME_USER" bash "$START_SCRIPT"

@@ -54,10 +54,10 @@ the deploy user needs passwordless sudo for the Toast restart step:
 
 ```sudoers
 deploy ALL=(http) NOPASSWD: ALL
-deploy ALL=(root) NOPASSWD: /usr/bin/touch, /usr/bin/chown, /usr/bin/chmod
 ```
 
 install that with `visudo`, preferably as a small file under `/etc/sudoers.d/`, because typoing sudoers directly is how servers become decorative bricks.
+the workflow prepares `toast-bot.log` as `deploy` with group `http` and mode `664`, so no root sudo is needed for log setup.
 
 ## Nginx Config Source
 
