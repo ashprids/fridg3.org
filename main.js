@@ -5997,7 +5997,7 @@ function initToastFeedGenerator() {
             params.append('mode', mode);
             params.append('prompt', prompt);
             params.append('length', lengthSlider ? lengthSlider.value : '3');
-            const res = await fetch('/api/toast-feed-generate', {
+            const res = await fetch('/api/toast-feed-generate/index.php', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
