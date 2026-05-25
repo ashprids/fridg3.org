@@ -1387,9 +1387,15 @@ def save_notify_state(state: dict):
 def build_initial_notify_state(posts: dict, replies: dict, accounts_index: dict):
     return {
         'mentions': sorted(
-            f"{post_id}:{target['username'].lower()}"
+            f"post:{post_id}:{target['username'].lower()}"
             for post_id, post in posts.items()
             for target in extract_mentions(post.get('body', ''), accounts_index)
+        ) + sorted(
+            f"reply:{post_id}:{reply.get('id', '')}:{target['username'].lower()}"
+            for post_id, items in replies.items()
+            for reply in items
+            for target in extract_mentions(reply.get('body', ''), accounts_index)
+            if reply.get('id')
         ),
         'replies': sorted(
             f"{post_id}:{reply.get('id', '')}"
@@ -1397,6 +1403,7 @@ def build_initial_notify_state(posts: dict, replies: dict, accounts_index: dict)
             for reply in items
             if reply.get('id')
         ),
+        'reply_mentions_initialized': True,
     }
 
 async def send_dm_to_user(discord_user_id: str, message: str):
@@ -1433,12 +1440,31 @@ async def feed_notifications_monitor():
         mention_state_changed = False
         reply_state_changed = False
 
+        if not state.get('reply_mentions_initialized'):
+            for post_id, post in posts.items():
+                for target in extract_mentions(post.get('body', ''), accounts_index):
+                    mention_state.add(f"post:{post_id}:{target['username'].lower()}")
+            for post_id, post_replies in replies.items():
+                for reply in post_replies:
+                    reply_id = reply.get('id', '')
+                    if not reply_id:
+                        continue
+                    for target in extract_mentions(reply.get('body', ''), accounts_index):
+                        mention_state.add(f"reply:{post_id}:{reply_id}:{target['username'].lower()}")
+            state['reply_mentions_initialized'] = True
+            mention_state_changed = True
+
         for post_id, post in posts.items():
             author_key = post['username'].lower()
             for target in extract_mentions(post.get('body', ''), accounts_index):
                 target_key = target['username'].lower()
-                notification_key = f"{post_id}:{target_key}"
-                if notification_key in mention_state:
+                legacy_notification_key = f"{post_id}:{target_key}"
+                notification_key = f"post:{post_id}:{target_key}"
+                if notification_key in mention_state or legacy_notification_key in mention_state:
+                    if legacy_notification_key in mention_state and notification_key not in mention_state:
+                        mention_state.discard(legacy_notification_key)
+                        mention_state.add(notification_key)
+                        mention_state_changed = True
                     continue
                 mention_state.add(notification_key)
                 mention_state_changed = True
@@ -1459,6 +1485,7 @@ async def feed_notifications_monitor():
                 continue
             post_owner = accounts_index.get(post['username'].lower())
             post_owner_discord_id = (post_owner or {}).get('discord_user_id', '')
+            post_owner_key = post['username'].lower()
             for reply in post_replies:
                 reply_id = reply.get('id', '')
                 if not reply_id:
@@ -1468,6 +1495,26 @@ async def feed_notifications_monitor():
                     continue
                 reply_state.add(notification_key)
                 reply_state_changed = True
+
+                reply_author_key = reply['username'].lower()
+                for target in extract_mentions(reply.get('body', ''), accounts_index):
+                    target_key = target['username'].lower()
+                    mention_notification_key = f"reply:{post_id}:{reply_id}:{target_key}"
+                    if mention_notification_key in mention_state:
+                        continue
+                    mention_state.add(mention_notification_key)
+                    mention_state_changed = True
+                    if target_key == reply_author_key or target_key == post_owner_key:
+                        continue
+                    discord_user_id = target.get('discord_user_id', '')
+                    if not discord_user_id:
+                        continue
+                    await send_dm_to_user(
+                        discord_user_id,
+                        f"**@{reply['username']}** mentioned you in a reply on [a /feed/ post](https://fridg3.org/feed/posts/{post_id}):\n"
+                        f"> \"{format_quote_block(reply.get('body', ''))}\""
+                    )
+
                 if not post_owner_discord_id:
                     continue
                 if reply['username'].lower() == post['username'].lower():

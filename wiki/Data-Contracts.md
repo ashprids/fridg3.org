@@ -342,7 +342,7 @@ legacy Discord bot fallback. The bot now prefers `data/etc/toast-personality.jso
 ### `toast-feed-notify-state.json`
 
 - internal bot dedupe state for sent feed mention/reply notifications
-- stores which feed mentions and replies have already triggered DMs
+- stores which feed post mentions, feed reply mentions, and replies to a user's own posts have already triggered DMs
 
 ### `toast-dm-history.json`
 

@@ -263,6 +263,7 @@ frontend archive viewer backed by `data/etc/off-topic-archive.json`.
 UI shell for toast bot status, controls, and stream playback.
 
 The bot also exposes localhost-only service endpoints on `127.0.0.1:8765`, including contact submission notifications to Discord channel `1503931489560301609`.
+It also scans `/feed` activity for linked Discord accounts and sends DMs for post mentions, reply mentions, and replies to a user's own feed posts.
 
 ### `/others/toast-discord-bot/messages`
 
