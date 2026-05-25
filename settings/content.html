@@ -33,12 +33,26 @@ _|"""""|_|"""""|_|"""""|_|"""""|_|"""""|_|"""""|_|"""""|_|"""""|
 <button id="form-button" type="button" data-tooltip="(admin-only) configure all made accounts" onclick="window.location='/account/admin'">manage accounts</button>
 <br><br><hr><br>
 </span>
+<span id="toast-settings">
+<h3>toast settings</h3>
+<h4>personality (json)</h4>
+<div id="toast-personality-editor" class="toast-json-editor">
+    <pre aria-hidden="true"><code class="language-json" id="toast-personality-highlight"></code></pre>
+    <textarea id="toast-personality-json" spellcheck="false" autocomplete="off" wrap="off" aria-label="toast personality json"></textarea>
+</div>
+<br>
+<span id="toast-personality-status" style="color: var(--subtle);"></span>
+<br>
+<button id="form-button" type="button" data-action="save-toast-personality">apply</button>
+<br><br><hr><br>
+</span>
 <span id="user-settings">
 <h3>account</h3>    
 <button id="form-button" type="button" data-tooltip="will prompt you to log in if you aren't already" onclick="window.location='/account/change-password'">change password</button>
 <button id="form-button" type="button" data-tooltip="save your discord user ID to your account for notifications" onclick="window.location='/account/link-discord'">link discord account</button>
 <br><br><hr><br>
 </span>
+<span id="accessibility-settings">
 <h3>accessibility</h3>
 <div class="checkbox-group">
     <label class="checkbox-label">
@@ -47,6 +61,8 @@ _|"""""|_|"""""|_|"""""|_|"""""|_|"""""|_|"""""|_|"""""|_|"""""|
     </label>
 </div>
 <br><br><hr><br>
+</span>
+<span id="appearance-settings">
 <h3>appearance</h3><br>
 <h4>theme</h4>
 <select class="dropdown" id="theme-select">
@@ -109,4 +125,5 @@ _|"""""|_|"""""|_|"""""|_|"""""|_|"""""|_|"""""|_|"""""|_|"""""|
     <span style="color: var(--subtle);">a fun little friend.</span>
 </div>
 <br><br><hr><br>
+</span>
 <button style="background-color: #206420" id="settings-save" data-tooltip="save your configuration.\nwill save to your account if you're logged in">save changes</button>

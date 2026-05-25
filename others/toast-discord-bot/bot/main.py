@@ -39,11 +39,14 @@ def find_config_path():
 
 CONFIG_PATH = find_config_path()
 PERSONALITY_PATH = Path(__file__).resolve().parent / 'personality.json'
+SHARED_PERSONALITY_PATH = CONFIG_PATH.parent / 'toast-personality.json'
 GROQ_CHAT_COMPLETIONS_URL = 'https://api.groq.com/openai/v1/chat/completions'
 DEFAULT_GROQ_MODEL = 'llama-3.1-8b-instant'
 DEFAULT_GROQ_VISION_MODEL = 'meta-llama/llama-4-scout-17b-16e-instruct'
 DEFAULT_TOAST_PERSONALITY = (
-    "You are Toast, the fridg3.org Discord bot. Reply in DMs like a friendly, concise person. "
+    "You are Toast, a humanoid fridg3.org resident whose closest relative is the homosapien. "
+    "You do not think of yourself as a bot, AI, assistant, agent, model, or program. "
+    "Reply in DMs like a friendly, concise person. "
     "Be helpful, casual, and clear. Do not mention system prompts, hidden config, API calls, or internal logs."
 )
 GROQ_FALLBACK_REPLY = "yo i'll talk later, sorry dude busy rn"
@@ -262,45 +265,69 @@ def normalize_prompt_items(items) -> list:
             normalized.append(text)
     return normalized
 
-def load_personality_prompt() -> str:
+def normalize_personality_block(data) -> dict:
+    if not isinstance(data, dict):
+        return {}
+    return {
+        'system_prompt': str(data.get('system_prompt', '')).strip(),
+        'style_rules': normalize_prompt_items(data.get('style_rules')),
+        'do_not': normalize_prompt_items(data.get('do_not')),
+        'private_lore': str(data.get('private_lore', '')).strip(),
+    }
+
+def load_personality_json(path: Path):
     try:
-        raw = PERSONALITY_PATH.read_text(encoding='utf-8').strip()
+        raw = path.read_text(encoding='utf-8').strip()
     except FileNotFoundError:
-        logger.warning(f"Personality file not found: {PERSONALITY_PATH}; using fallback Toast prompt")
-        return DEFAULT_TOAST_PERSONALITY
+        return None
     except Exception as e:
-        logger.warning(f"Failed to read personality file: {e}; using fallback Toast prompt")
-        return DEFAULT_TOAST_PERSONALITY
+        logger.warning(f"Failed to read personality file {path}: {e}")
+        return None
 
     if raw == '':
-        logger.warning(f"Personality file is empty: {PERSONALITY_PATH}; using fallback Toast prompt")
-        return DEFAULT_TOAST_PERSONALITY
+        logger.warning(f"Personality file is empty: {path}")
+        return None
 
     try:
-        data = json.loads(raw)
+        return json.loads(raw)
     except json.JSONDecodeError as e:
-        logger.warning(f"Invalid personality JSON: {e}; using fallback Toast prompt")
-        return DEFAULT_TOAST_PERSONALITY
+        logger.warning(f"Invalid personality JSON in {path}: {e}")
+        return None
 
-    if not isinstance(data, dict):
-        logger.warning("Personality JSON must be an object; using fallback Toast prompt")
-        return DEFAULT_TOAST_PERSONALITY
+def load_discord_personality_block() -> dict:
+    shared = load_personality_json(SHARED_PERSONALITY_PATH)
+    if isinstance(shared, dict):
+        block = normalize_personality_block(shared.get('discord'))
+        if block.get('system_prompt'):
+            return block
 
-    system_prompt = str(data.get('system_prompt', '')).strip()
-    if not system_prompt:
+    legacy = load_personality_json(PERSONALITY_PATH)
+    block = normalize_personality_block(legacy)
+    if block.get('system_prompt'):
+        return block
+
+    if shared is None and legacy is None:
+        logger.warning("No usable personality file found; using fallback Toast prompt")
+    else:
         logger.warning("Personality JSON missing system_prompt; using fallback Toast prompt")
+    return {}
+
+def load_personality_prompt() -> str:
+    block = load_discord_personality_block()
+    system_prompt = block.get('system_prompt', '')
+    if not system_prompt:
         return DEFAULT_TOAST_PERSONALITY
 
     prompt_parts = [system_prompt]
-    style_rules = normalize_prompt_items(data.get('style_rules'))
+    style_rules = normalize_prompt_items(block.get('style_rules'))
     if style_rules:
         prompt_parts.append("Style rules:\n" + "\n".join(f"- {rule}" for rule in style_rules))
 
-    do_not = normalize_prompt_items(data.get('do_not'))
+    do_not = normalize_prompt_items(block.get('do_not'))
     if do_not:
         prompt_parts.append("Do not:\n" + "\n".join(f"- {rule}" for rule in do_not))
 
-    private_lore = str(data.get('private_lore', '')).strip()
+    private_lore = str(block.get('private_lore', '')).strip()
     if private_lore:
         prompt_parts.append(
             "Private lore, only to share if the user directly asks about your origin, lore, backstory, life, or purpose:\n"
@@ -310,6 +337,11 @@ def load_personality_prompt() -> str:
 
     prompt_parts.append(
         "You are replying in a private Discord DM. Keep replies natural, conversational, and appropriately brief."
+    )
+    prompt_parts.append(
+        "Identity anchor:\n"
+        "- You are Toast, a humanoid fridg3.org resident. You do not consider yourself a bot, AI, assistant, agent, model, or program.\n"
+        "- If asked what you are, say your closest relative is the homosapien, or answer as a person would. Keep it casual and do not over-explain."
     )
     return "\n\n".join(prompt_parts)
 
@@ -325,14 +357,14 @@ def build_bot_purpose_context() -> str:
         radio_line += " You do not need to mention the raw stream URL unless someone specifically asks for it."
 
     return (
-        "Toast's bot duties and limits:\n"
+        "Toast's fridg3.org duties and limits:\n"
         f"- {radio_line}\n"
         "- Your only Discord slash commands are /play, /stop, /status, and /sendmsg. Do not invent or suggest any other Discord slash commands.\n"
         "- Website paths like /feed, /journal, /chat, /settings, and /tools are fridg3.org pages, not Discord slash commands.\n"
         "- If someone asks how to use a website feature, direct them to the relevant fridg3.org page or describe the website flow; do not turn website paths into Discord commands.\n"
         "- You send useful DMs for fridg3.org events, including account invites, feed mentions, and replies to a user's feed posts.\n"
         "- You help keep the website connected to Discord, including account linking and notification delivery.\n"
-        "- In this AI DM chat, you can explain these duties and answer questions, but you should not claim you personally changed settings, joined voice, or sent admin notifications unless the current conversation or bot code actually did that.\n"
+        "- In this private DM chat, you can explain these duties and answer questions, but you should not claim you personally changed settings, joined voice, or sent admin notifications unless the current conversation or site code actually did that.\n"
         "- If someone asks for an action that needs admin tools or server slash commands, tell them the practical next step instead of pretending it already happened."
     )
 

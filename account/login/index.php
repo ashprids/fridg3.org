@@ -5,6 +5,7 @@ while (!file_exists($sessionBootstrapDir . '/lib/session.php') && dirname($sessi
 }
 require_once $sessionBootstrapDir . '/lib/session.php';
 fridg3_start_session();
+require_once dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'lib' . DIRECTORY_SEPARATOR . 'toast.php';
 
 $title = 'login';
 $description = 'log into your fridg3.org account.';
@@ -79,13 +80,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if ($login_error === '') {
     
-            // Load accounts
-            $accounts_path = realpath(dirname(__DIR__, 2) . '/data/accounts/accounts.json');
-            if (!$accounts_path || !file_exists($accounts_path)) {
-                $login_error = 'account system not available at the moment... try again later?';
+            if (fridg3_toast_is_reserved_username($username)) {
+                $toastAdminUsername = trim((string)($_POST['toast_admin_username'] ?? ''));
+                $toastAdminPassword = (string)($_POST['toast_admin_password'] ?? '');
+
+                if (fridg3_toast_verify_admin_credentials($toastAdminUsername, $toastAdminPassword)) {
+                    session_regenerate_id(true);
+                    $_SESSION['user'] = fridg3_toast_session_user();
+                    fridg3_refresh_is_admin_cookie(false);
+                    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+                    $login_success = true;
+                    header('Location: /');
+                    exit();
+                }
             } else {
-                $accounts_data = json_decode(file_get_contents($accounts_path), true);
-                $found = false;
+                // Load accounts
+                $accounts_path = realpath(dirname(__DIR__, 2) . '/data/accounts/accounts.json');
+                if (!$accounts_path || !file_exists($accounts_path)) {
+                    $login_error = 'account system not available at the moment... try again later?';
+                } else {
+                    $accounts_data = json_decode(file_get_contents($accounts_path), true);
+                    $found = false;
                 
                 if ($accounts_data && isset($accounts_data['accounts'])) {
                     foreach ($accounts_data['accounts'] as $account) {
@@ -134,19 +149,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
                 }
                 
-                // Generic error message to prevent username enumeration
-                if (!$login_success) {
-                    $login_error = 'incorrect username or password';
-
-                    // Record failed attempt for this client
-                    $now = time();
-                    $clientKey = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
-                    if (!isset($attemptsData[$clientKey]) || !is_array($attemptsData[$clientKey])) {
-                        $attemptsData[$clientKey] = [];
-                    }
-                    $attemptsData[$clientKey][] = $now;
-                    @file_put_contents($attemptsFile, json_encode($attemptsData, JSON_UNESCAPED_SLASHES), LOCK_EX);
                 }
+            }
+
+            // Generic error message to prevent username enumeration
+            if ($login_error === '' && !$login_success) {
+                $login_error = 'incorrect username or password';
+
+                // Record failed attempt for this client
+                $now = time();
+                $clientKey = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+                if (!isset($attemptsData[$clientKey]) || !is_array($attemptsData[$clientKey])) {
+                    $attemptsData[$clientKey] = [];
+                }
+                $attemptsData[$clientKey][] = $now;
+                @file_put_contents($attemptsFile, json_encode($attemptsData, JSON_UNESCAPED_SLASHES), LOCK_EX);
             }
         }
     }

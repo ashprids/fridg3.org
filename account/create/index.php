@@ -7,6 +7,7 @@ while (!file_exists($sessionBootstrapDir . "/lib/session.php") && dirname($sessi
 require_once $sessionBootstrapDir . "/lib/session.php";
 fridg3_start_session();
 require_once dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'lib' . DIRECTORY_SEPARATOR . 'render.php';
+require_once dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'lib' . DIRECTORY_SEPARATOR . 'toast.php';
 
 // Restrict access to logged-in admins only
 if (!isset($_SESSION['user']) || !isset($_SESSION['user']['username'])) {
@@ -115,6 +116,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($formUsername === '' || $formName === '') {
         $errorMessage = 'username and name are required.';
+    } elseif (fridg3_toast_is_reserved_username($formUsername)) {
+        $errorMessage = 'toast is a reserved hardcoded account.';
     } elseif (!preg_match('/^[a-z0-9_-]{1,50}$/i', $formUsername)) {
         $errorMessage = 'username must be 1-50 characters (letters, numbers, underscores, hyphens).';
     } elseif (strlen($formName) > 100) {

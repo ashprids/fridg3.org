@@ -8,6 +8,7 @@ require_once $sessionBootstrapDir . "/lib/session.php";
 fridg3_start_session();
 
 require_once __DIR__ . DIRECTORY_SEPARATOR . 'helpers.php';
+require_once dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'lib' . DIRECTORY_SEPARATOR . 'toast.php';
 
 account_admin_require_admin();
 
@@ -20,6 +21,10 @@ $cards = [];
 
 foreach ($accountsData['accounts'] as $account) {
     $username = isset($account['username']) ? (string)$account['username'] : 'unknown';
+    if (fridg3_toast_is_reserved_username($username)) {
+        continue;
+    }
+
     $name = isset($account['name']) ? (string)$account['name'] : '';
     $isAdmin = !empty($account['isAdmin']);
     $allowedPages = array_values(array_map('strval', (array)($account['allowedPages'] ?? [])));
@@ -51,7 +56,7 @@ if ($deletedUsername !== '') {
 $content = str_replace(
     ['{account_count}', '{account_cards}'],
     [
-        (string)count($accountsData['accounts']),
+        (string)count($cards),
         empty($cards) ? '<p>no accounts yet. kinda peaceful in here.</p>' : implode('', $cards),
     ],
     $content

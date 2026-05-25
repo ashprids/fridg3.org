@@ -16,6 +16,7 @@ all API routes live under `/api/*` and are handled by PHP.
 - requires logged-in user
 - returns current settings from `data/accounts/accounts.json`
 - currently exposes `theme`, `glowIntensity`, `colors`, `mobileFriendlyView`, and `onekoEnabled`
+- for the hardcoded `toast` session, also returns `toastPersonalityJson`
 
 `POST`
 
@@ -27,6 +28,7 @@ all API routes live under `/api/*` and are handled by PHP.
 - syncs the `theme_pref` cookie so anonymous and first-load rendering can pick the active theme
 - validates color fields as `#RRGGBB`; the settings UI only sends color fields for `classic`
 - admin users can also toggle maintenance mode through the settings flow
+- the hardcoded `toast` session can save `toastPersonalityJson` to `data/etc/toast-personality.json`
 
 ### `/api/themes`
 
@@ -65,6 +67,22 @@ all API routes live under `/api/*` and are handled by PHP.
 
 - returns parsed feed post JSON for a supplied `?id=`
 - does not expose replies; thread replies are loaded directly by `/feed/posts/{id}` from `data/feed/replies/*.json`
+
+### `/api/toast-feed-generate`
+
+`POST` form payload with `mode=random|prompt`, optional `prompt`, and `length=1..5`.
+
+- hardcoded Toast session only
+- reads Groq settings from `data/etc/toast.json`
+- reads feed-writing personality from `data/etc/toast-personality.json`
+- sends a small weak style sample from already-published non-Toast feed posts, with image BBCode stripped
+- generated drafts that have not been posted are not sent as context
+- sends recent published Toast posts only as negative examples to avoid repeating
+- injects a per-request private freshness seed and creative spark so repeated generations vary more
+- prompt mode uses a smaller context window than random mode and retries once with minimal context on oversized requests
+- `length` selects one of five generated post profiles: `one-liner`, `short`, `normal`, `ramble`, or `trauma dump`
+- generated feed drafts are constrained by the selected length profile so Toast can stay tiny when asked or get much more vulnerable at max
+- returns `{ ok: true, content: "generated post body" }`
 
 ### `/api/gallery/delete`
 

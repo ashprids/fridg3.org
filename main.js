@@ -659,6 +659,31 @@ function rerunAsciiScalingAfterContent() {
     setTimeout(scaleAsciiBlocks, 0);
 }
 
+function refreshAsciiLayoutAfterFontLoad() {
+    try {
+        if (!document.fonts || typeof document.fonts.load !== 'function') {
+            autoScaleAsciiFont();
+            fitMobileAsciiLayout();
+            scaleAsciiBlocks();
+            return;
+        }
+
+        document.fonts.load('12px IBM_VGA').then(() => {
+            window.requestAnimationFrame(() => {
+                autoScaleAsciiFont();
+                fitMobileAsciiLayout();
+                scaleAsciiBlocks();
+            });
+        }).catch(() => {
+            autoScaleAsciiFont();
+            fitMobileAsciiLayout();
+            scaleAsciiBlocks();
+        });
+    } catch (_) { /* no-op */ }
+}
+
+window.addEventListener('DOMContentLoaded', refreshAsciiLayoutAfterFontLoad);
+
 // this script contains a shit ton of functionality for fridg3.org
 // it sucks and i refuse to touch it without the guiding hand of AI
 // no code for a website should need to span over 2000 lines of code
@@ -1083,6 +1108,7 @@ function loadPageIntoContent(url, addToHistory = true) {
                 initMiniPlayer();
                 initToastDiscordBotPage();
                 initBBCodeEditor();
+                initToastFeedGenerator();
                 initAsciiUsage();
                 setupSpaForms();
                 initOffTopicArchive();
@@ -1091,6 +1117,7 @@ function loadPageIntoContent(url, addToHistory = true) {
                 initAsciiTime();
                 autoScaleAsciiFont();
                 rerunAsciiScalingAfterContent();
+                refreshAsciiLayoutAfterFontLoad();
                 initTooltips();
                 updateContentFooterSpacing();
                 fitMobileAsciiLayout();
@@ -1480,6 +1507,7 @@ function bindSpaForm(form) {
                 initMiniPlayer();
                 ensureToastLiveControlsOnLoad();
                 initBBCodeEditor();
+                initToastFeedGenerator();
                 initAsciiUsage();
                 initAsciiTime();
                 initOffTopicArchive();
@@ -1501,8 +1529,145 @@ function bindSpaForm(form) {
     });
 }
 
+function showToastAdminLoginPopup() {
+    return new Promise(function(resolve) {
+        const overlay = document.createElement('div');
+        overlay.className = 'site-popup-overlay';
+        overlay.setAttribute('role', 'dialog');
+        overlay.setAttribute('aria-modal', 'true');
+
+        const dialog = document.createElement('div');
+        dialog.className = 'site-popup-dialog';
+
+        const title = document.createElement('div');
+        title.className = 'site-popup-title';
+        title.textContent = 'toast login';
+
+        const detail = document.createElement('div');
+        detail.className = 'site-popup-detail';
+        detail.textContent = 'enter an admin account to wake toast up.';
+
+        const username = document.createElement('input');
+        username.className = 'site-popup-input';
+        username.type = 'text';
+        username.placeholder = 'admin username';
+        username.autocomplete = 'username';
+
+        const password = document.createElement('input');
+        password.className = 'site-popup-input';
+        password.type = 'password';
+        password.placeholder = 'admin password';
+        password.autocomplete = 'current-password';
+
+        const actions = document.createElement('div');
+        actions.className = 'site-popup-actions';
+
+        const cancel = document.createElement('button');
+        cancel.className = 'site-popup-button site-popup-cancel';
+        cancel.type = 'button';
+        cancel.textContent = 'cancel';
+
+        const ok = document.createElement('button');
+        ok.className = 'site-popup-button site-popup-ok';
+        ok.type = 'button';
+        ok.textContent = 'login';
+
+        actions.append(cancel, ok);
+        dialog.append(title, detail, username, password, actions);
+        overlay.append(dialog);
+
+        const close = function(value) {
+            document.removeEventListener('keydown', onKeydown);
+            overlay.classList.add('is-closing');
+            window.setTimeout(function() { overlay.remove(); }, 160);
+            resolve(value);
+        };
+
+        const submit = function() {
+            close({
+                username: username.value.trim(),
+                password: password.value
+            });
+        };
+
+        const onKeydown = function(event) {
+            if (event.key === 'Escape') close(null);
+            if (event.key === 'Enter') submit();
+        };
+
+        cancel.addEventListener('click', function() { close(null); });
+        ok.addEventListener('click', submit);
+        overlay.addEventListener('click', function(event) {
+            if (event.target === overlay) close(null);
+        });
+        document.addEventListener('keydown', onKeydown);
+        document.body.append(overlay);
+        username.focus();
+    });
+}
+
+function initLoginPage() {
+    const form = document.getElementById('login-form');
+    if (!form || form.dataset.loginBound === '1') return;
+    form.dataset.loginBound = '1';
+
+    const usernameInput = form.querySelector('input[name="username"]');
+    const errorSpan = document.getElementById('error');
+    const contentDiv = document.getElementById('content');
+    if (!usernameInput || !errorSpan) return;
+
+    if (contentDiv && contentDiv.getAttribute('data-login-info')) {
+        const msg = contentDiv.getAttribute('data-login-info');
+        if (msg) {
+            errorSpan.textContent = msg;
+            errorSpan.style.color = 'rgb(120, 200, 120)';
+        }
+        contentDiv.removeAttribute('data-login-info');
+    }
+
+    if (contentDiv && contentDiv.getAttribute('data-login-error')) {
+        errorSpan.textContent = contentDiv.getAttribute('data-login-error');
+        errorSpan.style.color = 'red';
+        contentDiv.removeAttribute('data-login-error');
+    }
+
+    form.addEventListener('submit', function(e) {
+        errorSpan.textContent = '';
+
+        if (!usernameInput.value.trim()) {
+            e.preventDefault();
+            errorSpan.textContent = 'Please enter a username.';
+            errorSpan.style.color = 'red';
+            return;
+        }
+
+        if (usernameInput.value.trim().toLowerCase() === 'toast' && form.dataset.toastAdminReady !== '1') {
+            e.preventDefault();
+            showToastAdminLoginPopup().then(function(credentials) {
+                if (!credentials) return;
+                if (!credentials.username) {
+                    errorSpan.textContent = 'admin username required.';
+                    errorSpan.style.color = 'red';
+                    return;
+                }
+
+                const adminUsernameInput = form.querySelector('input[name="toast_admin_username"]');
+                const adminPasswordInput = form.querySelector('input[name="toast_admin_password"]');
+                if (adminUsernameInput) adminUsernameInput.value = credentials.username;
+                if (adminPasswordInput) adminPasswordInput.value = credentials.password;
+                form.dataset.toastAdminReady = '1';
+                form.submit();
+            });
+        }
+    });
+}
+
+window.initLoginPage = initLoginPage;
+
 function setupSpaForms() {
     try {
+        initLoginPage();
+
         const loginForm = document.getElementById('login-form');
         // Login should perform a full POST + redirect so that
         // session cookies and redirects behave exactly as the
@@ -2491,6 +2656,11 @@ function initSettingsPage() {
         const onekoToggle = document.getElementById('oneko-toggle');
         const saveBtn = document.getElementById('settings-save');
         const sitemapBtn = document.querySelector('[data-action="generate-sitemap"]');
+        const toastPersonalityTextarea = document.getElementById('toast-personality-json');
+        const toastPersonalityHighlight = document.getElementById('toast-personality-highlight');
+        const toastPersonalitySaveBtn = document.querySelector('[data-action="save-toast-personality"]');
+        const toastPersonalityStatus = document.getElementById('toast-personality-status');
+        const toastSettingsSection = document.getElementById('toast-settings');
         if (!glowGroup || !saveBtn) return;
         if (glowGroup.dataset.bound === '1') return;
         glowGroup.dataset.bound = '1';
@@ -2503,6 +2673,7 @@ function initSettingsPage() {
 
         let isAdmin = false;
         const isLoggedIn = !!document.getElementById('user-greeting');
+        const isToastSession = !!(toastSettingsSection && toastSettingsSection.dataset.toastSession === '1');
         let currentTheme = loadLocalThemePref();
 
         const selectMaintenance = (state) => {
@@ -2684,6 +2855,92 @@ function initSettingsPage() {
             });
         };
 
+        const setToastPersonalityStatus = (message, isError) => {
+            if (!toastPersonalityStatus) return;
+            toastPersonalityStatus.textContent = message || '';
+            toastPersonalityStatus.style.color = isError ? 'red' : 'var(--subtle)';
+        };
+
+        const renderToastPersonalityHighlight = () => {
+            if (!toastPersonalityTextarea || !toastPersonalityHighlight) return;
+            const value = toastPersonalityTextarea.value || ' ';
+            if (typeof hljs !== 'undefined' && hljs.highlight) {
+                try {
+                    toastPersonalityHighlight.innerHTML = hljs.highlight(value, {
+                        language: 'json',
+                        ignoreIllegals: true,
+                    }).value;
+                    return;
+                } catch (_) {
+                    /* fall through */
+                }
+            }
+            toastPersonalityHighlight.textContent = value;
+        };
+
+        const syncToastPersonalityScroll = () => {
+            if (!toastPersonalityTextarea || !toastPersonalityHighlight) return;
+            const pre = toastPersonalityHighlight.closest('pre');
+            if (!pre) return;
+            pre.scrollTop = toastPersonalityTextarea.scrollTop;
+            pre.scrollLeft = toastPersonalityTextarea.scrollLeft;
+        };
+
+        const setToastPersonalityValue = (value) => {
+            if (!toastPersonalityTextarea) return;
+            toastPersonalityTextarea.value = value || '';
+            renderToastPersonalityHighlight();
+            syncToastPersonalityScroll();
+        };
+
+        const bindToastPersonalityButton = () => {
+            if (!toastPersonalityTextarea || !toastPersonalitySaveBtn || toastPersonalitySaveBtn.dataset.bound === '1') return;
+            toastPersonalitySaveBtn.dataset.bound = '1';
+            toastPersonalityTextarea.addEventListener('input', () => {
+                renderToastPersonalityHighlight();
+                syncToastPersonalityScroll();
+            });
+            toastPersonalityTextarea.addEventListener('scroll', syncToastPersonalityScroll);
+            toastPersonalitySaveBtn.addEventListener('click', async () => {
+                let formatted = '';
+                try {
+                    formatted = JSON.stringify(JSON.parse(toastPersonalityTextarea.value || ''), null, 2);
+                } catch (_) {
+                    setToastPersonalityStatus('invalid json. tiny syntax crime detected.', true);
+                    return;
+                }
+
+                const originalText = toastPersonalitySaveBtn.textContent;
+                toastPersonalitySaveBtn.disabled = true;
+                toastPersonalitySaveBtn.textContent = 'saving...';
+                setToastPersonalityStatus('', false);
+                try {
+                    const params = new URLSearchParams();
+                    params.append('toastPersonalityJson', formatted);
+                    const res = await fetch('/api/settings', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+                            'X-Requested-With': 'XMLHttpRequest',
+                        },
+                        body: params.toString(),
+                    });
+                    const data = await res.json().catch(() => ({}));
+                    if (!res.ok || !data || !data.ok) {
+                        throw new Error(data && data.message ? data.message : 'save failed');
+                    }
+
+                    setToastPersonalityValue(formatted);
+                    setToastPersonalityStatus('saved.', false);
+                } catch (err) {
+                    setToastPersonalityStatus((err && err.message) ? err.message : 'save failed.', true);
+                } finally {
+                    toastPersonalitySaveBtn.textContent = originalText;
+                    toastPersonalitySaveBtn.disabled = false;
+                }
+            });
+        };
+
         // Pre-select glow from localStorage if available
         let stored = null;
         try {
@@ -2764,6 +3021,10 @@ function initSettingsPage() {
                     setOnekoToggle(data.settings.onekoEnabled);
                     setOnekoEnabled(data.settings.onekoEnabled);
                 }
+                if (toastPersonalityTextarea && typeof data.settings.toastPersonalityJson === 'string') {
+                    bindToastPersonalityButton();
+                    setToastPersonalityValue(data.settings.toastPersonalityJson);
+                }
             }).catch(() => {});
         }
 
@@ -2792,6 +3053,29 @@ function initSettingsPage() {
             });
             if (!selected) return;
 
+            const mobileViewEnabled = !!(mobileViewToggle && mobileViewToggle.checked);
+            setMobileViewCookie(mobileViewEnabled);
+
+            if (isToastSession) {
+                if (isLoggedIn && window.fetch) {
+                    const params = new URLSearchParams();
+                    params.append('mobileFriendlyView', mobileViewEnabled ? 'on' : 'off');
+                    fetch('/api/settings', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+                            'X-Requested-With': 'XMLHttpRequest',
+                        },
+                        body: params.toString(),
+                    }).catch(() => {}).finally(() => {
+                        window.location.reload();
+                    });
+                } else {
+                    window.location.reload();
+                }
+                return;
+            }
+
             // Persist to localStorage for all users
             try {
                 localStorage.setItem(GLOW_INTENSITY_KEY, selected);
@@ -2812,8 +3096,6 @@ function initSettingsPage() {
             } else {
                 clearColorVars();
             }
-            const mobileViewEnabled = !!(mobileViewToggle && mobileViewToggle.checked);
-            setMobileViewCookie(mobileViewEnabled);
             const onekoEnabled = !!(onekoToggle && onekoToggle.checked);
             setOnekoEnabled(onekoEnabled);
 
@@ -5582,6 +5864,170 @@ function initBBCodeEditor() {
 
 // Ensure the BBCode editor is wired on initial page load
 window.addEventListener('DOMContentLoaded', initBBCodeEditor);
+
+function initToastFeedGenerator() {
+    const generator = document.getElementById('toast-feed-generator');
+    if (!generator || generator.dataset.bound === '1') return;
+    generator.dataset.bound = '1';
+
+    const editor = document.getElementById('bbcode-textbox');
+    const form = document.getElementById('create-post-form');
+    const promptBox = document.getElementById('toast-feed-prompt');
+    const lengthSlider = document.getElementById('toast-feed-length');
+    const lengthLabel = document.getElementById('toast-feed-length-label');
+    const generateBtn = generator.querySelector('[data-action="toast-generate-feed"]');
+    const status = document.getElementById('toast-feed-generator-status');
+    const modeRadios = generator.querySelectorAll('input[name="toast-feed-mode"]');
+    const postButton = form ? form.querySelector('[data-toast-post-button="1"], button[type="submit"]') : null;
+    if (!editor || !generateBtn) return;
+    let generatedDraftReady = false;
+    let placeholderTimer = null;
+
+    const controls = () => {
+        const scope = editor.closest('.bbcode-editor') || document;
+        return Array.from(scope.querySelectorAll('.bbcode-btn, .bbcode-dropdown, input[type="file"], input[type="color"]'));
+    };
+
+    const setStatus = (message, isError) => {
+        if (!status) return;
+        status.textContent = message || '';
+        status.style.color = isError ? 'red' : 'var(--subtle)';
+    };
+
+    const setEditorLocked = (locked, placeholder) => {
+        editor.readOnly = locked;
+        if (placeholder !== undefined) {
+            editor.placeholder = placeholder;
+        }
+        controls().forEach(control => {
+            control.disabled = locked;
+            control.classList.toggle('disabled', locked);
+        });
+        if (postButton) {
+            postButton.disabled = locked;
+        }
+    };
+
+    const stopPlaceholderAnimation = () => {
+        if (placeholderTimer !== null) {
+            window.clearInterval(placeholderTimer);
+            placeholderTimer = null;
+        }
+    };
+
+    const startPlaceholderAnimation = () => {
+        stopPlaceholderAnimation();
+        let dots = 0;
+        const tick = () => {
+            dots = (dots % 3) + 1;
+            editor.placeholder = 'writing a post' + '.'.repeat(dots);
+        };
+        tick();
+        placeholderTimer = window.setInterval(tick, 360);
+    };
+
+    const selectedMode = () => {
+        let mode = 'random';
+        modeRadios.forEach(radio => {
+            if (radio.checked) mode = radio.value;
+        });
+        return mode;
+    };
+
+    const syncPromptVisibility = () => {
+        if (!promptBox) return;
+        promptBox.style.display = selectedMode() === 'prompt' ? '' : 'none';
+    };
+
+    const syncLengthLabel = () => {
+        if (!lengthSlider || !lengthLabel) return;
+        const labels = {
+            1: 'one-liner',
+            2: 'short',
+            3: 'normal',
+            4: 'ramble',
+            5: 'trauma dump',
+        };
+        const value = Number(lengthSlider.value);
+        const min = Number(lengthSlider.min || 1);
+        const max = Number(lengthSlider.max || 5);
+        const percent = max > min ? ((value - min) / (max - min)) * 100 : 0;
+        lengthSlider.style.setProperty('--toast-feed-length-fill', percent + '%');
+        lengthLabel.textContent = labels[value] || 'normal';
+    };
+
+    modeRadios.forEach(radio => {
+        radio.addEventListener('change', syncPromptVisibility);
+    });
+    if (lengthSlider) {
+        lengthSlider.addEventListener('input', syncLengthLabel);
+        syncLengthLabel();
+    }
+    syncPromptVisibility();
+    setEditorLocked(true, 'generate a post first...');
+
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            if (generatedDraftReady) return;
+            e.preventDefault();
+            setEditorLocked(true, 'generate a post first...');
+            setStatus('generate a draft before posting.', true);
+        });
+    }
+
+    generateBtn.addEventListener('click', async () => {
+        const mode = selectedMode();
+        const prompt = promptBox ? promptBox.value.trim() : '';
+        if (mode === 'prompt' && !prompt) {
+            setStatus('prompt mode needs a prompt.', true);
+            if (promptBox) promptBox.focus();
+            return;
+        }
+
+        const originalText = generateBtn.textContent;
+        generatedDraftReady = false;
+        generateBtn.disabled = true;
+        generateBtn.textContent = 'writing...';
+        setStatus('', false);
+        setEditorLocked(true, 'writing a post...');
+        startPlaceholderAnimation();
+
+        try {
+            const params = new URLSearchParams();
+            params.append('mode', mode);
+            params.append('prompt', prompt);
+            params.append('length', lengthSlider ? lengthSlider.value : '3');
+            const res = await fetch('/api/toast-feed-generate', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                body: params.toString(),
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok || !data || !data.ok || typeof data.content !== 'string') {
+                throw new Error(data && data.message ? data.message : 'generation failed.');
+            }
+
+            editor.value = data.content;
+            generatedDraftReady = true;
+            setEditorLocked(false, '');
+            editor.focus();
+            setStatus('draft ready.', false);
+        } catch (err) {
+            generatedDraftReady = false;
+            setEditorLocked(true, 'generate a post first...');
+            setStatus((err && err.message) ? err.message : 'generation failed.', true);
+        } finally {
+            stopPlaceholderAnimation();
+            generateBtn.textContent = originalText;
+            generateBtn.disabled = false;
+        }
+    });
+}
+
+window.addEventListener('DOMContentLoaded', initToastFeedGenerator);
 
 // BBCode parser
 function parseBBCode(text) {

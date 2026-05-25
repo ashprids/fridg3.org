@@ -7,6 +7,7 @@ while (!file_exists($sessionBootstrapDir . "/lib/session.php") && dirname($sessi
 require_once $sessionBootstrapDir . "/lib/session.php";
 fridg3_start_session();
 require_once dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'lib' . DIRECTORY_SEPARATOR . 'feed.php';
+require_once dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'lib' . DIRECTORY_SEPARATOR . 'toast.php';
 
 // Require logged-in user with permission to create posts
 if (!isset($_SESSION['user']) || !isset($_SESSION['user']['username'])) {
@@ -18,6 +19,7 @@ if (!isset($_SESSION['user']) || !isset($_SESSION['user']['username'])) {
 $isAdmin = $_SESSION['user']['isAdmin'] ?? false;
 $allowedPages = $_SESSION['user']['allowedPages'] ?? [];
 $canCreatePost = $isAdmin || in_array('feed', $allowedPages);
+$isToast = fridg3_toast_is_current_user();
 
 if (!$canCreatePost) {
     header('Location: /feed');
@@ -131,6 +133,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $postFile = $postsDir . DIRECTORY_SEPARATOR . $timestampFilename . '.txt';
     file_put_contents($postFile, $text);
 
+    $shouldQueueToastAutoReply = (
+        strcasecmp((string)$username, 'toast') !== 0
+        && fridg3_toast_feed_mentions_toast($safeContent)
+    );
+
     // Send Discord webhook notification
     $webhooksFile = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'data' . DIRECTORY_SEPARATOR . 'etc' . DIRECTORY_SEPARATOR . 'webhooks.json';
     if (file_exists($webhooksFile)) {
@@ -161,6 +168,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // Redirect to feed after posting
     header('Location: /feed/');
+    if ($shouldQueueToastAutoReply) {
+        $toastReplyPostId = $timestampFilename;
+        $toastReplyPostUsername = (string)$username;
+        $toastReplyPostDate = $displayDateTime;
+        $toastReplyPostBody = $safeContent;
+        fridg3_toast_run_auto_reply_after_response(static function () use (
+            $toastReplyPostId,
+            $toastReplyPostUsername,
+            $toastReplyPostDate,
+            $toastReplyPostBody
+        ): void {
+            fridg3_toast_maybe_auto_reply_to_feed(
+                $toastReplyPostId,
+                $toastReplyPostUsername,
+                $toastReplyPostDate,
+                $toastReplyPostBody,
+                [
+                    'username' => $toastReplyPostUsername,
+                    'body' => $toastReplyPostBody,
+                ]
+            );
+        });
+    }
     exit;
 }
 
@@ -210,6 +240,41 @@ if (!$content_path) {
 $content = file_get_contents($content_path);
 if ($error !== '') {
     $content = '<div id="error">' . htmlspecialchars($error, ENT_QUOTES, 'UTF-8') . '</div><br>' . $content;
+}
+if ($isToast) {
+    $toastGeneratorControls = '<div id="toast-feed-generator">'
+        . '<h3>inspiration</h3>'
+        . '<div class="radio-group">'
+        . '<label class="radio-label"><input type="radio" class="radio" name="toast-feed-mode" value="random" checked><span>random</span></label>'
+        . '<label class="radio-label"><input type="radio" class="radio" name="toast-feed-mode" value="prompt"><span>prompt</span></label>'
+        . '</div>'
+        . '<textarea id="toast-feed-prompt" rows="5" placeholder="input prompt..." style="display:none"></textarea>'
+        . '<label class="toast-feed-length-control" for="toast-feed-length">'
+        . '<span>length</span>'
+        . '<input id="toast-feed-length" type="range" min="1" max="5" step="1" value="3">'
+        . '<output id="toast-feed-length-label" for="toast-feed-length">normal</output>'
+        . '</label>'
+        . '<br>'
+        . '<button id="form-button" type="button" data-action="toast-generate-feed">write</button>'
+        . '<span id="toast-feed-generator-status" style="color: var(--subtle); margin-left: 0.75rem;"></span>'
+        . '</div><br>';
+
+    $content = str_replace('<button type="button"', '<button type="button" disabled', $content);
+    $content = str_replace('class="bbcode-btn"', 'class="bbcode-btn disabled"', $content);
+    $content = str_replace('<select id="bbcode-header-dropdown"', '<select id="bbcode-header-dropdown" disabled', $content);
+    $content = str_replace('<input id="bbcode-image-input"', '<input id="bbcode-image-input" disabled', $content);
+    $content = str_replace('<input id="bbcode-voice-input"', '<input id="bbcode-voice-input" disabled', $content);
+    $content = str_replace(
+        '<textarea id="bbcode-textbox" name="content"></textarea>',
+        '<textarea id="bbcode-textbox" name="content" readonly placeholder=""></textarea>',
+        $content
+    );
+    $content = str_replace(
+        '<button id="form-button" type="submit">post</button>',
+        '<button id="form-button" type="submit" data-toast-post-button="1" disabled>post</button>',
+        $content
+    );
+    $content = str_replace('<div class="bbcode-editor">', $toastGeneratorControls . '<div class="bbcode-editor">', $content);
 }
 $html = str_replace('{content}', $content, $template);
 $html = str_replace('{title}', $title, $html);

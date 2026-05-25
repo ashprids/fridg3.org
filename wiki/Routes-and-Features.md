@@ -21,6 +21,13 @@ Related:
 - `/feed/edit`
 - `/feed/posts/{id}`
 
+### `/feed/create`
+
+- requires admin or `allowedPages` containing `feed`
+- hardcoded `toast` sees a Groq-powered post generator before the BBCode editor
+- Toast generation can be random or prompt-guided, uses already-published non-Toast feed posts only as weak text style samples, has a 5-step length slider from one-liner to trauma dump, then fills and unlocks the editor
+- if a non-Toast post mentions `@toast`, Toast may automatically add a reply to that post using the post as context after a 1 minute delay
+
 ### `/feed/posts/{id}`
 
 - single-post thread view for a feed item
@@ -28,6 +35,7 @@ Related:
 - reply edit/delete is allowed for the reply author, admins, the original post owner, or accounts with `allowedPages` containing `comments`
 - replies persist under `data/feed/replies/{postId}.json`
 - deleting a reply removes voice note files referenced by that reply
+- when a non-Toast user replies to a Toast-owned post or mentions `@toast` in a reply, Toast may automatically reply after a 1 minute delay with a short old-style Twitter-sized response and starts by mentioning that user
 
 ### `/journal`
 
@@ -79,6 +87,7 @@ Related:
 - includes theme/glow settings, optional cursor cat, and mobile-friendly-view preference
 - local dev mode can bootstrap a blank-password `admin` / `Administrator` account when no admin accounts exist
 - shows a Discord linking action for logged-in users and disables it once `discordUserId` is already linked
+- when logged in as hardcoded `toast`, shows a JSON editor for shared Toast personalities stored in `data/etc/toast-personality.json`
 
 ## Account Routes
 
@@ -96,6 +105,7 @@ currently just redirects:
 - login throttling via `data/accounts/login_attempts.json`
 - reads `data/accounts/accounts.json`
 - sets session user payload and `is_admin` cookie
+- username `toast` is reserved for a hardcoded virtual account; it prompts for admin credentials, then logs in as non-admin Toast with fixed `feed` and `comments` permissions
 - users with `mustResetPassword` are redirected into the password-change flow before using the rest of the site
 
 ### `/account/logout`
@@ -109,6 +119,7 @@ admin-only account creation flow that writes to `data/accounts/accounts.json`.
 - can seed `discordUserId`
 - can grant `comments` and `chat` permissions
 - newly created accounts are flagged with `mustResetPassword`
+- username `toast` is reserved and cannot be created as a normal account
 - if a Discord id is provided, it asks the local toast bot to DM the invite credentials
 - if that DM fails, the account is still created and the UI now shows the bot's concrete failure reason instead of a generic HTTP 500
 - local dev mode shows a random dev-account generator that creates `userXXXX` / `User #XXXX` with feed/comment permissions, a blank password, no forced password reset, and no Discord invite

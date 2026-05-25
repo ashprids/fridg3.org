@@ -9,6 +9,7 @@ fridg3_start_session();
 
 require_once dirname(__DIR__) . DIRECTORY_SEPARATOR . 'helpers.php';
 require_once dirname(__DIR__, 3) . DIRECTORY_SEPARATOR . 'lib' . DIRECTORY_SEPARATOR . 'feed.php';
+require_once dirname(__DIR__, 3) . DIRECTORY_SEPARATOR . 'lib' . DIRECTORY_SEPARATOR . 'toast.php';
 
 account_admin_require_admin();
 
@@ -228,6 +229,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             if ($formUsername === '' || $formName === '') {
                 $errorMessage = 'username and name are required.';
+            } elseif (fridg3_toast_is_reserved_username($formUsername)) {
+                $errorMessage = 'toast is a reserved hardcoded account.';
             } elseif (!preg_match('/^[a-z0-9_-]{1,50}$/i', $formUsername)) {
                 $errorMessage = 'username must be 1-50 characters (letters, numbers, underscores, hyphens).';
             } elseif (strlen($formName) > 100) {

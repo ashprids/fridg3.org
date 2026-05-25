@@ -6,6 +6,7 @@ while (!file_exists($sessionBootstrapDir . "/lib/session.php") && dirname($sessi
 require_once $sessionBootstrapDir . "/lib/session.php";
 fridg3_start_session();
 require_once dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'lib' . DIRECTORY_SEPARATOR . 'feed.php';
+require_once dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'lib' . DIRECTORY_SEPARATOR . 'toast.php';
 fridg3_feed_refresh_session_user();
 
 function find_template_file($filename) {
@@ -171,6 +172,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } else {
         $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
         header('Location: /feed/posts/' . rawurlencode((string)$postIdNoExt) . '?reply_posted=1');
+        $shouldQueueToastAutoReply = strcasecmp((string)$_SESSION['user']['username'], 'toast') !== 0
+            && (strcasecmp(ltrim($username, '@'), 'toast') === 0 || fridg3_toast_feed_mentions_toast($replyBody));
+        if ($shouldQueueToastAutoReply) {
+            $toastReplyPostId = (string)($postIdNoExt ?? '');
+            $toastReplyPostUsername = $username;
+            $toastReplyPostDate = $dateLine;
+            $toastReplyPostBody = $body;
+            $toastReplyTriggerUsername = (string)$_SESSION['user']['username'];
+            $toastReplyTriggerBody = $replyBody;
+            fridg3_toast_run_auto_reply_after_response(static function () use (
+                $toastReplyPostId,
+                $toastReplyPostUsername,
+                $toastReplyPostDate,
+                $toastReplyPostBody,
+                $toastReplyTriggerUsername,
+                $toastReplyTriggerBody
+            ): void {
+                fridg3_toast_maybe_auto_reply_to_feed(
+                    $toastReplyPostId,
+                    $toastReplyPostUsername,
+                    $toastReplyPostDate,
+                    $toastReplyPostBody,
+                    [
+                        'username' => $toastReplyTriggerUsername,
+                        'body' => $toastReplyTriggerBody,
+                    ]
+                );
+            });
+        }
         exit;
     }
 }

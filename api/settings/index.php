@@ -6,6 +6,7 @@ while (!file_exists($sessionBootstrapDir . "/lib/session.php") && dirname($sessi
 }
 require_once $sessionBootstrapDir . "/lib/session.php";
 fridg3_start_session();
+require_once dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'lib' . DIRECTORY_SEPARATOR . 'toast.php';
 
 $renderHelperPath = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'lib' . DIRECTORY_SEPARATOR . 'render.php';
 if (is_file($renderHelperPath)) {
@@ -70,8 +71,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         exit;
     }
     $username = (string)$_SESSION['user']['username'];
+    $isToast = fridg3_toast_is_current_user();
     $accountsPath = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'data' . DIRECTORY_SEPARATOR . 'accounts' . DIRECTORY_SEPARATOR . 'accounts.json';
-    $data = load_accounts_data($accountsPath);
+    $data = $isToast ? ['accounts' => []] : load_accounts_data($accountsPath);
     if ($data === null) {
         http_response_code(500);
         echo json_encode(['ok' => false, 'error' => 'accounts_invalid']);
@@ -87,6 +89,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             'onekoEnabled' => null,
         ],
     ];
+    if ($isToast) {
+        $personality = fridg3_toast_load_personality_config();
+        $result['settings']['toastPersonalityJson'] = json_encode($personality, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+    }
     foreach ($data['accounts'] as $account) {
         if (isset($account['username']) && (string)$account['username'] === $username) {
             if (isset($account['glowIntensity'])) {
@@ -127,6 +133,7 @@ if (!isset($_SESSION['user']) || !isset($_SESSION['user']['username'])) {
 
 $username = (string)$_SESSION['user']['username'];
 $isAdmin = isset($_SESSION['user']['isAdmin']) && $_SESSION['user']['isAdmin'] === true;
+$isToast = fridg3_toast_is_current_user();
 
 $intensityProvided = array_key_exists('glowIntensity', $_POST);
 $intensity = $intensityProvided ? (string)$_POST['glowIntensity'] : null;
@@ -143,6 +150,9 @@ $mobileViewRaw = $mobileViewProvided ? (string)$_POST['mobileFriendlyView'] : nu
 $onekoProvided = array_key_exists('onekoEnabled', $_POST);
 $onekoRaw = $onekoProvided ? (string)$_POST['onekoEnabled'] : null;
 
+$toastPersonalityProvided = array_key_exists('toastPersonalityJson', $_POST);
+$toastPersonalityRaw = $toastPersonalityProvided ? (string)$_POST['toastPersonalityJson'] : null;
+
 $allowedIntensity = ['none', 'low', 'medium', 'high'];
 $availableThemes = function_exists('fridg3_list_themes') ? fridg3_list_themes(dirname(__DIR__, 2)) : [];
 $allowedThemes = array_merge(['default'], array_keys($availableThemes));
@@ -150,6 +160,34 @@ $colorFields = ['bg', 'fg', 'border', 'subtle', 'links'];
 
 $errors = [];
 $didWork = false;
+
+if ($toastPersonalityProvided) {
+    if (!$isToast) {
+        http_response_code(403);
+        echo json_encode(['ok' => false, 'error' => 'forbidden']);
+        exit;
+    }
+
+    $decoded = json_decode((string)$toastPersonalityRaw, true);
+    if (!is_array($decoded)) {
+        http_response_code(400);
+        echo json_encode(['ok' => false, 'error' => 'invalid_toast_personality_json']);
+        exit;
+    }
+
+    $personalityError = null;
+    if (!fridg3_toast_save_personality_config($decoded, $personalityError)) {
+        http_response_code(400);
+        echo json_encode([
+            'ok' => false,
+            'error' => 'invalid_toast_personality',
+            'message' => $personalityError ?: 'invalid personality json',
+        ], JSON_UNESCAPED_SLASHES);
+        exit;
+    }
+
+    $didWork = true;
+}
 
 if ($mobileViewProvided) {
     $truthy = ['1', 'true', 'yes', 'y', 'on', 'enabled'];
@@ -421,7 +459,7 @@ if ($maintenanceProvided) {
     $didWork = true;
 }
 
-if ($didWork || $intensityProvided || $themeProvided || $maintenanceProvided || $mobileViewProvided || $onekoProvided) {
+if ($didWork || $intensityProvided || $themeProvided || $maintenanceProvided || $mobileViewProvided || $onekoProvided || $toastPersonalityProvided) {
     echo json_encode(['ok' => true]);
     exit;
 }

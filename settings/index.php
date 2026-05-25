@@ -6,6 +6,7 @@ while (!file_exists($sessionBootstrapDir . "/lib/session.php") && dirname($sessi
 }
 require_once $sessionBootstrapDir . "/lib/session.php";
 fridg3_start_session();
+require_once dirname(__DIR__) . DIRECTORY_SEPARATOR . 'lib' . DIRECTORY_SEPARATOR . 'toast.php';
 
 $title = 'settings';
 $description = 'customize your preferences.';
@@ -151,6 +152,7 @@ $content = file_get_contents($content_path);
 
 $isLoggedIn = isset($_SESSION['user']) && isset($_SESSION['user']['username']);
 $isAdmin = isset($_SESSION['user']['isAdmin']) && $_SESSION['user']['isAdmin'] === true;
+$isToast = $isLoggedIn && fridg3_toast_is_current_user();
 $hasLinkedDiscord = false;
 
 if ($isLoggedIn) {
@@ -173,9 +175,17 @@ if (!$isLoggedIn) {
     // Hide user-only controls when not logged in
     $content = str_replace('<span id="user-settings">', '<span id="user-settings" style="display:none">', $content);
 }
+if ($isToast) {
+    $content = str_replace('<span id="user-settings">', '<span id="user-settings" style="display:none">', $content);
+    $content = str_replace('<span id="appearance-settings">', '<span id="appearance-settings" style="display:none">', $content);
+    $content = str_replace('<span id="toast-settings">', '<span id="toast-settings" data-toast-session="1">', $content);
+}
 if (!$isAdmin) {
     // Keep markup to avoid layout shifts; hide by default
     $content = str_replace('<span id="admin-settings">', '<span id="admin-settings" style="display:none">', $content);
+}
+if (!$isToast) {
+    $content = str_replace('<span id="toast-settings">', '<span id="toast-settings" style="display:none">', $content);
 }
 if ($hasLinkedDiscord) {
     $activeDiscordButton = '<button id="form-button" type="button" data-tooltip="save your discord user ID to your account for notifications" onclick="window.location=\'/account/link-discord\'">link discord account</button>';
