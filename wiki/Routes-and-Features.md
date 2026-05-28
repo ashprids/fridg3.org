@@ -80,6 +80,19 @@ Related:
 - client-side localStorage enhancement for anonymous users
 - supports feed and journal bookmark ids; legacy `newsletter:*` ids are ignored
 
+### `/tools/upload`
+
+- browser-to-browser encrypted file transfer using WebRTC data channels
+- PHP stores only short-lived room/signaling metadata under `data/upload/rooms.json`; uploaded file bytes are never stored server-side
+- creating a room chooses whether the creator is the sender or receiver, then produces a `/tools/upload?r={token}` share link
+- access is limited to the creator browser plus the first guest browser through the HttpOnly `fridg3_upload_peer` cookie; later browsers receive `room_full`
+- peers exchange ephemeral ECDH public keys through signaling and encrypt file chunks with AES-GCM before sending
+- plaintext chunks are kept below WebRTC's common 64 KiB message edge after encryption overhead to avoid truncated or dropped data-channel frames
+- sender and receiver compute a streaming SHA-256 checksum; the receiver only sends the success ack when file size, chunk count, and checksum match
+- enforces a 100 GB client-side file limit; browsers with File System Access API support stream received chunks to disk, while fallback browsers download after completion
+- both peers see transfer progress; sender progress reaches 100% only after the receiver confirms completion, and receiver progress reaches 100% after the file is written or downloaded, so either side can close the page once their bar is full
+- rooms end when either peer closes the tab via a close beacon, with a short heartbeat timeout fallback for crashed or disconnected tabs
+
 ### `/settings`
 
 - UI shell only
