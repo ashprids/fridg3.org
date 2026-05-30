@@ -52,11 +52,11 @@ all API routes live under `/api/*` and are handled by PHP.
 
 ## Content / Media
 
-### `/tools/upload?api=*`
+### `/tools/upload/?api=*`
 
 route-local JSON endpoints for the `/tools/upload` peer-to-peer transfer page.
 
-- `POST ?api=create` with `role=sender|receiver` creates a short-lived room and returns `/tools/upload?r={token}`
+- `POST ?api=create` with `role=sender|receiver` creates a short-lived room and returns `/tools/upload/?r={token}`
 - `GET ?api=room&r={token}` claims/loads a room for the creator browser or first guest browser
 - `POST ?api=key&r={token}` stores one peer's ephemeral ECDH public key
 - `POST ?api=signal&r={token}` stores WebRTC offer/answer/ICE signaling messages

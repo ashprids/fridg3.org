@@ -84,7 +84,7 @@ Related:
 
 - browser-to-browser encrypted file transfer using WebRTC data channels
 - PHP stores only short-lived room/signaling metadata under `data/upload/rooms.json`; uploaded file bytes are never stored server-side
-- creating a room chooses whether the creator is the sender or receiver, then produces a `/tools/upload?r={token}` share link
+- creating a room chooses whether the creator is the sender or receiver, then produces a `/tools/upload/?r={token}` share link
 - access is limited to the creator browser plus the first guest browser through the HttpOnly `fridg3_upload_peer` cookie; later browsers receive `room_full`
 - peers exchange ephemeral ECDH public keys through signaling and encrypt file chunks with AES-GCM before sending
 - plaintext chunks are kept below WebRTC's common 64 KiB message edge after encryption overhead to avoid truncated or dropped data-channel frames

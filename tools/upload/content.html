@@ -481,7 +481,7 @@
             request.body = options.body;
             request.headers = { 'Content-Type': 'application/x-www-form-urlencoded' };
         }
-        const response = await fetch(`/tools/upload?${params.toString()}`, request);
+        const response = await fetch(`/tools/upload/?${params.toString()}`, request);
         const data = await response.json().catch(() => ({ ok: false, error: 'bad_json' }));
         if (!response.ok || !data.ok) {
             throw new Error(data.error || `http_${response.status}`);
@@ -520,7 +520,7 @@
         show(els.senderPanel, state.role === 'sender');
         show(els.receiverPanel, state.role === 'receiver');
 
-        const absoluteUrl = `${location.origin}/tools/upload?r=${encodeURIComponent(state.token)}`;
+        const absoluteUrl = `${location.origin}/tools/upload/?r=${encodeURIComponent(state.token)}`;
         els.roomUrl.value = absoluteUrl;
         els.roleLabel.textContent = state.role === 'sender' ? 'you are the sender' : 'you are the receiver';
         if (els.roomCopy) {

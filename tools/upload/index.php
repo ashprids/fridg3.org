@@ -10,7 +10,7 @@ fridg3_start_session();
 const UPLOAD_ROOM_TTL_SECONDS = 86400;
 const UPLOAD_HEARTBEAT_TIMEOUT_SECONDS = 15;
 const UPLOAD_COOKIE_NAME = 'fridg3_upload_peer';
-const UPLOAD_ROUTE_PATH = '/tools/upload';
+const UPLOAD_ROUTE_PATH = '/tools/upload/';
 
 function upload_find_template_file($filename) {
     $dir = __DIR__;

@@ -83,16 +83,25 @@ server {
     }
 
     # mdpaste clean URLs
-    location ~ "^/others/mdpaste/s/[a-fA-F0-9]{16}/?$" {
-        rewrite "^/others/mdpaste/s/([a-fA-F0-9]{16})/?$" /others/mdpaste/s/index.php?id=$1 last;
+    location ~ "^/tools/mdpaste/s/[a-fA-F0-9]{16}/?$" {
+        rewrite "^/tools/mdpaste/s/([a-fA-F0-9]{16})/?$" /tools/mdpaste/s/index.php?id=$1 last;
     }
 
-    location /others/mdpaste/s/ {
-        try_files $uri $uri/ /others/mdpaste/s/index.php?$args;
+    location /tools/mdpaste/s/ {
+        try_files $uri $uri/ /tools/mdpaste/s/index.php?$args;
     }
 
-    location /others/mdpaste/ {
-        try_files $uri $uri/ /others/mdpaste/index.php?$args;
+    location /tools/mdpaste/ {
+        try_files $uri $uri/ /tools/mdpaste/index.php?$args;
+    }
+
+    # Upload route API: avoid trailing-slash redirects that drop POST bodies
+    location = /tools/upload {
+        rewrite ^ /tools/upload/index.php?$args last;
+    }
+
+    location /tools/upload/ {
+        try_files $uri $uri/ /tools/upload/index.php?$args;
     }
 
     # Chat clean URLs + POST-safe dashboard route
