@@ -112,6 +112,10 @@ body {
     color: var(--links);
 }
 
+body.mobile-template .mobile-nav-grid a.mobile-nav-link > #tab.mobile-nav-button::before {
+    content: none !important;
+}
+
 #tab:hover,
 #tab.active {
     transform: translate(-2px, -2px);

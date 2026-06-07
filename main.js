@@ -3167,6 +3167,22 @@ const sidebar = document.getElementById('sidebar');
 const mobileCollapsedHeader = document.getElementById('mobile-collapsed-header');
 const SIDEBAR_KEY = 'sidebarVisible';
 
+function setSidebarVisible(visible, persist = true) {
+    if (sidebar) {
+        sidebar.style.display = 'flex';
+    }
+    document.body.classList.toggle('sidebar-is-hidden', !visible);
+    if (showSidebarBtn) {
+        showSidebarBtn.style.display = visible ? 'none' : 'inline-block';
+    }
+    updateMobileCollapsedHeader(!visible);
+    if (persist) {
+        try {
+            localStorage.setItem(SIDEBAR_KEY, visible ? 'true' : 'false');
+        } catch (_) { /* no-op */ }
+    }
+}
+
 function updateMobileCollapsedHeader(visible) {
     if (!isMobileTemplateActive()) return;
     if (mobileCollapsedHeader) {
@@ -3176,12 +3192,7 @@ function updateMobileCollapsedHeader(visible) {
 
 function closeMobileMenu() {
     if (!isMobileTemplateActive()) return;
-    if (sidebar) sidebar.style.display = 'none';
-    if (showSidebarBtn) showSidebarBtn.style.display = 'inline-block';
-    updateMobileCollapsedHeader(true);
-    try {
-        localStorage.setItem(SIDEBAR_KEY, 'false');
-    } catch (_) { /* no-op */ }
+    setSidebarVisible(false);
 }
 
 // Load sidebar state, apply glow/gradient, and BBCode formatting
@@ -3192,16 +3203,12 @@ function initSidebarAndBBCode() {
         // Mobile template starts closed by default; desktop starts open.
         localStorage.setItem(SIDEBAR_KEY, defaultSidebarVisible);
         if (defaultSidebarVisible === 'false' && sidebar && showSidebarBtn) {
-            sidebar.style.display = 'none';
-            showSidebarBtn.style.display = 'inline-block';
-            updateMobileCollapsedHeader(true);
+            setSidebarVisible(false, false);
         }
     } else if (isSidebarVisible === 'false') {
-        if (sidebar) sidebar.style.display = 'none';
-        if (showSidebarBtn) showSidebarBtn.style.display = 'inline-block';
-        updateMobileCollapsedHeader(true);
+        setSidebarVisible(false, false);
     } else {
-        updateMobileCollapsedHeader(false);
+        setSidebarVisible(true, false);
     }
 
     // Apply global glow effect based on saved intensity
@@ -4452,19 +4459,13 @@ window.addEventListener('DOMContentLoaded', initSidebarActiveState);
 
 if (hideSidebarBtn) {
     hideSidebarBtn.addEventListener('click', function() {
-        sidebar.style.display = 'none';
-        showSidebarBtn.style.display = 'inline-block';
-        updateMobileCollapsedHeader(true);
-        localStorage.setItem(SIDEBAR_KEY, 'false');
+        setSidebarVisible(false);
     });
 }
 
 if (showSidebarBtn) {
     showSidebarBtn.addEventListener('click', function() {
-        sidebar.style.display = 'flex';
-        showSidebarBtn.style.display = 'none';
-        updateMobileCollapsedHeader(false);
-        localStorage.setItem(SIDEBAR_KEY, 'true');
+        setSidebarVisible(true);
     });
 }
 

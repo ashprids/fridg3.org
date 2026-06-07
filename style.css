@@ -450,6 +450,28 @@ body {
     display: flex;
     flex-direction: column;
     overflow-y: auto; /* allow sidebar content to scroll if taller than viewport */
+    opacity: 1;
+    transform: translateX(0);
+    transition:
+        width 0.16s ease,
+        min-width 0.16s ease,
+        max-width 0.16s ease,
+        opacity 0.12s ease,
+        transform 0.16s ease,
+        border-color 0.16s ease,
+        box-shadow 0.16s ease;
+}
+
+body.sidebar-is-hidden #sidebar {
+    width: 0 !important;
+    min-width: 0 !important;
+    max-width: 0 !important;
+    border-right-color: transparent !important;
+    opacity: 0;
+    overflow: hidden !important;
+    pointer-events: none;
+    transform: translateX(-10px);
+    box-shadow: none !important;
 }
 
 #container {
@@ -542,6 +564,32 @@ body {
         font-size: 16px;
         border-radius: 6px;
     }
+}
+
+body.mobile-template #sidebar {
+    max-height: 1400px;
+    opacity: 1;
+    transform: translateY(0);
+    transition:
+        max-height 0.18s ease,
+        opacity 0.12s ease,
+        transform 0.18s ease,
+        padding 0.18s ease,
+        border-color 0.18s ease,
+        margin 0.18s ease;
+}
+
+body.mobile-template.sidebar-is-hidden #sidebar {
+    width: 100% !important;
+    max-width: none !important;
+    max-height: 0 !important;
+    min-height: 0 !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    border-bottom-color: transparent !important;
+    opacity: 0 !important;
+    overflow: hidden !important;
+    transform: translateY(-8px);
 }
 
 .tooltip {
@@ -4131,7 +4179,7 @@ pre code.hljs {
 
 /* blackprint default theme layer */
 body.blackprint-theme {
-    --bg: #101315;
+    --bg: #0b0d0f;
     --fg: #ece7dc;
     --border: #d0c7b8;
     --subtle: #a99f91;
@@ -4143,7 +4191,7 @@ body.blackprint-theme{
     background:
         linear-gradient(90deg, rgba(236, 231, 220, 0.05) 1px, transparent 1px),
         linear-gradient(0deg, rgba(236, 231, 220, 0.04) 1px, transparent 1px),
-        #101315;
+        #0b0d0f;
     background-size: 18px 18px, 18px 18px, auto;
     color: var(--fg);
 }
@@ -4169,7 +4217,7 @@ body.blackprint-theme #container{
 body.blackprint-theme #sidebar{
     width: 280px;
     background:
-        linear-gradient(180deg, rgba(24, 28, 30, 0.88), rgba(12, 15, 17, 0.9)),
+        linear-gradient(180deg, rgba(17, 20, 22, 0.92), rgba(7, 9, 10, 0.94)),
         var(--bg);
     border-right: 2px solid var(--border);
     box-shadow: 10px 0 0 rgba(236, 231, 220, 0.08);
@@ -4185,7 +4233,11 @@ body.blackprint-theme #header{
 
 body.blackprint-theme #title,
 body.blackprint-theme .mobile-collapsed-title{
-    color: var(--fg);
+    background-image: linear-gradient(0deg, #977eb6, #86d3cf);
+    background-clip: text;
+    -webkit-background-clip: text;
+    color: transparent;
+    -webkit-text-fill-color: transparent;
     font-family: "MainBold", var(--emoji-font), monospace;
     font-size: 24px;
     letter-spacing: 0;
@@ -4223,7 +4275,7 @@ body.blackprint-theme #tab{
     padding: 8px 10px;
     border: 1px solid var(--border);
     border-radius: 0;
-    background: rgba(24, 28, 30, 0.62);
+    background: rgba(15, 17, 19, 0.72);
     color: var(--fg);
     text-align: left;
     box-shadow: 3px 3px 0 rgba(236, 231, 220, 0.18);
@@ -4251,7 +4303,7 @@ body.blackprint-theme #content-layout{
     max-width: 920px;
     min-height: calc(100% - 2px);
     padding: 24px 30px;
-    background: rgba(24, 28, 30, 0.82);
+    background: rgba(15, 17, 19, 0.86);
     border: 2px solid var(--border);
     box-shadow:
         0 0 0 8px rgba(24, 28, 30, 0.58),
@@ -4270,7 +4322,7 @@ body.blackprint-theme #post,
 body.blackprint-theme .account-admin-card,
 body.blackprint-theme .usage-card,
 body.blackprint-theme pre code.hljs{
-    background: rgba(24, 28, 30, 0.7);
+    background: rgba(15, 17, 19, 0.78);
     border: 1px solid var(--border);
     border-radius: 0;
     box-shadow: 4px 4px 0 rgba(236, 231, 220, 0.13);
@@ -4283,7 +4335,7 @@ body.blackprint-theme #post{
 body.blackprint-theme #post:hover,
 body.blackprint-theme .account-admin-card:hover,
 body.blackprint-theme .usage-card:hover{
-    background: rgba(34, 39, 42, 0.9);
+    background: rgba(24, 28, 30, 0.94);
 }
 
 body.blackprint-theme #post-content,
@@ -5607,7 +5659,7 @@ body.blackprint-theme .frdgbeats-daw {
 
 /* blackprint dark-mode overrides */
 body.blackprint-theme {
-    --bg: #101315;
+    --bg: #0b0d0f;
     --fg: #ece7dc;
     --border: #d0c7b8;
     --subtle: #a99f91;
@@ -5632,7 +5684,7 @@ body.blackprint-theme{
     background:
         linear-gradient(90deg, rgba(236, 231, 220, 0.035) 1px, transparent 1px),
         linear-gradient(0deg, rgba(236, 231, 220, 0.03) 1px, transparent 1px),
-        #101315;
+        #0b0d0f;
     color: var(--fg);
 }
 
@@ -5647,7 +5699,7 @@ body.blackprint-theme .paper-grain{
 
 body.blackprint-theme #sidebar{
     background:
-        linear-gradient(180deg, rgba(25, 29, 31, 0.94), rgba(12, 15, 17, 0.96)),
+        linear-gradient(180deg, rgba(17, 20, 22, 0.96), rgba(7, 9, 10, 0.98)),
         var(--bg);
     box-shadow: 10px 0 0 rgba(0, 0, 0, 0.24);
 }
@@ -5662,14 +5714,14 @@ body.blackprint-theme #mini-player,
 body.blackprint-theme #mini-player-tracks,
 body.blackprint-theme.mobile-template #mini-player,
 body.blackprint-theme.mobile-template #mini-player-tracks{
-    background: rgba(24, 28, 30, 0.84) !important;
+    background: rgba(15, 17, 19, 0.88) !important;
     color: var(--fg) !important;
     border-color: rgba(208, 199, 184, 0.72) !important;
 }
 
 body.blackprint-theme #content-layout{
     box-shadow:
-        0 0 0 8px rgba(31, 35, 37, 0.62),
+        0 0 0 8px rgba(18, 21, 23, 0.7),
         12px 12px 0 rgba(0, 0, 0, 0.28);
 }
 
@@ -5683,7 +5735,7 @@ body.blackprint-theme pre code.hljs{
 body.blackprint-theme #post:hover,
 body.blackprint-theme .account-admin-card:hover,
 body.blackprint-theme .usage-card:hover{
-    background: rgba(34, 39, 42, 0.94) !important;
+    background: rgba(24, 28, 30, 0.96) !important;
 }
 
 body.blackprint-theme #tab{
@@ -5714,14 +5766,14 @@ body.blackprint-theme #bbcode-preview,
 body.blackprint-theme #create-account-form input[type="text"],
 body.blackprint-theme #admin-account-form input[type="text"],
 body.blackprint-theme #admin-account-form textarea{
-    background: rgba(17, 20, 22, 0.94) !important;
+    background: rgba(11, 13, 15, 0.96) !important;
     color: var(--fg) !important;
     border-color: rgba(208, 199, 184, 0.72) !important;
 }
 
 body.blackprint-theme .dropdown option,
 body.blackprint-theme .bbcode-dropdown option{
-    background: #15191b;
+    background: #0f1214;
     color: var(--fg);
 }
 
@@ -5731,7 +5783,7 @@ body.blackprint-theme #settings-save,
 body.blackprint-theme #color-reset,
 body.blackprint-theme .danger-button,
 body.blackprint-theme button{
-    background: rgba(31, 36, 39, 0.9);
+    background: rgba(20, 23, 26, 0.92);
     color: var(--fg);
     border-color: rgba(208, 199, 184, 0.72);
 }
@@ -5763,21 +5815,21 @@ body.blackprint-theme .danger-button:hover {
 }
 
 body.blackprint-theme .chat-view{
-    --chat-bg: rgba(17, 20, 22, 0.94);
+    --chat-bg: rgba(11, 13, 15, 0.96);
     --chat-fg: #ece7dc;
     --chat-border: rgba(208, 199, 184, 0.52);
     --chat-muted: #a99f91;
     --chat-own-bg: #d8cdbb;
-    --chat-own-fg: #101315;
-    --chat-other-bg: rgba(47, 52, 54, 0.94);
+    --chat-own-fg: #0b0d0f;
+    --chat-other-bg: rgba(31, 35, 38, 0.96);
     --chat-other-fg: #ece7dc;
 }
 
 body.blackprint-theme .chat-messages{
     border-color: rgba(208, 199, 184, 0.42);
     background:
-        linear-gradient(180deg, rgba(20, 24, 26, 0.94), rgba(13, 16, 18, 0.98)),
-        #101315;
+        linear-gradient(180deg, rgba(14, 17, 19, 0.96), rgba(8, 10, 11, 0.99)),
+        #0b0d0f;
     box-shadow:
         inset 0 0 32px rgba(236, 231, 220, 0.03),
         0 12px 28px rgba(0, 0, 0, 0.28);
@@ -5805,7 +5857,7 @@ body.blackprint-theme .chat-emoji-picker,
 body.blackprint-theme .chat-attach-menu,
 body.blackprint-theme .chat-voice-recorder{
     border-color: rgba(208, 199, 184, 0.42);
-    background: rgba(17, 20, 22, 0.96);
+    background: rgba(11, 13, 15, 0.97);
     color: var(--fg);
 }
 
@@ -5820,12 +5872,12 @@ body.blackprint-theme .chat-attach-menu button:hover{
 }
 
 body.blackprint-theme .chat-message-deleted{
-    background: rgba(25, 29, 31, 0.94);
+    background: rgba(17, 20, 22, 0.96);
     border-color: rgba(208, 199, 184, 0.24);
 }
 
 body.blackprint-theme.mobile-template #content-layout{
-    background: rgba(19, 23, 25, 0.94) !important;
+    background: rgba(13, 15, 17, 0.96) !important;
     border-color: var(--border) !important;
 }
 
@@ -5845,7 +5897,7 @@ body.blackprint-theme.mobile-template #bbcode-preview,
 body.blackprint-theme.mobile-template .checkbox,
 body.blackprint-theme.mobile-template .radio,
 body.blackprint-theme.mobile-template .color-input{
-    background: rgba(17, 20, 22, 0.94) !important;
+    background: rgba(11, 13, 15, 0.96) !important;
     color: var(--fg) !important;
     border-color: var(--border) !important;
 }
@@ -5984,7 +6036,7 @@ body.blackprint-theme.mobile-template .mobile-collapsed-header #show-sidebar {
     min-width: 34px !important;
     height: 34px !important;
     padding: 0 !important;
-    background: rgba(24, 28, 30, 0.94) !important;
+    background: rgba(15, 17, 19, 0.96) !important;
     color: var(--fg) !important;
     border-color: var(--border) !important;
     box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.28) !important;
@@ -6053,7 +6105,7 @@ body.blackprint-theme.mobile-template .mobile-nav-grid {
 }
 
 body.blackprint-theme.mobile-template .mobile-nav-grid a.mobile-nav-link > #tab.mobile-nav-button {
-    background: rgba(24, 28, 30, 0.94) !important;
+    background: rgba(15, 17, 19, 0.96) !important;
     color: var(--fg) !important;
     border-color: var(--border) !important;
     box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.28) !important;
@@ -6089,7 +6141,7 @@ body.blackprint-theme.mobile-template #footer-buttons {
 }
 
 body.blackprint-theme.mobile-template #footer-buttons > a.mobile-footer-link > #footer-button.mobile-footer-button {
-    background: rgba(24, 28, 30, 0.94) !important;
+    background: rgba(15, 17, 19, 0.96) !important;
     color: var(--fg) !important;
     border-color: var(--border) !important;
     box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.28) !important;
@@ -6151,4 +6203,8 @@ body.blackprint-theme.mobile-template #search-button {
         justify-content: flex-end !important;
         align-items: center !important;
     }
+}
+
+body.blackprint-theme.mobile-template .mobile-nav-grid a.mobile-nav-link > #tab.mobile-nav-button::before {
+    content: none !important;
 }
