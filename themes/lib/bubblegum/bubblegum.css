@@ -907,6 +907,120 @@ body.mobile-template #usage-grid .usage-card:hover {
     color: var(--time-label) !important;
 }
 
+/* pastel whiteprint-derived bubblegum pass */
+:root {
+    --bg: #fbf4fb;
+    --fg: #30233d;
+    --border: #b99fd0;
+    --subtle: #8d759d;
+    --links: #70aaa8;
+    --hero-ascii-muted: #a693b6;
+    --hero-ascii-1: #b99fd0;
+    --hero-ascii-2: #b4a5d0;
+    --hero-ascii-3: #aeacd1;
+    --hero-ascii-4: #a6b3cf;
+    --hero-ascii-5: #9abacb;
+    --hero-ascii-6: #86c1c4;
+    --hero-ascii-7: #70aaa8;
+    --resource-ascii: #70aaa8;
+    --resource-label: #9c7faf;
+    --time-ascii: #70aaa8;
+    --time-label: #8d759d;
+}
+
+body {
+    background:
+        linear-gradient(135deg, rgba(185, 159, 208, 0.22), rgba(112, 170, 168, 0.18)),
+        linear-gradient(90deg, rgba(185, 159, 208, 0.1) 1px, transparent 1px),
+        linear-gradient(0deg, rgba(112, 170, 168, 0.08) 1px, transparent 1px),
+        #fbf4fb;
+    background-size: auto, 18px 18px, 18px 18px, auto;
+    color: var(--fg);
+}
+
+.bubble-pop {
+    opacity: 0.34;
+    background:
+        radial-gradient(circle at 14% 18%, rgba(238, 194, 222, 0.5) 0 82px, transparent 83px),
+        radial-gradient(circle at 84% 24%, rgba(188, 229, 225, 0.55) 0 96px, transparent 97px),
+        linear-gradient(45deg, rgba(48, 35, 61, 0.035) 25%, transparent 25% 75%, rgba(48, 35, 61, 0.035) 75%);
+}
+
+#sidebar,
+#content-layout,
+#post,
+.account-admin-card,
+.usage-card,
+pre code.hljs,
+#mini-player,
+#mini-player-tracks,
+#sidebar-footer,
+.form-card,
+.grid-item {
+    background:
+        linear-gradient(145deg, rgba(255, 255, 255, 0.62), rgba(224, 247, 244, 0.34)),
+        rgba(255, 250, 255, 0.82) !important;
+    border-color: var(--border) !important;
+    border-radius: 0 !important;
+    box-shadow: 4px 4px 0 rgba(112, 82, 134, 0.16) !important;
+}
+
+#sidebar {
+    border-right: 2px solid var(--border) !important;
+    box-shadow: 10px 0 0 rgba(112, 82, 134, 0.09) !important;
+}
+
+#title,
+.mobile-collapsed-title {
+    background-image: linear-gradient(0deg, #b99fd0, #a6b3cf, #70aaa8);
+    background-clip: text;
+    -webkit-background-clip: text;
+    color: transparent !important;
+    -webkit-text-fill-color: transparent;
+    text-shadow: none !important;
+}
+
+#tab,
+#footer-button,
+button,
+#form-button,
+#search-button,
+#settings-save,
+#color-reset {
+    background:
+        linear-gradient(90deg, rgba(185, 159, 208, 0.24), rgba(112, 170, 168, 0.18)),
+        rgba(255, 250, 255, 0.9) !important;
+    border: 1px solid var(--border) !important;
+    color: var(--fg) !important;
+    border-radius: 0 !important;
+    box-shadow: 3px 3px 0 rgba(112, 82, 134, 0.16) !important;
+    text-shadow: none !important;
+}
+
+#tab::before {
+    content: ">> ";
+    color: var(--links);
+}
+
+#tab:hover,
+#tab.active,
+#footer-button:hover,
+#footer-button.active,
+button:hover,
+#form-button:hover,
+#search-button:hover,
+#settings-save:hover,
+#color-reset:hover,
+body.mobile-template .mobile-nav-grid a.mobile-nav-link > #tab.mobile-nav-button:hover,
+body.mobile-template .mobile-nav-grid a.mobile-nav-link > #tab.mobile-nav-button.active,
+body.mobile-template #footer-buttons > a.mobile-footer-link > #footer-button.mobile-footer-button:hover,
+body.mobile-template #footer-buttons > a.mobile-footer-link > #footer-button.mobile-footer-button.active {
+    background: linear-gradient(90deg, #b99fd0, #70aaa8) !important;
+    color: #fffaff !important;
+    border-color: var(--links) !important;
+    text-shadow: none !important;
+}
+
 /* bubblegum ascii sticker treatment */
 #homepage-hero-ascii > pre,
 #ascii-time,

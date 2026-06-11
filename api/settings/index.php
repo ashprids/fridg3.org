@@ -87,6 +87,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             'colors' => null,
             'mobileFriendlyView' => null,
             'onekoEnabled' => null,
+            'reduceMotion' => null,
+            'highContrast' => null,
         ],
     ];
     if ($isToast) {
@@ -112,6 +114,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             if (array_key_exists('onekoEnabled', $account)) {
                 $result['settings']['onekoEnabled'] = is_truthy_setting($account['onekoEnabled']);
             }
+            if (array_key_exists('reduceMotion', $account)) {
+                $result['settings']['reduceMotion'] = is_truthy_setting($account['reduceMotion']);
+            }
+            if (array_key_exists('highContrast', $account)) {
+                $result['settings']['highContrast'] = is_truthy_setting($account['highContrast']);
+            }
             break;
         }
     }
@@ -136,7 +144,10 @@ $isAdmin = isset($_SESSION['user']['isAdmin']) && $_SESSION['user']['isAdmin'] =
 $isToast = fridg3_toast_is_current_user();
 
 $intensityProvided = array_key_exists('glowIntensity', $_POST);
-$intensity = $intensityProvided ? (string)$_POST['glowIntensity'] : null;
+$intensity = $intensityProvided ? strtolower(trim((string)$_POST['glowIntensity'])) : null;
+if ($intensity === 'low' || $intensity === 'high') {
+    $intensity = 'medium';
+}
 
 $themeProvided = array_key_exists('theme', $_POST);
 $theme = $themeProvided ? (string)$_POST['theme'] : null;
@@ -147,16 +158,26 @@ $maintenanceRaw = $maintenanceProvided ? (string)$_POST['maintenanceMode'] : nul
 $mobileViewProvided = array_key_exists('mobileFriendlyView', $_POST);
 $mobileViewRaw = $mobileViewProvided ? (string)$_POST['mobileFriendlyView'] : null;
 
+$reduceMotionProvided = array_key_exists('reduceMotion', $_POST);
+$reduceMotionRaw = $reduceMotionProvided ? (string)$_POST['reduceMotion'] : null;
+
+$highContrastProvided = array_key_exists('highContrast', $_POST);
+$highContrastRaw = $highContrastProvided ? (string)$_POST['highContrast'] : null;
+
 $onekoProvided = array_key_exists('onekoEnabled', $_POST);
 $onekoRaw = $onekoProvided ? (string)$_POST['onekoEnabled'] : null;
 
 $toastPersonalityProvided = array_key_exists('toastPersonalityJson', $_POST);
 $toastPersonalityRaw = $toastPersonalityProvided ? (string)$_POST['toastPersonalityJson'] : null;
 
-$allowedIntensity = ['none', 'low', 'medium', 'high'];
+$allowedIntensity = ['none', 'medium'];
 $availableThemes = function_exists('fridg3_list_themes') ? fridg3_list_themes(dirname(__DIR__, 2)) : [];
 $allowedThemes = array_merge(['default'], array_keys($availableThemes));
 $colorFields = ['bg', 'fg', 'border', 'subtle', 'links'];
+$themeColorFields = [
+    'classic' => $colorFields,
+    'ambercrt' => ['links'],
+];
 
 $errors = [];
 $didWork = false;
@@ -254,6 +275,56 @@ if ($onekoProvided) {
     foreach ($data['accounts'] as &$account) {
         if (isset($account['username']) && (string)$account['username'] === $username) {
             $account['onekoEnabled'] = $onekoEnabled;
+            $updated = true;
+            break;
+        }
+    }
+    unset($account);
+
+    if ($updated) {
+        if (!save_accounts_data($accountsPath, $data)) {
+            http_response_code(500);
+            echo json_encode(['ok' => false, 'error' => 'write_failed']);
+            exit;
+        }
+        $didWork = true;
+    }
+}
+
+if ($reduceMotionProvided || $highContrastProvided) {
+    $truthy = ['1', 'true', 'yes', 'y', 'on', 'enabled'];
+    $falsy  = ['0', 'false', 'no', 'n', 'off', 'disabled'];
+    $accessibilityValues = [];
+    $accessibilityInputs = [
+        'reduceMotion' => [$reduceMotionProvided, $reduceMotionRaw, 'invalid_reduce_motion_value'],
+        'highContrast' => [$highContrastProvided, $highContrastRaw, 'invalid_high_contrast_value'],
+    ];
+
+    foreach ($accessibilityInputs as $key => [$provided, $raw, $error]) {
+        if (!$provided) continue;
+        $lower = strtolower(trim((string)$raw));
+        if (!in_array($lower, $truthy, true) && !in_array($lower, $falsy, true)) {
+            http_response_code(400);
+            echo json_encode(['ok' => false, 'error' => $error]);
+            exit;
+        }
+        $accessibilityValues[$key] = in_array($lower, $truthy, true);
+    }
+
+    $accountsPath = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'data' . DIRECTORY_SEPARATOR . 'accounts' . DIRECTORY_SEPARATOR . 'accounts.json';
+    $data = load_accounts_data($accountsPath);
+    if ($data === null) {
+        http_response_code(500);
+        echo json_encode(['ok' => false, 'error' => 'accounts_invalid']);
+        exit;
+    }
+
+    $updated = false;
+    foreach ($data['accounts'] as &$account) {
+        if (isset($account['username']) && (string)$account['username'] === $username) {
+            foreach ($accessibilityValues as $key => $value) {
+                $account[$key] = $value;
+            }
             $updated = true;
             break;
         }
@@ -386,10 +457,11 @@ if (!empty($colors)) {
     }
 }
 
-if (!empty($colors) && $colorTheme === 'classic') {
+if (!empty($colors) && isset($themeColorFields[$colorTheme])) {
+    $allowedColorFields = $themeColorFields[$colorTheme];
     $validColors = [];
     foreach ($colors as $k => $v) {
-        if (!in_array($k, $colorFields, true)) continue;
+        if (!in_array($k, $allowedColorFields, true)) continue;
         $hex = trim((string)$v);
         if (!preg_match('/^#([0-9a-fA-F]{6})$/', $hex)) {
             http_response_code(400);
@@ -459,7 +531,7 @@ if ($maintenanceProvided) {
     $didWork = true;
 }
 
-if ($didWork || $intensityProvided || $themeProvided || $maintenanceProvided || $mobileViewProvided || $onekoProvided || $toastPersonalityProvided) {
+if ($didWork || $intensityProvided || $themeProvided || $maintenanceProvided || $mobileViewProvided || $reduceMotionProvided || $highContrastProvided || $onekoProvided || $toastPersonalityProvided) {
     echo json_encode(['ok' => true]);
     exit;
 }

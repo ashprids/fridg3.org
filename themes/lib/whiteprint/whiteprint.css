@@ -1,27 +1,32 @@
 :root {
-    --bg: #e4e7e4;
+    --bg: #eceaf0;
     --fg: #171b1d;
-    --border: #30383b;
-    --subtle: #5d6669;
-    --links: #1f5f78;
+    --border: #776490;
+    --subtle: #6f617f;
+    --links: #3e8582;
     --chat-own-fg: #ffffff;
-    --hero-ascii-muted: #6a7173;
-    --hero-ascii-1: #576073;
-    --hero-ascii-2: #505f75;
-    --hero-ascii-3: #485f78;
-    --hero-ascii-4: #405f7a;
-    --hero-ascii-5: #38617b;
-    --hero-ascii-6: #30627c;
-    --hero-ascii-7: #1f5f78;
+    --hero-ascii-muted: #8a8392;
+    --hero-ascii-1: #776490;
+    --hero-ascii-2: #766f94;
+    --hero-ascii-3: #747a99;
+    --hero-ascii-4: #72869d;
+    --hero-ascii-5: #7091a1;
+    --hero-ascii-6: #6e9da4;
+    --hero-ascii-7: #6caaa7;
     --hero-ascii-opacity: 1;
+    --resource-ascii: #4d918e;
+    --resource-label: #776490;
+    --time-ascii: #4d918e;
+    --time-label: #6f617f;
 }
 
 body {
     background:
-        linear-gradient(90deg, rgba(23, 27, 29, 0.05) 1px, transparent 1px),
-        linear-gradient(0deg, rgba(23, 27, 29, 0.04) 1px, transparent 1px),
-        #e4e7e4;
-    background-size: 18px 18px, 18px 18px, auto;
+        linear-gradient(135deg, rgba(119, 100, 144, 0.16), rgba(108, 170, 167, 0.12)),
+        linear-gradient(90deg, rgba(119, 100, 144, 0.08) 1px, transparent 1px),
+        linear-gradient(0deg, rgba(108, 170, 167, 0.07) 1px, transparent 1px),
+        #eceaf0;
+    background-size: auto, 18px 18px, 18px 18px, auto;
     color: var(--fg);
 }
 
@@ -46,7 +51,7 @@ body {
 #sidebar {
     width: 280px;
     background:
-        linear-gradient(180deg, rgba(247, 248, 244, 0.88), rgba(209, 216, 214, 0.9)),
+        linear-gradient(180deg, rgba(249, 248, 252, 0.9), rgba(219, 236, 234, 0.9)),
         var(--bg);
     border-right: 2px solid var(--border);
     box-shadow: 10px 0 0 rgba(23, 27, 29, 0.08);
@@ -62,7 +67,11 @@ body {
 
 #title,
 .mobile-collapsed-title {
-    color: var(--fg);
+    background-image: linear-gradient(0deg, #776490, #748f9c, #6caaa7);
+    background-clip: text;
+    -webkit-background-clip: text;
+    color: transparent;
+    -webkit-text-fill-color: transparent;
     font-family: "MainBold", var(--emoji-font), monospace;
     font-size: 24px;
     letter-spacing: 0;
@@ -100,7 +109,9 @@ body {
     padding: 8px 10px;
     border: 1px solid var(--border);
     border-radius: 0;
-    background: rgba(247, 248, 244, 0.62);
+    background:
+        linear-gradient(90deg, rgba(119, 100, 144, 0.13), rgba(108, 170, 167, 0.09)),
+        rgba(247, 248, 244, 0.62);
     color: var(--fg);
     text-align: left;
     box-shadow: 3px 3px 0 rgba(23, 27, 29, 0.18);
@@ -119,9 +130,35 @@ body.mobile-template .mobile-nav-grid a.mobile-nav-link > #tab.mobile-nav-button
 #tab:hover,
 #tab.active {
     transform: translate(-2px, -2px);
-    background: var(--fg);
+    background: linear-gradient(90deg, #776490, #6caaa7);
     color: #f7f8f4;
-    box-shadow: 5px 5px 0 rgba(31, 95, 120, 0.34);
+    box-shadow: 5px 5px 0 rgba(108, 170, 167, 0.28);
+}
+
+.theme-picker-button,
+.theme-picker-option {
+    background:
+        linear-gradient(90deg, rgba(119, 100, 144, 0.13), rgba(108, 170, 167, 0.09)),
+        rgba(247, 248, 244, 0.62) !important;
+    color: var(--fg) !important;
+    border-color: var(--border) !important;
+}
+
+.theme-picker-button:hover,
+.theme-picker-option:hover,
+.theme-picker-option.selected {
+    background: linear-gradient(90deg, #776490, #6caaa7) !important;
+    color: #f7f8f4 !important;
+}
+
+.theme-picker-button:hover .theme-picker-title,
+.theme-picker-button:hover .theme-picker-description,
+.theme-picker-button:hover .theme-picker-chevron,
+.theme-picker-option:hover .theme-picker-option-title,
+.theme-picker-option:hover .theme-picker-option-description,
+.theme-picker-option.selected .theme-picker-option-title,
+.theme-picker-option.selected .theme-picker-option-description {
+    color: #f7f8f4 !important;
 }
 
 #content {
@@ -132,7 +169,9 @@ body.mobile-template .mobile-nav-grid a.mobile-nav-link > #tab.mobile-nav-button
     max-width: 920px;
     min-height: calc(100% - 2px);
     padding: 24px 30px;
-    background: rgba(247, 248, 244, 0.82);
+    background:
+        linear-gradient(145deg, rgba(119, 100, 144, 0.1), rgba(108, 170, 167, 0.08)),
+        rgba(247, 248, 244, 0.82);
     border: 2px solid var(--border);
     box-shadow:
         0 0 0 8px rgba(247, 248, 244, 0.58),
@@ -293,7 +332,7 @@ textarea:focus,
 .danger-button,
 button,
 #footer-button {
-    background: var(--fg);
+    background: linear-gradient(90deg, #776490, #6caaa7);
     color: #f7f8f4;
     border: 1px solid var(--border);
     border-radius: 0;
@@ -306,7 +345,7 @@ button,
 #color-reset:hover,
 button:hover,
 #footer-button:hover {
-    background: var(--links);
+    background: linear-gradient(90deg, #8b73a8, #80bfbc);
     color: #f7f8f4;
 }
 
@@ -324,13 +363,13 @@ button:active,
 }
 
 #settings-save {
-    background: #1f5f78 !important;
+    background: linear-gradient(90deg, #776490, #6caaa7) !important;
     color: #f7f8f4 !important;
 }
 
 #settings-save:hover,
 #settings-save:active {
-    background: #2d7895 !important;
+    background: linear-gradient(90deg, #8b73a8, #80bfbc) !important;
     color: #f7f8f4 !important;
 }
 
@@ -485,9 +524,10 @@ body.mobile-template .mobile-nav-grid a.mobile-nav-link > #tab.mobile-nav-button
 
 body.mobile-template {
     background:
-        linear-gradient(90deg, rgba(23, 27, 29, 0.055) 1px, transparent 1px),
-        linear-gradient(0deg, rgba(23, 27, 29, 0.045) 1px, transparent 1px),
-        #e4e7e4 !important;
+        linear-gradient(135deg, rgba(119, 100, 144, 0.16), rgba(108, 170, 167, 0.12)),
+        linear-gradient(90deg, rgba(119, 100, 144, 0.08) 1px, transparent 1px),
+        linear-gradient(0deg, rgba(108, 170, 167, 0.07) 1px, transparent 1px),
+        #eceaf0 !important;
     color: var(--fg) !important;
 }
 
@@ -509,7 +549,7 @@ body.mobile-template #show-sidebar,
 body.mobile-template .mobile-collapsed-header #show-sidebar,
 body.mobile-template .mobile-nav-grid a.mobile-nav-link > #tab.mobile-nav-button,
 body.mobile-template #footer-buttons > a.mobile-footer-link > #footer-button.mobile-footer-button {
-    background: var(--fg) !important;
+    background: linear-gradient(90deg, #776490, #6caaa7) !important;
     color: #f7f8f4 !important;
     border-color: var(--border) !important;
 }
@@ -522,7 +562,7 @@ body.mobile-template .mobile-nav-grid a.mobile-nav-link > #tab.mobile-nav-button
 body.mobile-template .mobile-nav-grid a.mobile-nav-link > #tab.mobile-nav-button.active:hover,
 body.mobile-template #footer-buttons > a.mobile-footer-link > #footer-button.mobile-footer-button.active,
 body.mobile-template #footer-buttons > a.mobile-footer-link > #footer-button.mobile-footer-button.active:hover {
-    background: var(--links) !important;
+    background: linear-gradient(90deg, #8b73a8, #80bfbc) !important;
     color: #f7f8f4 !important;
     border-color: var(--border) !important;
 }

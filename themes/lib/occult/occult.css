@@ -922,3 +922,53 @@ body.mobile-template #usage-grid .usage-card:hover {
 #ascii-time-label {
     color: var(--time-label) !important;
 }
+
+/* distinct occult controls: sigil panels with inner glow */
+#tab,
+#footer-button,
+button,
+#form-button,
+#search-button,
+#settings-save,
+#color-reset,
+body.mobile-template .mobile-nav-grid a.mobile-nav-link > #tab.mobile-nav-button,
+body.mobile-template #footer-buttons > a.mobile-footer-link > #footer-button.mobile-footer-button {
+    border: 1px solid color-mix(in srgb, var(--links) 72%, var(--border) 28%) !important;
+    border-radius: 2px !important;
+    background:
+        radial-gradient(circle at 18% 50%, rgba(200, 132, 32, 0.22), transparent 38%),
+        linear-gradient(135deg, rgba(70, 28, 80, 0.42), rgba(11, 7, 16, 0.96)) !important;
+    color: var(--fg) !important;
+    box-shadow:
+        inset 0 0 18px rgba(200, 132, 32, 0.16),
+        0 0 0 1px rgba(0, 0, 0, 0.6),
+        3px 3px 0 rgba(0, 0, 0, 0.32) !important;
+}
+
+#tab::before {
+    content: "◇ ";
+    color: var(--links);
+}
+
+#tab:hover,
+#tab.active,
+#footer-button:hover,
+#footer-button.active,
+button:hover,
+#form-button:hover,
+#search-button:hover,
+#settings-save:hover,
+#color-reset:hover,
+body.mobile-template .mobile-nav-grid a.mobile-nav-link > #tab.mobile-nav-button:hover,
+body.mobile-template .mobile-nav-grid a.mobile-nav-link > #tab.mobile-nav-button.active,
+body.mobile-template #footer-buttons > a.mobile-footer-link > #footer-button.mobile-footer-button:hover,
+body.mobile-template #footer-buttons > a.mobile-footer-link > #footer-button.mobile-footer-button.active {
+    background:
+        radial-gradient(circle at 18% 50%, rgba(248, 207, 116, 0.3), transparent 40%),
+        linear-gradient(135deg, rgba(93, 37, 102, 0.72), rgba(18, 10, 26, 0.96)) !important;
+    color: #f8cf74 !important;
+    border-color: #f8cf74 !important;
+    box-shadow:
+        inset 0 0 22px rgba(248, 207, 116, 0.2),
+        0 0 16px rgba(200, 132, 32, 0.24) !important;
+}

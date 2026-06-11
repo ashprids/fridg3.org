@@ -683,3 +683,118 @@ body.mobile-template #usage-grid .usage-card:hover {
 #ascii-time-label {
     color: var(--time-label) !important;
 }
+
+/* arcade-cabinet neon palette pass */
+:root {
+    --bg: #0b0d22;
+    --fg: #f7f2ff;
+    --border: #6b82df;
+    --subtle: #61a1e6;
+    --links: #31d7c2;
+    --arcade-teal: #31d7c2;
+    --arcade-periwinkle: #6b82df;
+    --arcade-sky: #61a1e6;
+    --arcade-blue: #3495e8;
+    --arcade-violet: #6e26e1;
+    --arcade-magenta: #ce29c6;
+    --hero-ascii-muted: #594f8f;
+    --hero-ascii-1: #31d7c2;
+    --hero-ascii-2: #6b82df;
+    --hero-ascii-3: #61a1e6;
+    --hero-ascii-4: #3495e8;
+    --hero-ascii-5: #6e26e1;
+    --hero-ascii-6: #a728d2;
+    --hero-ascii-7: #ce29c6;
+    --resource-ascii: #31d7c2;
+    --resource-label: #61a1e6;
+    --time-ascii: #ce29c6;
+    --time-label: #6b82df;
+}
+
+body {
+    background:
+        radial-gradient(circle at 12% 14%, rgba(206, 41, 198, 0.32), transparent 28%),
+        radial-gradient(circle at 86% 18%, rgba(49, 215, 194, 0.22), transparent 26%),
+        linear-gradient(135deg, rgba(110, 38, 225, 0.18), rgba(52, 149, 232, 0.12), rgba(49, 215, 194, 0.08)),
+        linear-gradient(90deg, rgba(107, 130, 223, 0.08) 1px, transparent 1px),
+        linear-gradient(0deg, rgba(206, 41, 198, 0.07) 1px, transparent 1px),
+        #0b0d22;
+    background-size: auto, auto, auto, 18px 18px, 18px 18px, auto;
+    color: var(--fg);
+}
+
+#sidebar,
+#content-layout,
+#post,
+.account-admin-card,
+.usage-card,
+pre code.hljs,
+#mini-player,
+#mini-player-tracks,
+#sidebar-footer,
+.form-card,
+.grid-item {
+    background:
+        linear-gradient(145deg, rgba(107, 130, 223, 0.14), rgba(49, 215, 194, 0.08)),
+        rgba(11, 13, 34, 0.9) !important;
+    border-color: color-mix(in srgb, var(--border) 70%, var(--links) 30%) !important;
+    box-shadow:
+        4px 4px 0 rgba(0, 0, 0, 0.28),
+        0 0 22px rgba(52, 149, 232, 0.12) !important;
+}
+
+#sidebar {
+    border-right: 2px solid var(--border) !important;
+    box-shadow: 10px 0 0 rgba(0, 0, 0, 0.22) !important;
+}
+
+#title,
+.mobile-collapsed-title {
+    background-image: linear-gradient(0deg, var(--arcade-teal), var(--arcade-blue), var(--arcade-violet), var(--arcade-magenta));
+    background-clip: text;
+    -webkit-background-clip: text;
+    color: transparent !important;
+    -webkit-text-fill-color: transparent;
+    text-shadow: none !important;
+}
+
+#tab,
+#footer-button,
+button,
+#form-button,
+#search-button,
+#settings-save,
+#color-reset {
+    background:
+        linear-gradient(90deg, rgba(107, 130, 223, 0.24), rgba(52, 149, 232, 0.18), rgba(49, 215, 194, 0.12)),
+        rgba(11, 13, 34, 0.92) !important;
+    border: 1px solid var(--border) !important;
+    color: var(--fg) !important;
+    border-radius: 0 !important;
+    box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.3) !important;
+    text-shadow: none !important;
+}
+
+#tab::before {
+    content: ">> ";
+    color: var(--arcade-magenta);
+}
+
+#tab:hover,
+#tab.active,
+#footer-button:hover,
+#footer-button.active,
+button:hover,
+#form-button:hover,
+#search-button:hover,
+#settings-save:hover,
+#color-reset:hover,
+body.mobile-template .mobile-nav-grid a.mobile-nav-link > #tab.mobile-nav-button:hover,
+body.mobile-template .mobile-nav-grid a.mobile-nav-link > #tab.mobile-nav-button.active,
+body.mobile-template #footer-buttons > a.mobile-footer-link > #footer-button.mobile-footer-button:hover,
+body.mobile-template #footer-buttons > a.mobile-footer-link > #footer-button.mobile-footer-button.active {
+    background: linear-gradient(90deg, var(--arcade-teal), var(--arcade-blue), var(--arcade-violet), var(--arcade-magenta)) !important;
+    color: #07091f !important;
+    border-color: var(--links) !important;
+    text-shadow: none !important;
+}

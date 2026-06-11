@@ -1,5 +1,7 @@
 {
   "name": "whiteprint",
+  "description": "light print layout with purple-to-teal ink accents",
+  "thumbnail": "thumbnails/whiteprint.svg",
   "html": "whiteprint/whiteprint.html",
   "css": "whiteprint/whiteprint.css"
 }

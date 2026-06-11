@@ -749,3 +749,173 @@ body.mobile-template #usage-grid .usage-card:hover {
 #ascii-time-label {
     color: var(--time-label) !important;
 }
+
+/* CRT blackprint-derived layer. --links is the user-configurable main phosphor color. */
+:root {
+    --bg: #090b0d;
+    --links: #ffb84d;
+    --crt-accent: var(--links);
+    --fg: color-mix(in srgb, var(--crt-accent) 56%, #f6efe7 44%);
+    --border: color-mix(in srgb, var(--crt-accent) 70%, #776490 30%);
+    --subtle: color-mix(in srgb, var(--crt-accent) 52%, #776490 48%);
+    --chat-own-fg: #090b0d;
+    --hero-ascii-muted: color-mix(in srgb, var(--crt-accent) 42%, #5f5968 58%);
+    --hero-ascii-1: color-mix(in srgb, var(--crt-accent) 48%, #776490 52%);
+    --hero-ascii-2: color-mix(in srgb, var(--crt-accent) 54%, #776490 46%);
+    --hero-ascii-3: color-mix(in srgb, var(--crt-accent) 60%, #776490 40%);
+    --hero-ascii-4: color-mix(in srgb, var(--crt-accent) 66%, #6caaa7 34%);
+    --hero-ascii-5: color-mix(in srgb, var(--crt-accent) 72%, #6caaa7 28%);
+    --hero-ascii-6: color-mix(in srgb, var(--crt-accent) 78%, #6caaa7 22%);
+    --hero-ascii-7: var(--crt-accent);
+    --resource-ascii: var(--crt-accent);
+    --resource-label: var(--subtle);
+    --time-ascii: var(--crt-accent);
+    --time-label: var(--subtle);
+}
+
+body {
+    background:
+        radial-gradient(ellipse at 50% 45%, color-mix(in srgb, var(--crt-accent) 18%, transparent), transparent 62%),
+        linear-gradient(135deg, rgba(119, 100, 144, 0.12), color-mix(in srgb, var(--crt-accent) 8%, transparent)),
+        linear-gradient(90deg, color-mix(in srgb, var(--border) 16%, transparent) 1px, transparent 1px),
+        linear-gradient(0deg, color-mix(in srgb, var(--crt-accent) 10%, transparent) 1px, transparent 1px),
+        #090b0d !important;
+    background-size: auto, auto, 18px 18px, 18px 18px, auto;
+    color: var(--fg);
+    text-shadow: 0 0 7px color-mix(in srgb, var(--crt-accent) 42%, transparent);
+}
+
+.crt-glass {
+    background:
+        repeating-linear-gradient(0deg, color-mix(in srgb, var(--crt-accent) 12%, transparent) 0 1px, transparent 1px 4px),
+        radial-gradient(ellipse at center, transparent 0 62%, rgba(0, 0, 0, 0.4) 100%);
+}
+
+#sidebar,
+#content-layout,
+#post,
+.account-admin-card,
+.usage-card,
+pre code.hljs,
+#mini-player,
+#mini-player-tracks,
+#sidebar-footer,
+.form-card,
+.grid-item {
+    background:
+        linear-gradient(145deg, color-mix(in srgb, var(--border) 12%, transparent), color-mix(in srgb, var(--crt-accent) 6%, transparent)),
+        rgba(9, 11, 13, 0.9) !important;
+    border: 1px solid color-mix(in srgb, var(--border) 72%, transparent) !important;
+    border-radius: 0 !important;
+    box-shadow:
+        inset 0 0 30px color-mix(in srgb, var(--crt-accent) 8%, transparent),
+        4px 4px 0 rgba(0, 0, 0, 0.34) !important;
+}
+
+#sidebar {
+    border-right: 2px solid var(--border) !important;
+    box-shadow: 10px 0 0 rgba(0, 0, 0, 0.24) !important;
+}
+
+#header {
+    margin: 10px;
+    border-top: 4px double var(--border);
+    border-bottom: 4px double var(--border);
+}
+
+#title,
+.mobile-collapsed-title {
+    background-image: linear-gradient(0deg, color-mix(in srgb, var(--crt-accent) 52%, #776490 48%), var(--crt-accent));
+    background-clip: text;
+    -webkit-background-clip: text;
+    color: transparent !important;
+    -webkit-text-fill-color: transparent;
+    text-shadow: 0 0 14px color-mix(in srgb, var(--crt-accent) 46%, transparent) !important;
+}
+
+#content-layout::before {
+    content: "crt terminal";
+    border-bottom-color: color-mix(in srgb, var(--border) 48%, transparent);
+    color: var(--subtle);
+}
+
+#tab,
+#footer-button,
+button,
+#form-button,
+#search-button,
+#settings-save,
+#color-reset,
+body.mobile-template .mobile-nav-grid a.mobile-nav-link > #tab.mobile-nav-button,
+body.mobile-template #footer-buttons > a.mobile-footer-link > #footer-button.mobile-footer-button {
+    background:
+        linear-gradient(90deg, color-mix(in srgb, var(--border) 18%, transparent), color-mix(in srgb, var(--crt-accent) 9%, transparent)),
+        rgba(10, 12, 14, 0.94) !important;
+    color: var(--fg) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 0 !important;
+    box-shadow:
+        inset 0 0 12px color-mix(in srgb, var(--crt-accent) 8%, transparent),
+        3px 3px 0 rgba(0, 0, 0, 0.3) !important;
+    text-shadow: 0 0 6px color-mix(in srgb, var(--crt-accent) 38%, transparent);
+}
+
+#tab::before {
+    content: ">> ";
+    color: var(--subtle);
+}
+
+#tab:hover,
+#tab.active,
+#footer-button:hover,
+#footer-button.active,
+button:hover,
+#form-button:hover,
+#search-button:hover,
+#settings-save:hover,
+#color-reset:hover,
+body.mobile-template .mobile-nav-grid a.mobile-nav-link > #tab.mobile-nav-button:hover,
+body.mobile-template .mobile-nav-grid a.mobile-nav-link > #tab.mobile-nav-button.active,
+body.mobile-template #footer-buttons > a.mobile-footer-link > #footer-button.mobile-footer-button:hover,
+body.mobile-template #footer-buttons > a.mobile-footer-link > #footer-button.mobile-footer-button.active {
+    background: var(--crt-accent) !important;
+    color: #090b0d !important;
+    border-color: var(--fg) !important;
+    text-shadow: none !important;
+}
+
+#search-box,
+input,
+textarea,
+.dropdown,
+.text-input,
+.bbcode-dropdown,
+.bbcode-btn,
+#bbcode-textbox,
+#bbcode-preview,
+body.mobile-template input,
+body.mobile-template textarea,
+body.mobile-template .dropdown,
+body.mobile-template .text-input,
+body.mobile-template .bbcode-dropdown,
+body.mobile-template .bbcode-btn,
+body.mobile-template #bbcode-textbox,
+body.mobile-template #bbcode-preview,
+body.mobile-template .checkbox,
+body.mobile-template .radio,
+body.mobile-template .color-input {
+    background: #090b0d !important;
+    color: var(--fg) !important;
+    border-color: var(--border) !important;
+}
+
+.chat-view {
+    --chat-bg: rgba(9, 11, 13, 0.94);
+    --chat-fg: var(--fg);
+    --chat-border: color-mix(in srgb, var(--border) 58%, transparent);
+    --chat-muted: var(--subtle);
+    --chat-own-bg: var(--crt-accent);
+    --chat-own-fg: #090b0d;
+    --chat-other-bg: color-mix(in srgb, var(--bg) 82%, var(--border) 18%);
+    --chat-other-fg: var(--fg);
+}

@@ -2140,6 +2140,10 @@ const THEME_PREF_KEY = 'themePref';
 const THEME_COOKIE = 'theme_pref';
 const COLOR_PREFS_KEY = 'colorPrefs';
 const COLOR_FIELDS = ['bg', 'fg', 'border', 'subtle', 'links'];
+const THEME_COLOR_FIELDS = {
+    classic: COLOR_FIELDS,
+    ambercrt: ['links'],
+};
 const COLOR_DEFAULTS = {
     bg: '#000000',
     fg: '#EEEEEE',
@@ -2147,9 +2151,20 @@ const COLOR_DEFAULTS = {
     subtle: '#917DAA',
     links: '#415FAD',
 };
+const THEME_COLOR_DEFAULTS = {
+    classic: COLOR_DEFAULTS,
+    ambercrt: {
+        links: '#FFB84D',
+    },
+};
 const MOBILE_VIEW_COOKIE = 'mobile_friendly_view';
 const MOBILE_VIEW_DOMAIN = '.fridg3.org';
 const ONEKO_ENABLED_KEY = 'onekoEnabled';
+const ACCESSIBILITY_PREFS_KEY = 'accessibilityPrefs';
+const ACCESSIBILITY_DEFAULTS = {
+    reduceMotion: false,
+    highContrast: false,
+};
 const ONEKO_ASSET_URL = '/resources/oneko.gif';
 const ONEKO_SIZE = 32;
 const ONEKO_SPEED = 10;
@@ -2157,23 +2172,36 @@ const ONEKO_FRAME_MS = 100;
 const ONEKO_SLEEP_AFTER_MS = 15000;
 let onekoController = null;
 
-// Apply saved color prefs early on page load only when the classic theme is active.
+// Apply saved color prefs early on page load for themes that expose color controls.
 (() => {
-    if (loadLocalThemePref() !== 'classic') {
+    const activeTheme = loadLocalThemePref();
+    if (!themeSupportsColorPrefs(activeTheme)) {
         clearColorVars();
         return;
     }
     const localColors = loadLocalColorPrefs();
     if (localColors) {
-        const merged = Object.assign({}, COLOR_DEFAULTS, localColors);
-        applyColorVars(merged);
+        const merged = Object.assign({}, getThemeColorDefaults(activeTheme), localColors);
+        applyColorVars(merged, getThemeColorFields(activeTheme));
     }
 })();
 
-function applyColorVars(colors) {
+function themeSupportsColorPrefs(theme) {
+    return Object.prototype.hasOwnProperty.call(THEME_COLOR_FIELDS, normalizeTheme(theme));
+}
+
+function getThemeColorFields(theme) {
+    return THEME_COLOR_FIELDS[normalizeTheme(theme)] || [];
+}
+
+function getThemeColorDefaults(theme) {
+    return THEME_COLOR_DEFAULTS[normalizeTheme(theme)] || {};
+}
+
+function applyColorVars(colors, fields = COLOR_FIELDS) {
     if (!colors) return;
     const root = document.documentElement;
-    COLOR_FIELDS.forEach(key => {
+    fields.forEach(key => {
         if (colors[key]) {
             root.style.setProperty(`--${key}`, colors[key]);
         }
@@ -2192,6 +2220,8 @@ function normalizeTheme(theme) {
     const normalized = theme.trim().toLowerCase();
     if (normalized === '' || normalized === 'default') return 'default';
     if (normalized === 'blackprint') return 'default';
+    if (normalized === 'crt') return 'ambercrt';
+    if (normalized === 'liminal') return 'default';
     if (normalized === 'custom') return 'classic';
     if (normalized === 'newsprint') return 'whiteprint';
     if (/^[a-z0-9_-]+$/.test(normalized)) return normalized;
@@ -2287,6 +2317,40 @@ function saveLocalOnekoEnabled(enabled) {
     try {
         localStorage.setItem(ONEKO_ENABLED_KEY, enabled ? '1' : '0');
     } catch (_) { /* ignore */ }
+}
+
+function normalizeAccessibilityPrefs(prefs) {
+    return Object.assign({}, ACCESSIBILITY_DEFAULTS, {
+        reduceMotion: !!(prefs && prefs.reduceMotion),
+        highContrast: !!(prefs && prefs.highContrast),
+    });
+}
+
+function readLocalAccessibilityPrefs() {
+    try {
+        const raw = localStorage.getItem(ACCESSIBILITY_PREFS_KEY);
+        if (!raw) return normalizeAccessibilityPrefs(null);
+        return normalizeAccessibilityPrefs(JSON.parse(raw));
+    } catch (_) {
+        return normalizeAccessibilityPrefs(null);
+    }
+}
+
+function saveLocalAccessibilityPrefs(prefs) {
+    try {
+        localStorage.setItem(ACCESSIBILITY_PREFS_KEY, JSON.stringify(normalizeAccessibilityPrefs(prefs)));
+    } catch (_) { /* ignore */ }
+}
+
+function applyAccessibilityPrefs(prefs, opts = {}) {
+    const normalized = normalizeAccessibilityPrefs(prefs);
+    const root = document.documentElement;
+    root.classList.toggle('access-reduced-motion', normalized.reduceMotion);
+    root.classList.toggle('access-high-contrast', normalized.highContrast);
+    if (opts.persistLocal !== false) {
+        saveLocalAccessibilityPrefs(normalized);
+    }
+    return normalized;
 }
 
 function setOnekoSprite(el, frame) {
@@ -2432,6 +2496,8 @@ function setOnekoEnabled(enabled, opts = {}) {
 }
 
 function syncOnekoPreference() {
+    applyAccessibilityPrefs(readLocalAccessibilityPrefs(), { persistLocal: false });
+
     const localEnabled = readLocalOnekoEnabled();
     setOnekoEnabled(localEnabled, { persistLocal: false });
 
@@ -2440,8 +2506,19 @@ function syncOnekoPreference() {
         method: 'GET',
         headers: { 'X-Requested-With': 'XMLHttpRequest' },
     }).then(r => r.ok ? r.json() : null).then(data => {
-        if (!data || !data.ok || !data.settings || typeof data.settings.onekoEnabled !== 'boolean') return;
-        setOnekoEnabled(data.settings.onekoEnabled);
+        if (!data || !data.ok || !data.settings) return;
+        if (typeof data.settings.onekoEnabled === 'boolean') {
+            setOnekoEnabled(data.settings.onekoEnabled);
+        }
+        const accessibilityPrefs = {};
+        ['reduceMotion', 'highContrast'].forEach(key => {
+            if (typeof data.settings[key] === 'boolean') {
+                accessibilityPrefs[key] = data.settings[key];
+            }
+        });
+        if (Object.keys(accessibilityPrefs).length) {
+            applyAccessibilityPrefs(accessibilityPrefs);
+        }
     }).catch(() => {});
 }
 
@@ -2519,17 +2596,7 @@ function ensureGlowStyle() {
 }
 
 function getGlowRadiusForIntensity(intensity) {
-    switch (intensity) {
-        case 'none':
-            return '0px';
-        case 'low':
-            return '4px';
-        case 'high':
-            return '16px';
-        case 'medium':
-        default:
-            return GLOW_RADIUS_DEFAULT;
-    }
+    return intensity === 'none' ? '0px' : GLOW_RADIUS_DEFAULT;
 }
 
 function applyGlowIntensity(intensity) {
@@ -2569,10 +2636,14 @@ const GRADIENT_ROTATION_MS = 12000; // adjust for speed/smoothness
 
 function startGradientRotation(el, durationMs) {
     try {
+        const reduceMotion = document.documentElement.classList.contains('access-reduced-motion')
+            || (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+        if (reduceMotion) return;
         let start;
         // disable CSS animation to avoid double updates
         el.style.animation = 'none';
         const tick = (ts) => {
+            if (document.documentElement.classList.contains('access-reduced-motion')) return;
             if (!start) start = ts;
             const elapsed = ts - start;
             const angle = (elapsed % durationMs) / durationMs * 360;
@@ -2638,14 +2709,15 @@ function initTooltips() {
 window.addEventListener('DOMContentLoaded', initTooltips);
 window.addEventListener('DOMContentLoaded', syncOnekoPreference);
 
-// Settings page: glow intensity control
+// Settings page: text glow toggle
 function initSettingsPage() {
     try {
         const rawPath = (window.location && window.location.pathname) ? window.location.pathname : '/';
         const path = rawPath.replace(/\/+$/, '') || '/';
         if (!path.startsWith('/settings')) return;
 
-        const glowGroup = document.getElementById('glow-intensity-group');
+        const glowGroup = document.getElementById('text-glow-group');
+        const glowToggle = document.getElementById('text-glow-toggle');
         const maintenanceGroup = document.getElementById('maintenance-mode-group');
         const adminSection = document.getElementById('admin-settings');
         const themeSelect = document.getElementById('theme-select');
@@ -2653,6 +2725,8 @@ function initSettingsPage() {
         const colorGroup = document.getElementById('color-scheme-group');
         const colorResetBtn = document.getElementById('color-reset');
         const mobileViewToggle = document.getElementById('mobile-friendly-toggle');
+        const reduceMotionToggle = document.getElementById('reduce-motion-toggle');
+        const highContrastToggle = document.getElementById('high-contrast-toggle');
         const onekoToggle = document.getElementById('oneko-toggle');
         const saveBtn = document.getElementById('settings-save');
         const sitemapBtn = document.querySelector('[data-action="generate-sitemap"]');
@@ -2665,16 +2739,22 @@ function initSettingsPage() {
         if (glowGroup.dataset.bound === '1') return;
         glowGroup.dataset.bound = '1';
 
-        const glowRadios = glowGroup.querySelectorAll('input[type="radio"][name="glow-intensity"]');
         const maintenanceRadios = maintenanceGroup ? maintenanceGroup.querySelectorAll('input[type="radio"][name="maintenance-mode"]') : [];
         const colorInputs = colorGroup ? colorGroup.querySelectorAll('input.color-input[data-color-key]') : [];
         const host = getCurrentHostName();
-        if (!glowRadios.length) return;
+        if (!glowToggle) return;
 
         let isAdmin = false;
         const isLoggedIn = !!document.getElementById('user-greeting');
         const isToastSession = !!(toastSettingsSection && toastSettingsSection.dataset.toastSession === '1');
         let currentTheme = loadLocalThemePref();
+        let themeOptions = [];
+        let themePicker = null;
+        let themePickerButton = null;
+        let themePickerMenu = null;
+        let themePickerTitle = null;
+        let themePickerDescription = null;
+        let themePickerThumb = null;
 
         const selectMaintenance = (state) => {
             if (!maintenanceRadios.length) return;
@@ -2691,6 +2771,19 @@ function initSettingsPage() {
         const setOnekoToggle = (enabled) => {
             if (!onekoToggle) return;
             onekoToggle.checked = enabled === true;
+        };
+
+        const getAccessibilityValues = () => {
+            return normalizeAccessibilityPrefs({
+                reduceMotion: !!(reduceMotionToggle && reduceMotionToggle.checked),
+                highContrast: !!(highContrastToggle && highContrastToggle.checked),
+            });
+        };
+
+        const setAccessibilityToggles = (prefs) => {
+            const normalized = normalizeAccessibilityPrefs(prefs);
+            if (reduceMotionToggle) reduceMotionToggle.checked = normalized.reduceMotion;
+            if (highContrastToggle) highContrastToggle.checked = normalized.highContrast;
         };
 
         const loadMaintenanceState = async () => {
@@ -2723,6 +2816,16 @@ function initSettingsPage() {
             return result;
         };
 
+        const getColorValuesForTheme = (theme) => {
+            const allowed = new Set(getThemeColorFields(theme));
+            const values = getColorValuesFromInputs();
+            const filtered = {};
+            Object.entries(values).forEach(([key, value]) => {
+                if (allowed.has(key)) filtered[key] = value;
+            });
+            return filtered;
+        };
+
         const setColorInputs = (colors) => {
             if (!colors) return;
             colorInputs.forEach(inp => {
@@ -2733,20 +2836,175 @@ function initSettingsPage() {
             });
         };
 
+        const getThemeMeta = (theme) => {
+            const normalizedTheme = normalizeTheme(theme);
+            return themeOptions.find(item => item.id === normalizedTheme) || {
+                id: normalizedTheme,
+                name: normalizedTheme === 'default' ? 'blackprint' : normalizedTheme,
+                description: '',
+                thumbnail: '',
+            };
+        };
+
+        const updateThemePickerButton = () => {
+            if (!themePickerButton || !themePickerTitle || !themePickerDescription || !themePickerThumb) return;
+            const meta = getThemeMeta(getThemeSelection());
+            themePickerTitle.textContent = meta.name || meta.id;
+            themePickerDescription.textContent = meta.description || '';
+            if (meta.thumbnail) {
+                themePickerThumb.style.backgroundImage = `url("${meta.thumbnail}")`;
+                themePickerThumb.classList.remove('empty');
+            } else {
+                themePickerThumb.style.backgroundImage = '';
+                themePickerThumb.classList.add('empty');
+            }
+            if (themePickerMenu) {
+                themePickerMenu.querySelectorAll('.theme-picker-option').forEach(option => {
+                    const selected = option.dataset.themeId === meta.id;
+                    option.classList.toggle('selected', selected);
+                    option.setAttribute('aria-selected', selected ? 'true' : 'false');
+                });
+            }
+        };
+
+        const closeThemePicker = () => {
+            if (!themePicker) return;
+            themePicker.classList.remove('open');
+            if (themePickerButton) themePickerButton.setAttribute('aria-expanded', 'false');
+        };
+
+        const renderThemePickerOptions = () => {
+            if (!themePickerMenu) return;
+            themePickerMenu.innerHTML = '';
+            themeOptions.forEach(theme => {
+                const option = document.createElement('button');
+                option.type = 'button';
+                option.className = 'theme-picker-option';
+                option.dataset.themeId = theme.id;
+                option.setAttribute('role', 'option');
+
+                const thumb = document.createElement('span');
+                thumb.className = 'theme-picker-thumb';
+                if (theme.thumbnail) {
+                    thumb.style.backgroundImage = `url("${theme.thumbnail}")`;
+                } else {
+                    thumb.classList.add('empty');
+                }
+
+                const copy = document.createElement('span');
+                copy.className = 'theme-picker-copy';
+                const title = document.createElement('span');
+                title.className = 'theme-picker-option-title';
+                title.textContent = theme.name || theme.id;
+                const description = document.createElement('span');
+                description.className = 'theme-picker-option-description';
+                description.textContent = theme.description || '';
+                copy.appendChild(title);
+                copy.appendChild(description);
+
+                option.appendChild(thumb);
+                option.appendChild(copy);
+                option.addEventListener('click', () => {
+                    setThemeSelection(theme.id);
+                    closeThemePicker();
+                    themeSelect.dispatchEvent(new Event('change', { bubbles: true }));
+                });
+                themePickerMenu.appendChild(option);
+            });
+            updateThemePickerButton();
+        };
+
+        const ensureThemePicker = () => {
+            if (!themeSelect || themePicker) return;
+            themeSelect.classList.add('native-theme-select');
+            themePicker = document.createElement('div');
+            themePicker.className = 'theme-picker';
+
+            themePickerButton = document.createElement('button');
+            themePickerButton.type = 'button';
+            themePickerButton.className = 'theme-picker-button';
+            themePickerButton.setAttribute('aria-haspopup', 'listbox');
+            themePickerButton.setAttribute('aria-expanded', 'false');
+
+            themePickerThumb = document.createElement('span');
+            themePickerThumb.className = 'theme-picker-thumb';
+            const buttonCopy = document.createElement('span');
+            buttonCopy.className = 'theme-picker-copy';
+            themePickerTitle = document.createElement('span');
+            themePickerTitle.className = 'theme-picker-title';
+            themePickerDescription = document.createElement('span');
+            themePickerDescription.className = 'theme-picker-description';
+            buttonCopy.appendChild(themePickerTitle);
+            buttonCopy.appendChild(themePickerDescription);
+            const chevron = document.createElement('span');
+            chevron.className = 'theme-picker-chevron';
+            chevron.setAttribute('aria-hidden', 'true');
+            chevron.textContent = '▾';
+            themePickerButton.appendChild(themePickerThumb);
+            themePickerButton.appendChild(buttonCopy);
+            themePickerButton.appendChild(chevron);
+
+            themePickerMenu = document.createElement('div');
+            themePickerMenu.className = 'theme-picker-menu';
+            themePickerMenu.setAttribute('role', 'listbox');
+
+            themePicker.appendChild(themePickerButton);
+            themePicker.appendChild(themePickerMenu);
+            themeSelect.insertAdjacentElement('afterend', themePicker);
+
+            themePickerButton.addEventListener('click', () => {
+                const open = themePicker.classList.toggle('open');
+                themePickerButton.setAttribute('aria-expanded', open ? 'true' : 'false');
+            });
+            document.addEventListener('click', event => {
+                if (!themePicker.contains(event.target)) closeThemePicker();
+            });
+            document.addEventListener('keydown', event => {
+                if (event.key === 'Escape') closeThemePicker();
+            });
+        };
+
+        const syncColorSectionForTheme = (theme) => {
+            if (!colorSection) return;
+            const normalizedTheme = normalizeTheme(theme);
+            const fields = getThemeColorFields(normalizedTheme);
+            colorSection.style.display = fields.length ? '' : 'none';
+            const heading = colorSection.querySelector('h3');
+            if (heading) {
+                heading.textContent = normalizedTheme === 'ambercrt' ? 'CRT phosphor' : 'color scheme';
+            }
+            const allowed = new Set(fields);
+            colorInputs.forEach(inp => {
+                const row = inp.closest('.color-row');
+                if (row) row.style.display = allowed.has(inp.dataset.colorKey) ? '' : 'none';
+                const label = row ? row.querySelector('span') : null;
+                if (label && normalizedTheme === 'ambercrt' && inp.dataset.colorKey === 'links') {
+                    label.textContent = 'main';
+                } else if (label && inp.dataset.colorKey === 'links') {
+                    label.textContent = 'links';
+                }
+            });
+        };
+
         const populateThemeOptions = (themes) => {
             if (!themeSelect) return;
             const selectedTheme = getThemeSelection();
+            ensureThemePicker();
             themeSelect.innerHTML = '';
+            themeOptions = [];
 
             (Array.isArray(themes) ? themes : []).forEach(theme => {
                 const id = normalizeTheme(theme && theme.id);
                 const name = theme && typeof theme.name === 'string' ? theme.name.trim() : '';
                 if (!name) return;
                 if ([...themeSelect.options].some(option => option.value === id)) return;
+                const description = theme && typeof theme.description === 'string' ? theme.description.trim() : '';
+                const thumbnail = theme && typeof theme.thumbnail === 'string' ? theme.thumbnail.trim() : '';
                 const option = document.createElement('option');
                 option.value = id;
                 option.textContent = name;
                 themeSelect.appendChild(option);
+                themeOptions.push({ id, name, description, thumbnail });
             });
 
             if (![...themeSelect.options].some(option => option.value === 'default')) {
@@ -2754,9 +3012,16 @@ function initSettingsPage() {
                 defaultOption.value = 'default';
                 defaultOption.textContent = 'blackprint';
                 themeSelect.insertBefore(defaultOption, themeSelect.firstChild);
+                themeOptions.unshift({
+                    id: 'default',
+                    name: 'blackprint',
+                    description: 'dark print layout with purple-to-teal accents',
+                    thumbnail: '/themes/thumbnails/blackprint.svg',
+                });
             }
 
             setThemeSelection(selectedTheme);
+            renderThemePickerOptions();
         };
 
         const setThemeSelection = (theme) => {
@@ -2773,6 +3038,7 @@ function initSettingsPage() {
             if (themeSelect.value === '') {
                 themeSelect.value = 'default';
             }
+            updateThemePickerButton();
         };
 
         const getThemeSelection = () => {
@@ -2781,13 +3047,13 @@ function initSettingsPage() {
 
         const applyThemeSelection = (theme) => {
             const normalizedTheme = normalizeTheme(theme);
-            if (colorSection) {
-                colorSection.style.display = normalizedTheme === 'classic' ? '' : 'none';
-            }
-            if (normalizedTheme === 'classic') {
-                const colors = Object.assign({}, COLOR_DEFAULTS, loadLocalColorPrefs() || getColorValuesFromInputs());
+            syncColorSectionForTheme(normalizedTheme);
+            if (themeSupportsColorPrefs(normalizedTheme)) {
+                const fields = getThemeColorFields(normalizedTheme);
+                const colors = Object.assign({}, getThemeColorDefaults(normalizedTheme), loadLocalColorPrefs() || getColorValuesForTheme(normalizedTheme));
                 setColorInputs(colors);
-                applyColorVars(colors);
+                clearColorVars();
+                applyColorVars(colors, fields);
             } else {
                 clearColorVars();
             }
@@ -2810,13 +3076,16 @@ function initSettingsPage() {
         };
 
         const persistColors = (colors, opts = {}) => {
-            if (getThemeSelection() !== 'classic') {
+            const selectedTheme = getThemeSelection();
+            if (!themeSupportsColorPrefs(selectedTheme)) {
                 clearColorVars();
                 return Promise.resolve();
             }
-            const merged = Object.assign({}, COLOR_DEFAULTS, colors || {});
+            const fields = getThemeColorFields(selectedTheme);
+            const merged = Object.assign({}, getThemeColorDefaults(selectedTheme), colors || {});
             saveLocalColorPrefs(merged);
-            applyColorVars(merged);
+            clearColorVars();
+            applyColorVars(merged, fields);
             if (!opts.skipServer) {
                 return postColorsToServer(merged);
             }
@@ -2824,8 +3093,10 @@ function initSettingsPage() {
         };
 
         const resetColorsToDefault = () => {
-            setColorInputs(COLOR_DEFAULTS);
-            persistColors(COLOR_DEFAULTS);
+            const selectedTheme = getThemeSelection();
+            const defaults = getThemeColorDefaults(selectedTheme);
+            setColorInputs(defaults);
+            persistColors(defaults);
         };
 
         const bindSitemapButton = () => {
@@ -2947,25 +3218,17 @@ function initSettingsPage() {
             stored = localStorage.getItem(GLOW_INTENSITY_KEY);
         } catch (_) { stored = null; }
         const initial = stored || GLOW_DEFAULT_INTENSITY;
-        let anyChecked = false;
-        glowRadios.forEach(r => {
-            if (r.value === initial) {
-                r.checked = true;
-                anyChecked = true;
-            }
-        });
-        if (!anyChecked) {
-            glowRadios[0].checked = true;
-        }
+        glowToggle.checked = initial !== 'none';
 
         // Load theme/color prefs: local first, then server if logged in
         const initialTheme = currentTheme;
         setThemeSelection(initialTheme);
-        const initialColors = Object.assign({}, COLOR_DEFAULTS, loadLocalColorPrefs() || {});
+        const initialColors = Object.assign({}, getThemeColorDefaults(initialTheme), loadLocalColorPrefs() || {});
         setColorInputs(initialColors);
         applyThemeSelection(initialTheme);
         syncMobileViewCookieWithCurrentHost();
         setMobileViewToggle(readMobileViewCookie());
+        setAccessibilityToggles(readLocalAccessibilityPrefs());
         setOnekoToggle(readLocalOnekoEnabled());
 
         if (window.fetch) {
@@ -3005,7 +3268,7 @@ function initSettingsPage() {
                         if (n) serverColors[k] = n;
                     });
                     if (Object.keys(serverColors).length) {
-                        const merged = Object.assign({}, COLOR_DEFAULTS, serverColors);
+                        const merged = Object.assign({}, getThemeColorDefaults(currentTheme), serverColors);
                         setColorInputs(merged);
                         saveLocalColorPrefs(merged);
                     }
@@ -3017,9 +3280,27 @@ function initSettingsPage() {
                     setMobileViewToggle(data.settings.mobileFriendlyView);
                     setMobileViewCookie(data.settings.mobileFriendlyView);
                 }
+                const serverAccessibilityPrefs = {};
+                ['reduceMotion', 'highContrast'].forEach(key => {
+                    if (typeof data.settings[key] === 'boolean') {
+                        serverAccessibilityPrefs[key] = data.settings[key];
+                    }
+                });
+                if (Object.keys(serverAccessibilityPrefs).length) {
+                    const normalizedAccessibilityPrefs = applyAccessibilityPrefs(serverAccessibilityPrefs);
+                    setAccessibilityToggles(normalizedAccessibilityPrefs);
+                }
                 if (typeof data.settings.onekoEnabled === 'boolean') {
                     setOnekoToggle(data.settings.onekoEnabled);
                     setOnekoEnabled(data.settings.onekoEnabled);
+                }
+                if (typeof data.settings.glowIntensity === 'string') {
+                    const serverGlowIntensity = data.settings.glowIntensity === 'none' ? 'none' : 'medium';
+                    glowToggle.checked = serverGlowIntensity !== 'none';
+                    try {
+                        localStorage.setItem(GLOW_INTENSITY_KEY, serverGlowIntensity);
+                    } catch (_) { /* ignore */ }
+                    applyGlowIntensity(serverGlowIntensity);
                 }
                 if (toastPersonalityTextarea && typeof data.settings.toastPersonalityJson === 'string') {
                     bindToastPersonalityButton();
@@ -3031,8 +3312,9 @@ function initSettingsPage() {
         // Persist colors immediately when changed
         colorInputs.forEach(inp => {
             inp.addEventListener('input', () => {
-                if (getThemeSelection() !== 'classic') return;
-                const chosen = getColorValuesFromInputs();
+                const selectedTheme = getThemeSelection();
+                if (!themeSupportsColorPrefs(selectedTheme)) return;
+                const chosen = getColorValuesForTheme(selectedTheme);
                 persistColors(chosen);
             });
         });
@@ -3047,19 +3329,18 @@ function initSettingsPage() {
         }
 
         saveBtn.addEventListener('click', function() {
-            let selected = null;
-            glowRadios.forEach(r => {
-                if (r.checked) selected = r.value;
-            });
-            if (!selected) return;
+            const selected = glowToggle.checked ? 'medium' : 'none';
 
             const mobileViewEnabled = !!(mobileViewToggle && mobileViewToggle.checked);
             setMobileViewCookie(mobileViewEnabled);
+            const accessibilityPrefs = applyAccessibilityPrefs(getAccessibilityValues());
 
             if (isToastSession) {
                 if (isLoggedIn && window.fetch) {
                     const params = new URLSearchParams();
                     params.append('mobileFriendlyView', mobileViewEnabled ? 'on' : 'off');
+                    params.append('reduceMotion', accessibilityPrefs.reduceMotion ? 'on' : 'off');
+                    params.append('highContrast', accessibilityPrefs.highContrast ? 'on' : 'off');
                     fetch('/api/settings', {
                         method: 'POST',
                         headers: {
@@ -3088,10 +3369,9 @@ function initSettingsPage() {
             saveLocalThemePref(selectedTheme);
             setThemeCookie(selectedTheme);
 
-            // Colors: only classic overrides style.css variables
-            const chosenColors = getColorValuesFromInputs();
-            const mergedColors = Object.assign({}, COLOR_DEFAULTS, chosenColors);
-            if (selectedTheme === 'classic') {
+            const chosenColors = getColorValuesForTheme(selectedTheme);
+            const mergedColors = Object.assign({}, getThemeColorDefaults(selectedTheme), chosenColors);
+            if (themeSupportsColorPrefs(selectedTheme)) {
                 persistColors(mergedColors, { skipServer: isLoggedIn });
             } else {
                 clearColorVars();
@@ -3104,9 +3384,11 @@ function initSettingsPage() {
                 params.append('glowIntensity', selected);
                 params.append('theme', selectedTheme);
                 params.append('mobileFriendlyView', mobileViewEnabled ? 'on' : 'off');
+                params.append('reduceMotion', accessibilityPrefs.reduceMotion ? 'on' : 'off');
+                params.append('highContrast', accessibilityPrefs.highContrast ? 'on' : 'off');
                 params.append('onekoEnabled', onekoEnabled ? 'on' : 'off');
 
-                if (selectedTheme === 'classic' && Object.keys(mergedColors).length) {
+                if (themeSupportsColorPrefs(selectedTheme) && Object.keys(mergedColors).length) {
                     // flatten colors into separate fields (merged so defaults persist server-side)
                     Object.entries(mergedColors).forEach(([k, v]) => {
                         params.append('color' + k.charAt(0).toUpperCase() + k.slice(1), v);

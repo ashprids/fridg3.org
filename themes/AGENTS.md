@@ -45,10 +45,13 @@ keep ids lowercase with `a-z`, `0-9`, `_`, and `-`. avoid spaces in filenames.
 theme json must be valid JSON and must include:
 
 - `name`: human-readable label shown in `/settings`
+- `description`: short supporting text shown in the on-site theme picker
+- `thumbnail`: 4:3 preview image path relative to `/themes`, usually `thumbnails/{theme-id}.svg`
 - `html`: relative path inside `/themes/lib`
 - `css`: relative path inside `/themes/lib`
 
 do not put paths like `/themes/lib/foo.css` in the json. use paths relative to `/themes/lib`, such as `aero/aero.css`.
+do not put paths like `/themes/thumbnails/foo.svg` in the json. use paths relative to `/themes`, such as `thumbnails/aero.svg`.
 
 allowed asset path characters are letters, numbers, `.`, `_`, `-`, and `/`. never use `..`, absolute paths, empty path segments, or weird shell-ish filenames.
 

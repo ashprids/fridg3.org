@@ -26,6 +26,8 @@ $themeList = [
     [
         'id' => 'default',
         'name' => 'blackprint',
+        'description' => 'dark print layout with purple-to-teal accents',
+        'thumbnail' => '/themes/thumbnails/blackprint.svg',
     ],
 ];
 
@@ -33,6 +35,8 @@ foreach ($themes as $theme) {
     $themeList[] = [
         'id' => $theme['id'],
         'name' => $theme['name'],
+        'description' => $theme['description'] ?? '',
+        'thumbnail' => $theme['thumbnailHref'] ?? '',
     ];
 }
 

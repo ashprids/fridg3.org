@@ -1,0 +1,254 @@
+:root {
+    --bg: #111315;
+    --fg: #e7e7e2;
+    --border: #383d3f;
+    --subtle: #9ca3a3;
+    --links: #e2201a;
+    --chat-own-fg: #ffffff;
+    --hero-ascii-muted: #656b6c;
+    --hero-ascii-1: #f5f5ef;
+    --hero-ascii-2: #d8d8d0;
+    --hero-ascii-3: #b6b8b3;
+    --hero-ascii-4: #8f9693;
+    --hero-ascii-5: #707b78;
+    --hero-ascii-6: #e2201a;
+    --hero-ascii-7: #ff4a3d;
+    --hero-ascii-opacity: 0.96;
+}
+
+body {
+    background:
+        linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+        linear-gradient(0deg, rgba(0, 0, 0, 0.34) 1px, transparent 1px),
+        radial-gradient(circle at 78% 14%, rgba(226, 32, 26, 0.11), transparent 26%),
+        linear-gradient(135deg, #1a1d1f 0%, #0b0c0d 58%, #151719 100%);
+    background-size: 6px 6px, 6px 6px, auto, auto;
+    color: var(--fg);
+}
+
+.thinkpad-deck {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background:
+        radial-gradient(circle at 32px 32px, rgba(226, 32, 26, 0.95) 0 4px, transparent 5px),
+        linear-gradient(90deg, transparent calc(100% - 138px), rgba(255, 255, 255, 0.04) calc(100% - 138px) calc(100% - 136px), transparent calc(100% - 136px)),
+        linear-gradient(180deg, transparent calc(100% - 72px), rgba(255, 255, 255, 0.05) calc(100% - 72px) calc(100% - 70px), transparent calc(100% - 70px));
+    opacity: 0.9;
+}
+
+#page-wrapper,
+#container {
+    background: transparent;
+}
+
+#sidebar {
+    width: 286px;
+    background:
+        linear-gradient(180deg, rgba(31, 34, 36, 0.98), rgba(10, 11, 12, 0.98)),
+        var(--bg);
+    border-right: 1px solid #404547;
+    box-shadow:
+        inset -7px 0 0 rgba(0, 0, 0, 0.32),
+        12px 0 28px rgba(0, 0, 0, 0.42);
+}
+
+#header {
+    position: relative;
+    margin: 12px;
+    padding: 14px 12px;
+    background:
+        linear-gradient(90deg, rgba(226, 32, 26, 0.12), transparent 34%),
+        #151719;
+    border: 1px solid #3c4143;
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.08),
+        0 2px 0 #050505;
+}
+
+#header::after {
+    content: "x230";
+    position: absolute;
+    right: 11px;
+    bottom: 9px;
+    color: #ff4a3d;
+    font-family: "MainBold", var(--emoji-font), monospace;
+    font-size: 11px;
+}
+
+#title,
+.mobile-collapsed-title {
+    color: #f5f5ef;
+    font-family: "MainBold", var(--emoji-font), monospace;
+    text-transform: none;
+    text-shadow: 1px 1px 0 #000;
+}
+
+#subtitle,
+#footer-text,
+#user-greeting,
+#content-footer,
+#post-date,
+#post-date-feed,
+#post-description,
+#post-username,
+.usage-label {
+    color: var(--subtle);
+}
+
+a,
+#hide-sidebar,
+#show-sidebar {
+    color: var(--links);
+}
+
+#sidebar > a {
+    display: block;
+    margin: 0 12px 7px;
+}
+
+#tab {
+    padding: 8px 10px;
+    background:
+        linear-gradient(180deg, #24282a, #131516);
+    border: 1px solid #41484a;
+    border-radius: 2px;
+    color: var(--fg);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.08),
+        0 2px 0 #050505;
+    text-transform: lowercase;
+}
+
+#tab::before {
+    content: "■ ";
+    color: #e2201a;
+}
+
+#tab:hover,
+#tab.active {
+    background:
+        linear-gradient(180deg, #e53935, #a71310);
+    border-color: #ff6259;
+    color: #ffffff;
+    transform: translateY(1px);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.22),
+        0 1px 0 #050505;
+}
+
+#content {
+    padding: 30px;
+}
+
+#content-layout,
+#post,
+.account-admin-card,
+.usage-card,
+.form-card,
+.grid-item,
+pre code.hljs,
+#mini-player,
+#mini-player-tracks,
+#sidebar-footer {
+    background:
+        linear-gradient(180deg, rgba(31, 34, 36, 0.96), rgba(16, 18, 19, 0.96));
+    border: 1px solid #3c4143;
+    border-radius: 2px;
+    color: var(--fg);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.07),
+        0 12px 28px rgba(0, 0, 0, 0.28);
+}
+
+#content-layout {
+    max-width: 930px;
+    padding: 24px 28px;
+}
+
+input,
+textarea,
+.dropdown,
+.text-input,
+.bbcode-dropdown,
+.bbcode-btn,
+#bbcode-textbox,
+#bbcode-preview {
+    background: #0c0d0e;
+    color: var(--fg);
+    border: 1px solid #4b5153;
+    border-radius: 2px;
+}
+
+button,
+#search-button,
+#form-button,
+#settings-save,
+#color-reset,
+#footer-button,
+.danger-button {
+    background: linear-gradient(180deg, #2b3032, #131516);
+    color: var(--fg);
+    border: 1px solid #4b5153;
+    border-radius: 2px;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.09), 0 2px 0 #050505;
+}
+
+button:hover,
+#search-button:hover,
+#form-button:hover,
+#settings-save:hover,
+#color-reset:hover,
+#footer-button:hover {
+    background: linear-gradient(180deg, #e53935, #a71310);
+    color: #ffffff;
+    border-color: #ff6259;
+}
+
+.theme-picker-button,
+.theme-picker-option {
+    background: linear-gradient(180deg, #24282a, #131516) !important;
+    border-color: #41484a !important;
+}
+
+.theme-picker-option:hover,
+.theme-picker-option.selected {
+    background: linear-gradient(180deg, #e53935, #a71310) !important;
+}
+
+body.mobile-template {
+    background:
+        radial-gradient(circle at 32px 32px, rgba(226, 32, 26, 0.18), transparent 28px),
+        linear-gradient(135deg, #1a1d1f 0%, #0b0c0d 58%, #151719 100%) !important;
+    color: var(--fg) !important;
+}
+
+body.mobile-template #sidebar,
+body.mobile-template .mobile-collapsed-header,
+body.mobile-template #content-layout,
+body.mobile-template #mini-player,
+body.mobile-template #mini-player-tracks,
+body.mobile-template #sidebar-footer {
+    background: linear-gradient(180deg, rgba(31, 34, 36, 0.98), rgba(10, 11, 12, 0.98)) !important;
+    color: var(--fg) !important;
+    border-color: #41484a !important;
+}
+
+body.mobile-template #show-sidebar,
+body.mobile-template .mobile-collapsed-header #show-sidebar,
+body.mobile-template .mobile-nav-grid a.mobile-nav-link > #tab.mobile-nav-button,
+body.mobile-template #footer-buttons > a.mobile-footer-link > #footer-button.mobile-footer-button {
+    background: linear-gradient(180deg, #24282a, #131516) !important;
+    color: var(--fg) !important;
+    border-color: #41484a !important;
+}
+
+body.mobile-template .mobile-nav-grid a.mobile-nav-link > #tab.mobile-nav-button:hover,
+body.mobile-template .mobile-nav-grid a.mobile-nav-link > #tab.mobile-nav-button.active,
+body.mobile-template #footer-buttons > a.mobile-footer-link > #footer-button.mobile-footer-button:hover,
+body.mobile-template #footer-buttons > a.mobile-footer-link > #footer-button.mobile-footer-button.active {
+    background: linear-gradient(180deg, #e53935, #a71310) !important;
+    color: #ffffff !important;
+    border-color: #ff6259 !important;
+}

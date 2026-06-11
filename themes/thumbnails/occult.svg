@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" role="img" aria-label="occult theme thumbnail">
+  <rect width="400" height="300" fill="#0d0713"/>
+  <circle cx="300" cy="84" r="86" fill="#5d2566" opacity=".5"/><circle cx="96" cy="224" r="92" fill="#c88420" opacity=".14"/>
+  <rect x="34" y="28" width="94" height="240" fill="#130b1b" stroke="#c88420" stroke-width="3"/>
+  <rect x="156" y="58" width="210" height="164" fill="#130b1b" stroke="#7a3f88" stroke-width="4"/>
+  <path d="M260 86l42 72h-84zM260 108v82M224 150h72" fill="none" stroke="#f8cf74" stroke-width="5"/>
+</svg>

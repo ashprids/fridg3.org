@@ -31,9 +31,11 @@ expected top-level shape:
       "allowedPages": ["feed", "journal", "comments", "chat"],
       "bookmarks": ["2026-01-01_12-00-00", "journal:12"],
       "theme": "default|classic|theme-id",
-      "glowIntensity": "none|low|medium|high",
+      "glowIntensity": "none|medium",
       "mobileFriendlyView": true,
       "onekoEnabled": true,
+      "reduceMotion": false,
+      "highContrast": false,
       "colors": {
         "bg": "#RRGGBB",
         "fg": "#RRGGBB",
@@ -51,8 +53,10 @@ notes:
 - extra unknown keys can exist and are preserved by `account/admin/edit`
 - bookmarks are the current source of truth for logged-in users
 - bookmark ids currently use raw feed ids and `journal:{id}`; legacy `newsletter:{id}` values can exist but are ignored
-- `theme: default` is blackprint and uses the base template plus `/style.css`; `theme: classic` enables saved `colors`; any other valid value refers to a `/themes/{theme-id}.json` file
-- legacy `blackprint` normalizes to `default`, `custom` normalizes to `classic`, and `newsprint` normalizes to `whiteprint`
+- `theme: default` is blackprint and uses the base template plus `/style.css`; `theme: classic` enables saved `colors` for `bg`/`fg`/`border`/`subtle`/`links`; `theme: ambercrt` is shown as `CRT` and uses only saved `colors.links` as its main phosphor color; any other valid value refers to a `/themes/{theme-id}.json` file with `name`, `description`, `thumbnail`, `html`, and `css`
+- legacy `blackprint` normalizes to `default`, `custom` normalizes to `classic`, `newsprint` normalizes to `whiteprint`, `crt` normalizes to `ambercrt`, and removed `liminal`/`syswave` preferences normalize to `default`
+- text glow is stored in `glowIntensity`; the settings UI writes `none` for off and `medium` for on, while legacy `low`/`high` values are treated as enabled medium glow when saved again
+- accessibility toggles are stored as account booleans: `reduceMotion` and `highContrast`; logged-out browsers keep the same preferences in localStorage
 - `mustResetPassword` is used by the shared session bootstrap to force first-login password changes
 - `discordUserId` links a site account to a Discord member for bot DMs and notifications
 - `allowedPages` currently includes functional grants like `feed`, `journal`, `comments`, and `chat`
@@ -106,6 +110,8 @@ notes:
 
 - the metadata filename is the saved theme id, for example `/themes/cool.json` becomes `cool`
 - `name` is the label shown in `/settings`
+- `description` is the short supporting text shown under the theme name in the picker
+- `thumbnail` is a 4:3 preview path relative to `/themes`, usually `thumbnails/{theme-id}.svg`
 - `html` and `css` must be relative paths in `/themes/lib`, for example `aero/aero.html` and `aero/aero.css`
 - theme asset paths cannot be absolute, contain `..`, or use characters outside letters, numbers, `.`, `_`, `-`, and `/`
 - desktop rendering uses both themed HTML and CSS

@@ -97,7 +97,7 @@ Related:
 
 - UI shell only
 - persistence handled by `/api/settings`
-- includes theme/glow settings, optional cursor cat, and mobile-friendly-view preference
+- includes accessibility toggles for mobile view, reduced motion, and high contrast, plus theme selection, a text glow toggle, and optional cursor cat
 - local dev mode can bootstrap a blank-password `admin` / `Administrator` account when no admin accounts exist
 - shows a Discord linking action for logged-in users and disables it once `discordUserId` is already linked
 - when logged in as hardcoded `toast`, shows a JSON editor for shared Toast personalities stored in `data/etc/toast-personality.json`

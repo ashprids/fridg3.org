@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" role="img" aria-label="little helps theme thumbnail">
+  <rect width="400" height="300" fill="#ffffff"/>
+  <rect width="400" height="34" fill="#00539f"/>
+  <rect y="34" width="400" height="6" fill="#ee1c2e"/>
+  <rect x="24" y="64" width="106" height="32" rx="16" fill="#00539f"/>
+  <text x="77" y="85" fill="#ffffff" font-family="Arial, Helvetica, sans-serif" font-size="15" font-weight="700" text-anchor="middle">feed</text>
+  <rect x="24" y="108" width="106" height="32" rx="16" fill="#ffffff" stroke="#00539f" stroke-width="4"/>
+  <text x="77" y="129" fill="#00539f" font-family="Arial, Helvetica, sans-serif" font-size="15" font-weight="700" text-anchor="middle">journal</text>
+  <rect x="156" y="64" width="220" height="170" rx="8" fill="#ffffff" stroke="#d7d7d7" stroke-width="2"/>
+  <rect x="156" y="64" width="220" height="8" rx="4" fill="#00539f"/>
+  <rect x="292" y="64" width="48" height="8" fill="#ee1c2e"/>
+  <rect x="340" y="64" width="36" height="8" rx="4" fill="#ffd800"/>
+  <text x="180" y="112" fill="#ee1c2e" font-family="Arial, Helvetica, sans-serif" font-size="30" font-weight="700">fridg3.org</text>
+  <rect x="181" y="120" width="24" height="5" fill="#ee1c2e"/>
+  <rect x="211" y="120" width="24" height="5" fill="#f7941d"/>
+  <rect x="241" y="120" width="24" height="5" fill="#ffd800"/>
+  <rect x="271" y="120" width="24" height="5" fill="#54b948"/>
+  <rect x="301" y="120" width="24" height="5" fill="#00a3e0"/>
+  <rect x="331" y="120" width="24" height="5" fill="#552583"/>
+  <rect x="181" y="150" width="160" height="16" rx="8" fill="#f5f5f5"/>
+  <rect x="181" y="178" width="126" height="16" rx="8" fill="#f5f5f5"/>
+  <rect x="181" y="206" width="86" height="22" rx="11" fill="#ffffff" stroke="#00539f" stroke-width="3"/>
+  <text x="224" y="221" fill="#00539f" font-family="Arial, Helvetica, sans-serif" font-size="13" font-weight="700" text-anchor="middle">save</text>
+</svg>

@@ -116,6 +116,15 @@ if (!function_exists('fridg3_normalize_theme_id')) {
         if ($theme === 'blackprint') {
             return 'default';
         }
+        if ($theme === 'crt') {
+            return 'ambercrt';
+        }
+        if ($theme === 'liminal') {
+            return 'default';
+        }
+        if ($theme === 'syswave') {
+            return 'default';
+        }
         if ($theme === 'custom') {
             return 'classic';
         }
@@ -186,16 +195,27 @@ if (!function_exists('fridg3_list_themes')) {
             }
 
             $name = trim((string)($meta['name'] ?? ''));
+            $description = trim((string)($meta['description'] ?? ''));
             $html = fridg3_normalize_theme_asset_path($meta['html'] ?? '');
             $css = fridg3_normalize_theme_asset_path($meta['css'] ?? '');
+            $thumbnail = fridg3_normalize_theme_asset_path($meta['thumbnail'] ?? '');
+            if ($thumbnail === null) {
+                $thumbnail = '';
+            }
             if ($name === '' || $html === '' || $css === '') {
                 continue;
             }
 
             $htmlPath = $themesLibDir . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $html);
             $cssPath = $themesLibDir . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $css);
+            $thumbnailPath = $thumbnail !== null && $thumbnail !== ''
+                ? $themesDir . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $thumbnail)
+                : null;
             if (!is_file($htmlPath) || !is_file($cssPath)) {
                 continue;
+            }
+            if ($thumbnailPath !== null && !is_file($thumbnailPath)) {
+                $thumbnail = '';
             }
 
             if (isset($themes[$id])) {
@@ -205,12 +225,15 @@ if (!function_exists('fridg3_list_themes')) {
             $themes[$id] = [
                 'id' => $id,
                 'name' => $name,
+                'description' => $description,
+                'thumbnail' => $thumbnail,
                 'html' => $html,
                 'css' => $css,
                 'htmlPath' => $htmlPath,
                 'cssPath' => $cssPath,
                 'htmlTemplate' => 'themes/lib/' . $html,
                 'cssHref' => fridg3_theme_asset_href($css) . '?v=' . (string)filemtime($cssPath),
+                'thumbnailHref' => $thumbnail !== '' ? '/themes/' . implode('/', array_map('rawurlencode', explode('/', $thumbnail))) : '',
             ];
         }
 

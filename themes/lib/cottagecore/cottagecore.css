@@ -883,3 +883,50 @@ body.mobile-template #usage-grid .usage-card:hover {
 #ascii-time-label {
     color: var(--time-label) !important;
 }
+
+/* distinct cottage controls: stitched soft cloth buttons */
+#tab,
+#footer-button,
+button,
+#form-button,
+#search-button,
+#settings-save,
+#color-reset,
+body.mobile-template .mobile-nav-grid a.mobile-nav-link > #tab.mobile-nav-button,
+body.mobile-template #footer-buttons > a.mobile-footer-link > #footer-button.mobile-footer-button {
+    border: 2px dashed color-mix(in srgb, var(--border) 76%, #f4e5c7 24%) !important;
+    border-radius: 10px 3px 10px 3px !important;
+    background:
+        linear-gradient(180deg, rgba(255, 248, 230, 0.82), rgba(218, 193, 148, 0.38)),
+        color-mix(in srgb, var(--bg) 76%, #fff7df 24%) !important;
+    color: var(--fg) !important;
+    box-shadow:
+        inset 0 0 0 1px rgba(255, 255, 240, 0.42),
+        3px 4px 0 rgba(96, 74, 44, 0.2) !important;
+}
+
+#tab::before {
+    content: "✿ ";
+    color: var(--links);
+}
+
+#tab:hover,
+#tab.active,
+#footer-button:hover,
+#footer-button.active,
+button:hover,
+#form-button:hover,
+#search-button:hover,
+#settings-save:hover,
+#color-reset:hover,
+body.mobile-template .mobile-nav-grid a.mobile-nav-link > #tab.mobile-nav-button:hover,
+body.mobile-template .mobile-nav-grid a.mobile-nav-link > #tab.mobile-nav-button.active,
+body.mobile-template #footer-buttons > a.mobile-footer-link > #footer-button.mobile-footer-button:hover,
+body.mobile-template #footer-buttons > a.mobile-footer-link > #footer-button.mobile-footer-button.active {
+    background:
+        linear-gradient(180deg, rgba(250, 234, 197, 0.9), rgba(135, 84, 74, 0.22)),
+        color-mix(in srgb, var(--links) 18%, #fff6dd 82%) !important;
+    color: var(--fg) !important;
+    border-style: solid !important;
+    transform: translate(-1px, -1px) !important;
+}

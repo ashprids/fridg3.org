@@ -2971,3 +2971,129 @@ body.mobile-template #usage-grid .usage-card:hover {
 #ascii-time-label {
     color: var(--time-label) !important;
 }
+
+/* final classic mobile repair: keep desktop shell rules from overriding template_mobile */
+body.mobile-template {
+    width: 100% !important;
+    min-height: 100dvh !important;
+    height: auto !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    background: var(--bg) !important;
+    color: var(--fg) !important;
+}
+
+body.mobile-template #page-wrapper,
+body.mobile-template #container {
+    width: 100% !important;
+    min-height: 0 !important;
+    height: auto !important;
+    display: block !important;
+    overflow: visible !important;
+}
+
+body.mobile-template #sidebar {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    height: auto !important;
+    min-height: 0 !important;
+    border-right: 0 !important;
+    border-bottom: 1px solid var(--border) !important;
+    overflow: visible !important;
+}
+
+body.mobile-template #content {
+    max-width: none !important;
+    width: 100% !important;
+    height: auto !important;
+    padding: 14px !important;
+    box-sizing: border-box !important;
+}
+
+body.mobile-template #content-layout {
+    min-height: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 14px !important;
+}
+
+body.mobile-template #content-main {
+    width: 100% !important;
+    min-width: 0 !important;
+    padding: 0 !important;
+    background: var(--bg) !important;
+    overflow-x: hidden !important;
+    box-sizing: border-box !important;
+}
+
+body.mobile-template .mobile-nav-grid a.mobile-nav-link > #tab.mobile-nav-button,
+body.mobile-template #footer-buttons > a.mobile-footer-link > #footer-button.mobile-footer-button,
+body.mobile-template #show-sidebar,
+body.mobile-template .mobile-collapsed-header #show-sidebar {
+    background: var(--bg) !important;
+    color: var(--fg) !important;
+    border-color: var(--border) !important;
+}
+
+body.mobile-template .mobile-nav-grid a.mobile-nav-link > #tab.mobile-nav-button:hover,
+body.mobile-template .mobile-nav-grid a.mobile-nav-link > #tab.mobile-nav-button.active,
+body.mobile-template #footer-buttons > a.mobile-footer-link > #footer-button.mobile-footer-button:hover,
+body.mobile-template #footer-buttons > a.mobile-footer-link > #footer-button.mobile-footer-button.active,
+body.mobile-template #show-sidebar:hover,
+body.mobile-template .mobile-collapsed-header #show-sidebar:hover {
+    background: var(--fg) !important;
+    color: var(--bg) !important;
+    border-color: var(--fg) !important;
+}
+
+body.mobile-template #mini-player,
+body.mobile-template #mini-player-tracks,
+body.mobile-template #sidebar-footer {
+    width: auto !important;
+    margin: 10px 14px 0 14px !important;
+    background: var(--bg) !important;
+    border-color: var(--border) !important;
+}
+
+body.mobile-template #footer-buttons {
+    display: grid !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    gap: 6px !important;
+}
+
+@media (max-width: 420px) {
+    body.mobile-template #content {
+        padding: 10px !important;
+    }
+
+    body.mobile-template #content-main {
+        padding: 12px 11px !important;
+    }
+
+    body.mobile-template #footer-buttons {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+}
+
+/* keep the custom settings theme picker crisp inside classic */
+.theme-picker-button,
+.theme-picker-option {
+    border: 1px solid var(--border) !important;
+    background:
+        linear-gradient(135deg, color-mix(in srgb, var(--border) 14%, transparent), color-mix(in srgb, var(--links) 9%, transparent)),
+        var(--bg) !important;
+    color: var(--fg) !important;
+}
+
+.theme-picker-menu {
+    background: var(--bg) !important;
+    border-color: var(--border) !important;
+}
+
+.theme-picker-option:hover,
+.theme-picker-option.selected {
+    background:
+        linear-gradient(90deg, color-mix(in srgb, var(--links) 32%, transparent), color-mix(in srgb, var(--border) 24%, transparent)),
+        color-mix(in srgb, var(--bg) 88%, var(--fg) 12%) !important;
+}

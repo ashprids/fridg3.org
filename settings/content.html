@@ -60,6 +60,18 @@ _|"""""|_|"""""|_|"""""|_|"""""|_|"""""|_|"""""|_|"""""|_|"""""|
         <span>force mobile view</span>
     </label>
 </div>
+<div class="checkbox-group">
+    <label class="checkbox-label">
+        <input type="checkbox" class="checkbox" id="reduce-motion-toggle">
+        <span data-tooltip="reduce animations, transitions, and scrolling motion">reduce motion</span>
+    </label>
+</div>
+<div class="checkbox-group">
+    <label class="checkbox-label">
+        <input type="checkbox" class="checkbox" id="high-contrast-toggle">
+        <span data-tooltip="boost foreground, border, and link contrast">high contrast</span>
+    </label>
+</div>
 <br><br><hr><br>
 </span>
 <span id="appearance-settings">
@@ -96,33 +108,18 @@ _|"""""|_|"""""|_|"""""|_|"""""|_|"""""|_|"""""|_|"""""|_|"""""|
 <button id="color-reset" data-tooltip="reset color scheme to defaults">reset to default</button>
 <br><br><hr><br>
 </div>
-<h4>text glow intensity</h4>
-<div class="radio-group" id="glow-intensity-group">
-    <label class="radio-label">
-        <input type="radio" class="radio" name="glow-intensity" value="none">
-        <span>none</span>
-    </label>
-    <label class="radio-label">
-        <input type="radio" class="radio" name="glow-intensity" value="low">
-        <span>low</span>
-    </label>
-    <label class="radio-label">
-        <input type="radio" class="radio" name="glow-intensity" value="medium" checked>
-        <span>medium</span>
-    </label>
-    <label class="radio-label">
-        <input type="radio" class="radio" name="glow-intensity" value="high">
-        <span>high</span>
+<h4>misc</h4>
+<div class="checkbox-group" id="text-glow-group">
+    <label class="checkbox-label">
+        <input type="checkbox" class="checkbox" id="text-glow-toggle">
+        <span data-tooltip="activate a glowing text effect on all site text">text glow</span>
     </label>
 </div>
-<br>
-<h4>oneko</h4>
 <div class="checkbox-group">
     <label class="checkbox-label">
         <input type="checkbox" class="checkbox" id="oneko-toggle">
-        <span>enable oneko</span>
+        <span data-tooltip="summon a small cat to follow your pointer around">oneko</span>
     </label>
-    <span style="color: var(--subtle);">a fun little friend.</span>
 </div>
 <br><br><hr><br>
 </span>

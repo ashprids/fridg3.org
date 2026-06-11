@@ -521,7 +521,7 @@ body.sidebar-is-hidden #sidebar {
 #title {
     font-family: "MainBoldItalic", var(--emoji-font), monospace;
     cursor: default;
-    background-image: linear-gradient(0deg, #977eb6, #86d3cf);
+    background-image: linear-gradient(0deg, #776490, #748f9c, #6caaa7);
     background-clip: text;
     -webkit-background-clip: text;
     color: transparent;
@@ -2879,6 +2879,66 @@ hr {
     }
 }
 
+html.access-reduced-motion,
+html.access-reduced-motion *,
+html.access-reduced-motion *::before,
+html.access-reduced-motion *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 1ms !important;
+}
+
+html.access-high-contrast body {
+    --bg: #000000 !important;
+    --fg: #ffffff !important;
+    --border: #ffffff !important;
+    --subtle: #d9d9d9 !important;
+    --links: #7fffd4 !important;
+    color: var(--fg) !important;
+}
+
+html.access-high-contrast body.whiteprint-theme,
+html.access-high-contrast body.bubblegum-theme,
+html.access-high-contrast body.cottagecore-theme,
+html.access-high-contrast body.littlehelps-theme {
+    --bg: #ffffff !important;
+    --fg: #000000 !important;
+    --border: #000000 !important;
+    --subtle: #333333 !important;
+    --links: #003cff !important;
+    color: var(--fg) !important;
+}
+
+html.access-high-contrast body.whiteprint-theme,
+html.access-high-contrast body.bubblegum-theme,
+html.access-high-contrast body.cottagecore-theme,
+html.access-high-contrast body.littlehelps-theme,
+html.access-high-contrast body.whiteprint-theme #sidebar,
+html.access-high-contrast body.bubblegum-theme #sidebar,
+html.access-high-contrast body.cottagecore-theme #sidebar,
+html.access-high-contrast body.littlehelps-theme #sidebar,
+html.access-high-contrast body.whiteprint-theme #content-layout,
+html.access-high-contrast body.bubblegum-theme #content-layout,
+html.access-high-contrast body.cottagecore-theme #content-layout,
+html.access-high-contrast body.littlehelps-theme #content-layout {
+    background: #ffffff !important;
+}
+
+html.access-high-contrast a,
+html.access-high-contrast button,
+html.access-high-contrast input,
+html.access-high-contrast textarea,
+html.access-high-contrast select,
+html.access-high-contrast [tabindex] {
+    outline-color: var(--links) !important;
+}
+
+html.access-high-contrast :focus-visible {
+    outline: 3px solid var(--links) !important;
+    outline-offset: 3px !important;
+}
+
 .chat-view {
     --chat-bg: var(--bg);
     --chat-fg: var(--fg);
@@ -4177,22 +4237,162 @@ pre code.hljs {
     background-color: var(--bg);
 }
 
+.native-theme-select {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+}
+
+.theme-picker {
+    position: relative;
+    width: 100%;
+    max-width: 520px;
+    margin: 0 0 14px 0;
+    font-family: "MainRegular", var(--emoji-font), monospace;
+}
+
+.theme-picker-button,
+.theme-picker-option {
+    width: 100%;
+    min-height: 76px;
+    display: grid;
+    grid-template-columns: 96px minmax(0, 1fr) auto;
+    gap: 12px;
+    align-items: center;
+    padding: 10px;
+    border: 1px solid var(--border);
+    background:
+        linear-gradient(135deg, color-mix(in srgb, var(--border) 14%, transparent), color-mix(in srgb, var(--links) 9%, transparent)),
+        var(--bg);
+    color: var(--fg);
+    text-align: left;
+    box-sizing: border-box;
+    cursor: pointer;
+}
+
+.theme-picker-thumb {
+    display: block;
+    width: 96px;
+    aspect-ratio: 4 / 3;
+    background-color: color-mix(in srgb, var(--bg) 82%, var(--fg) 18%);
+    background-position: center;
+    background-size: cover;
+    border: 1px solid color-mix(in srgb, var(--border) 78%, transparent);
+    box-sizing: border-box;
+}
+
+.theme-picker-thumb.empty {
+    background:
+        linear-gradient(135deg, color-mix(in srgb, var(--border) 32%, transparent), color-mix(in srgb, var(--links) 24%, transparent)),
+        var(--bg);
+}
+
+.theme-picker-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+}
+
+.theme-picker-title,
+.theme-picker-option-title {
+    font-family: "MainBold", var(--emoji-font), monospace;
+    font-size: 16px;
+    line-height: 1.15;
+    color: var(--fg);
+}
+
+.theme-picker-description,
+.theme-picker-option-description {
+    font-size: 12px;
+    line-height: 1.25;
+    color: var(--subtle);
+}
+
+.theme-picker-chevron {
+    padding-left: 4px;
+    color: var(--links);
+}
+
+.theme-picker-menu {
+    display: none;
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    right: 0;
+    max-height: min(420px, 70vh);
+    overflow-y: auto;
+    z-index: 80;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    box-shadow: 8px 8px 0 color-mix(in srgb, #000 28%, transparent);
+}
+
+.theme-picker.open .theme-picker-menu {
+    display: block;
+}
+
+.theme-picker-option {
+    grid-template-columns: 84px minmax(0, 1fr);
+    min-height: 70px;
+    border: 0;
+    border-bottom: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+    box-shadow: none;
+}
+
+.theme-picker-option .theme-picker-thumb {
+    width: 84px;
+}
+
+.theme-picker-option:hover,
+.theme-picker-option.selected {
+    background:
+        linear-gradient(90deg, color-mix(in srgb, var(--links) 32%, transparent), color-mix(in srgb, var(--border) 24%, transparent)),
+        color-mix(in srgb, var(--bg) 88%, var(--fg) 12%);
+}
+
+@media (max-width: 520px) {
+    .theme-picker-button,
+    .theme-picker-option {
+        grid-template-columns: 72px minmax(0, 1fr) auto;
+        gap: 9px;
+        min-height: 64px;
+    }
+
+    .theme-picker-option {
+        grid-template-columns: 72px minmax(0, 1fr);
+    }
+
+    .theme-picker-thumb,
+    .theme-picker-option .theme-picker-thumb {
+        width: 72px;
+    }
+
+    .theme-picker-title,
+    .theme-picker-option-title {
+        font-size: 14px;
+    }
+}
+
 /* blackprint default theme layer */
 body.blackprint-theme {
     --bg: #0b0d0f;
-    --fg: #ece7dc;
-    --border: #d0c7b8;
-    --subtle: #a99f91;
-    --links: #8fbfd0;
+    --fg: #eeeaf4;
+    --border: #776490;
+    --subtle: #9a87b2;
+    --links: #6caaa7;
     --chat-own-fg: #ffffff;
 }
 
 body.blackprint-theme{
     background:
-        linear-gradient(90deg, rgba(236, 231, 220, 0.05) 1px, transparent 1px),
-        linear-gradient(0deg, rgba(236, 231, 220, 0.04) 1px, transparent 1px),
+        linear-gradient(135deg, rgba(119, 100, 144, 0.12), rgba(108, 170, 167, 0.08)),
+        linear-gradient(90deg, rgba(119, 100, 144, 0.08) 1px, transparent 1px),
+        linear-gradient(0deg, rgba(108, 170, 167, 0.06) 1px, transparent 1px),
         #0b0d0f;
-    background-size: 18px 18px, 18px 18px, auto;
+    background-size: auto, 18px 18px, 18px 18px, auto;
     color: var(--fg);
 }
 
@@ -4217,7 +4417,7 @@ body.blackprint-theme #container{
 body.blackprint-theme #sidebar{
     width: 280px;
     background:
-        linear-gradient(180deg, rgba(17, 20, 22, 0.92), rgba(7, 9, 10, 0.94)),
+        linear-gradient(180deg, rgba(34, 29, 42, 0.94), rgba(10, 18, 19, 0.96)),
         var(--bg);
     border-right: 2px solid var(--border);
     box-shadow: 10px 0 0 rgba(236, 231, 220, 0.08);
@@ -4233,7 +4433,7 @@ body.blackprint-theme #header{
 
 body.blackprint-theme #title,
 body.blackprint-theme .mobile-collapsed-title{
-    background-image: linear-gradient(0deg, #977eb6, #86d3cf);
+    background-image: linear-gradient(0deg, #776490, #748f9c, #6caaa7);
     background-clip: text;
     -webkit-background-clip: text;
     color: transparent;
@@ -4275,7 +4475,9 @@ body.blackprint-theme #tab{
     padding: 8px 10px;
     border: 1px solid var(--border);
     border-radius: 0;
-    background: rgba(15, 17, 19, 0.72);
+    background:
+        linear-gradient(90deg, rgba(119, 100, 144, 0.18), rgba(108, 170, 167, 0.1)),
+        rgba(15, 17, 19, 0.72);
     color: var(--fg);
     text-align: left;
     box-shadow: 3px 3px 0 rgba(236, 231, 220, 0.18);
@@ -4290,9 +4492,9 @@ body.blackprint-theme #tab::before{
 body.blackprint-theme #tab:hover,
 body.blackprint-theme #tab.active{
     transform: translate(-2px, -2px);
-    background: var(--fg);
+    background: linear-gradient(90deg, #776490, #6caaa7);
     color: #15191b;
-    box-shadow: 5px 5px 0 rgba(31, 95, 120, 0.34);
+    box-shadow: 5px 5px 0 rgba(108, 170, 167, 0.28);
 }
 
 body.blackprint-theme #content{
@@ -4303,7 +4505,9 @@ body.blackprint-theme #content-layout{
     max-width: 920px;
     min-height: calc(100% - 2px);
     padding: 24px 30px;
-    background: rgba(15, 17, 19, 0.86);
+    background:
+        linear-gradient(145deg, rgba(119, 100, 144, 0.1), rgba(108, 170, 167, 0.06)),
+        rgba(15, 17, 19, 0.86);
     border: 2px solid var(--border);
     box-shadow:
         0 0 0 8px rgba(24, 28, 30, 0.58),
@@ -4464,8 +4668,8 @@ body.blackprint-theme #color-reset,
 body.blackprint-theme .danger-button,
 body.blackprint-theme button,
 body.blackprint-theme #footer-button{
-    background: var(--fg);
-    color: #15191b;
+    background: linear-gradient(90deg, #776490, #6caaa7);
+    color: #101315;
     border: 1px solid var(--border);
     border-radius: 0;
     box-shadow: 3px 3px 0 rgba(236, 231, 220, 0.2);
@@ -4495,13 +4699,13 @@ body.blackprint-theme .bbcode-btn:active{
 }
 
 body.blackprint-theme #settings-save{
-    background: #8fbfd0 !important;
+    background: linear-gradient(90deg, #776490, #6caaa7) !important;
     color: #15191b !important;
 }
 
 body.blackprint-theme #settings-save:hover,
 body.blackprint-theme #settings-save:active{
-    background: #a9cfdb !important;
+    background: linear-gradient(90deg, #8b73a8, #80bfbc) !important;
     color: #15191b !important;
 }
 
@@ -4656,8 +4860,9 @@ body.blackprint-theme #spa-loading{
 
 body.blackprint-theme.mobile-template{
     background:
-        linear-gradient(90deg, rgba(236, 231, 220, 0.055) 1px, transparent 1px),
-        linear-gradient(0deg, rgba(236, 231, 220, 0.045) 1px, transparent 1px),
+        linear-gradient(135deg, rgba(119, 100, 144, 0.14), rgba(108, 170, 167, 0.09)),
+        linear-gradient(90deg, rgba(119, 100, 144, 0.08) 1px, transparent 1px),
+        linear-gradient(0deg, rgba(108, 170, 167, 0.06) 1px, transparent 1px),
         #101315 !important;
     color: var(--fg) !important;
 }
@@ -5464,7 +5669,9 @@ body.blackprint-theme.mobile-template #show-sidebar,
 body.blackprint-theme.mobile-template .mobile-collapsed-header #show-sidebar,
 body.blackprint-theme.mobile-template .mobile-nav-grid a.mobile-nav-link > #tab.mobile-nav-button,
 body.blackprint-theme.mobile-template #footer-buttons > a.mobile-footer-link > #footer-button.mobile-footer-button{
-    background: rgba(24, 28, 30, 0.92) !important;
+    background:
+        linear-gradient(90deg, rgba(119, 100, 144, 0.22), rgba(108, 170, 167, 0.16)),
+        rgba(24, 28, 30, 0.92) !important;
     color: var(--fg) !important;
     border-color: var(--border) !important;
 }
@@ -5477,9 +5684,9 @@ body.blackprint-theme.mobile-template .mobile-nav-grid a.mobile-nav-link > #tab.
 body.blackprint-theme.mobile-template #footer-buttons > a.mobile-footer-link > #footer-button.mobile-footer-button:hover,
 body.blackprint-theme.mobile-template #footer-buttons > a.mobile-footer-link > #footer-button.mobile-footer-button.active,
 body.blackprint-theme.mobile-template #footer-buttons > a.mobile-footer-link > #footer-button.mobile-footer-button.active:hover{
-    background: var(--fg) !important;
+    background: linear-gradient(90deg, #776490, #6caaa7) !important;
     color: #101315 !important;
-    border-color: var(--fg) !important;
+    border-color: var(--links) !important;
 }
 
 body.blackprint-theme.mobile-template .mobile-nav-grid a.mobile-nav-link > #tab.mobile-nav-button::before{
@@ -5497,7 +5704,9 @@ body.blackprint-theme.mobile-template #show-sidebar,
 body.blackprint-theme.mobile-template .mobile-collapsed-header #show-sidebar,
 body.blackprint-theme.mobile-template .mobile-nav-grid a.mobile-nav-link > #tab.mobile-nav-button,
 body.blackprint-theme.mobile-template #footer-buttons > a.mobile-footer-link > #footer-button.mobile-footer-button{
-    background: rgba(24, 28, 30, 0.92) !important;
+    background:
+        linear-gradient(90deg, rgba(119, 100, 144, 0.22), rgba(108, 170, 167, 0.16)),
+        rgba(24, 28, 30, 0.92) !important;
     color: var(--fg) !important;
     border-color: var(--border) !important;
 }
@@ -5513,9 +5722,9 @@ body.blackprint-theme.mobile-template .mobile-nav-grid a.mobile-nav-link > #tab.
 body.blackprint-theme.mobile-template #footer-buttons > a.mobile-footer-link > #footer-button.mobile-footer-button:hover,
 body.blackprint-theme.mobile-template #footer-buttons > a.mobile-footer-link > #footer-button.mobile-footer-button.active,
 body.blackprint-theme.mobile-template #footer-buttons > a.mobile-footer-link > #footer-button.mobile-footer-button.active:hover{
-    background: var(--fg) !important;
+    background: linear-gradient(90deg, #776490, #6caaa7) !important;
     color: #101315 !important;
-    border-color: var(--fg) !important;
+    border-color: var(--links) !important;
 }
 
 body.blackprint-theme.mobile-template .mobile-nav-grid a.mobile-nav-link > #tab.mobile-nav-button:hover::before,
@@ -5603,6 +5812,32 @@ body.blackprint-theme button:active:not(.guestbook-delete-btn){
     color: var(--fg) !important;
 }
 
+body.blackprint-theme .theme-picker-button,
+body.blackprint-theme .theme-picker-option{
+    background:
+        linear-gradient(90deg, rgba(119, 100, 144, 0.18), rgba(108, 170, 167, 0.1)),
+        rgba(15, 17, 19, 0.72) !important;
+    color: var(--fg) !important;
+    border-color: var(--border) !important;
+}
+
+body.blackprint-theme .theme-picker-button:hover,
+body.blackprint-theme .theme-picker-option:hover,
+body.blackprint-theme .theme-picker-option.selected{
+    background: linear-gradient(90deg, #776490, #6caaa7) !important;
+    color: #15191b !important;
+}
+
+body.blackprint-theme .theme-picker-button:hover .theme-picker-title,
+body.blackprint-theme .theme-picker-button:hover .theme-picker-description,
+body.blackprint-theme .theme-picker-button:hover .theme-picker-chevron,
+body.blackprint-theme .theme-picker-option:hover .theme-picker-option-title,
+body.blackprint-theme .theme-picker-option:hover .theme-picker-option-description,
+body.blackprint-theme .theme-picker-option.selected .theme-picker-option-title,
+body.blackprint-theme .theme-picker-option.selected .theme-picker-option-description{
+    color: #15191b !important;
+}
+
 body.blackprint-theme #mini-player-title{
     overflow: hidden !important;
     width: 100% !important;
@@ -5660,30 +5895,31 @@ body.blackprint-theme .frdgbeats-daw {
 /* blackprint dark-mode overrides */
 body.blackprint-theme {
     --bg: #0b0d0f;
-    --fg: #ece7dc;
-    --border: #d0c7b8;
-    --subtle: #a99f91;
-    --links: #8fbfd0;
+    --fg: #eeeaf4;
+    --border: #776490;
+    --subtle: #9a87b2;
+    --links: #6caaa7;
     --chat-own-fg: #101315;
-    --hero-ascii-muted: #625f5c;
-    --hero-ascii-1: #8b738f;
-    --hero-ascii-2: #897e98;
-    --hero-ascii-3: #858ba0;
-    --hero-ascii-4: #8097a4;
-    --hero-ascii-5: #7ba0a4;
-    --hero-ascii-6: #80a6a1;
-    --hero-ascii-7: #8fb7b0;
+    --hero-ascii-muted: #5f5968;
+    --hero-ascii-1: #776490;
+    --hero-ascii-2: #766f94;
+    --hero-ascii-3: #747a99;
+    --hero-ascii-4: #72869d;
+    --hero-ascii-5: #7091a1;
+    --hero-ascii-6: #6e9da4;
+    --hero-ascii-7: #6caaa7;
     --hero-ascii-opacity: 0.95;
-    --resource-ascii: #90aca8;
-    --resource-label: #b7aa99;
-    --time-ascii: #8fb7b0;
-    --time-label: #9c9188;
+    --resource-ascii: #6caaa7;
+    --resource-label: #9a87b2;
+    --time-ascii: #6caaa7;
+    --time-label: #8d829b;
 }
 
 body.blackprint-theme{
     background:
-        linear-gradient(90deg, rgba(236, 231, 220, 0.035) 1px, transparent 1px),
-        linear-gradient(0deg, rgba(236, 231, 220, 0.03) 1px, transparent 1px),
+        linear-gradient(135deg, rgba(119, 100, 144, 0.12), rgba(108, 170, 167, 0.08)),
+        linear-gradient(90deg, rgba(119, 100, 144, 0.07) 1px, transparent 1px),
+        linear-gradient(0deg, rgba(108, 170, 167, 0.05) 1px, transparent 1px),
         #0b0d0f;
     color: var(--fg);
 }
@@ -5699,7 +5935,7 @@ body.blackprint-theme .paper-grain{
 
 body.blackprint-theme #sidebar{
     background:
-        linear-gradient(180deg, rgba(17, 20, 22, 0.96), rgba(7, 9, 10, 0.98)),
+        linear-gradient(180deg, rgba(34, 29, 42, 0.96), rgba(10, 18, 19, 0.98)),
         var(--bg);
     box-shadow: 10px 0 0 rgba(0, 0, 0, 0.24);
 }
@@ -5716,12 +5952,15 @@ body.blackprint-theme.mobile-template #mini-player,
 body.blackprint-theme.mobile-template #mini-player-tracks{
     background: rgba(15, 17, 19, 0.88) !important;
     color: var(--fg) !important;
-    border-color: rgba(208, 199, 184, 0.72) !important;
+    border-color: color-mix(in srgb, var(--border) 72%, var(--links) 28%) !important;
 }
 
 body.blackprint-theme #content-layout{
+    background:
+        linear-gradient(145deg, rgba(119, 100, 144, 0.1), rgba(108, 170, 167, 0.06)),
+        rgba(15, 17, 19, 0.88) !important;
     box-shadow:
-        0 0 0 8px rgba(18, 21, 23, 0.7),
+        0 0 0 8px rgba(49, 41, 61, 0.54),
         12px 12px 0 rgba(0, 0, 0, 0.28);
 }
 
@@ -5739,14 +5978,17 @@ body.blackprint-theme .usage-card:hover{
 }
 
 body.blackprint-theme #tab{
+    background:
+        linear-gradient(90deg, rgba(119, 100, 144, 0.2), rgba(108, 170, 167, 0.12)),
+        rgba(15, 17, 19, 0.88) !important;
     box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.34);
 }
 
 body.blackprint-theme #tab:hover,
 body.blackprint-theme #tab.active{
-    background: var(--fg) !important;
+    background: linear-gradient(90deg, #776490, #6caaa7) !important;
     color: #101315 !important;
-    box-shadow: 5px 5px 0 rgba(143, 191, 208, 0.28);
+    box-shadow: 5px 5px 0 rgba(108, 170, 167, 0.28);
 }
 
 body.blackprint-theme #tab:hover::before,
@@ -5768,7 +6010,7 @@ body.blackprint-theme #admin-account-form input[type="text"],
 body.blackprint-theme #admin-account-form textarea{
     background: rgba(11, 13, 15, 0.96) !important;
     color: var(--fg) !important;
-    border-color: rgba(208, 199, 184, 0.72) !important;
+    border-color: color-mix(in srgb, var(--border) 72%, var(--links) 28%) !important;
 }
 
 body.blackprint-theme .dropdown option,
@@ -5783,9 +6025,9 @@ body.blackprint-theme #settings-save,
 body.blackprint-theme #color-reset,
 body.blackprint-theme .danger-button,
 body.blackprint-theme button{
-    background: rgba(20, 23, 26, 0.92);
+    background: linear-gradient(90deg, #776490, #6caaa7);
     color: var(--fg);
-    border-color: rgba(208, 199, 184, 0.72);
+    border-color: color-mix(in srgb, var(--border) 72%, var(--links) 28%);
 }
 
 body.blackprint-theme #search-button:hover,
@@ -5794,7 +6036,7 @@ body.blackprint-theme #settings-save:hover,
 body.blackprint-theme #color-reset:hover,
 body.blackprint-theme .danger-button:hover,
 body.blackprint-theme button:hover{
-    background: var(--fg);
+    background: linear-gradient(90deg, #8b73a8, #80bfbc);
     color: #101315;
 }
 
@@ -5816,19 +6058,19 @@ body.blackprint-theme .danger-button:hover {
 
 body.blackprint-theme .chat-view{
     --chat-bg: rgba(11, 13, 15, 0.96);
-    --chat-fg: #ece7dc;
-    --chat-border: rgba(208, 199, 184, 0.52);
-    --chat-muted: #a99f91;
-    --chat-own-bg: #d8cdbb;
+    --chat-fg: #eeeaf4;
+    --chat-border: color-mix(in srgb, var(--border) 66%, var(--links) 34%);
+    --chat-muted: #9a87b2;
+    --chat-own-bg: #6caaa7;
     --chat-own-fg: #0b0d0f;
-    --chat-other-bg: rgba(31, 35, 38, 0.96);
-    --chat-other-fg: #ece7dc;
+    --chat-other-bg: rgba(34, 29, 42, 0.96);
+    --chat-other-fg: #eeeaf4;
 }
 
 body.blackprint-theme .chat-messages{
-    border-color: rgba(208, 199, 184, 0.42);
+    border-color: color-mix(in srgb, var(--border) 62%, transparent);
     background:
-        linear-gradient(180deg, rgba(14, 17, 19, 0.96), rgba(8, 10, 11, 0.99)),
+        linear-gradient(180deg, rgba(34, 29, 42, 0.72), rgba(8, 16, 17, 0.98)),
         #0b0d0f;
     box-shadow:
         inset 0 0 32px rgba(236, 231, 220, 0.03),
@@ -5837,12 +6079,12 @@ body.blackprint-theme .chat-messages{
 
 body.blackprint-theme .chat-message-own{
     background:
-        linear-gradient(180deg, #ece7dc, #c5b9a6);
-    border-color: rgba(236, 231, 220, 0.48);
+        linear-gradient(180deg, #82bfbc, #6caaa7);
+    border-color: rgba(108, 170, 167, 0.58);
 }
 
 body.blackprint-theme .chat-message-other{
-    border-color: rgba(208, 199, 184, 0.14);
+    border-color: rgba(119, 100, 144, 0.28);
 }
 
 body.blackprint-theme .chat-presence,
@@ -5856,7 +6098,7 @@ body.blackprint-theme .chat-context-menu,
 body.blackprint-theme .chat-emoji-picker,
 body.blackprint-theme .chat-attach-menu,
 body.blackprint-theme .chat-voice-recorder{
-    border-color: rgba(208, 199, 184, 0.42);
+    border-color: color-mix(in srgb, var(--border) 62%, transparent);
     background: rgba(11, 13, 15, 0.97);
     color: var(--fg);
 }
@@ -5873,7 +6115,7 @@ body.blackprint-theme .chat-attach-menu button:hover{
 
 body.blackprint-theme .chat-message-deleted{
     background: rgba(17, 20, 22, 0.96);
-    border-color: rgba(208, 199, 184, 0.24);
+    border-color: rgba(119, 100, 144, 0.26);
 }
 
 body.blackprint-theme.mobile-template #content-layout{
