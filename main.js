@@ -278,7 +278,7 @@ function autoScaleAsciiFont() {
         if (tooltip) { tooltip.style.display = 'none'; tooltip.style.opacity = '0'; }
         return;
     }
-    if (scaled) {
+    if (scaled && isMobileDevice()) {
         localStorage.setItem(TOOLTIP_KEY, '1');
         showSitePopup({
             title: 'screen feels cramped',
@@ -696,10 +696,20 @@ if (typeof hljs !== 'undefined') {
 
 
 function isMobileDevice() {
+    const ua = (navigator.userAgent || '').toLowerCase();
+    const uaLooksMobile = /android|webos|iphone|ipad|ipod|blackberry|bb10|iemobile|opera mini|mobile/.test(ua);
+    const iPadDesktopUA = navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1;
+    const coarsePointer = !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
+    const noHover = !!(window.matchMedia && window.matchMedia('(hover: none)').matches);
+    const screenMin = Math.min(
+        window.screen && window.screen.width ? window.screen.width : window.innerWidth,
+        window.screen && window.screen.height ? window.screen.height : window.innerHeight
+    );
+
     return (
-        typeof window.orientation !== 'undefined' ||
-        navigator.userAgent.indexOf('Mobi') !== -1 ||
-        window.innerWidth <= 700
+        uaLooksMobile ||
+        iPadDesktopUA ||
+        (coarsePointer && noHover && screenMin <= 900)
     );
 }
 
@@ -2163,7 +2173,6 @@ const ONEKO_ENABLED_KEY = 'onekoEnabled';
 const ACCESSIBILITY_PREFS_KEY = 'accessibilityPrefs';
 const ACCESSIBILITY_DEFAULTS = {
     reduceMotion: false,
-    highContrast: false,
 };
 const ONEKO_ASSET_URL = '/resources/oneko.gif';
 const ONEKO_SIZE = 32;
@@ -2322,7 +2331,6 @@ function saveLocalOnekoEnabled(enabled) {
 function normalizeAccessibilityPrefs(prefs) {
     return Object.assign({}, ACCESSIBILITY_DEFAULTS, {
         reduceMotion: !!(prefs && prefs.reduceMotion),
-        highContrast: !!(prefs && prefs.highContrast),
     });
 }
 
@@ -2346,7 +2354,7 @@ function applyAccessibilityPrefs(prefs, opts = {}) {
     const normalized = normalizeAccessibilityPrefs(prefs);
     const root = document.documentElement;
     root.classList.toggle('access-reduced-motion', normalized.reduceMotion);
-    root.classList.toggle('access-high-contrast', normalized.highContrast);
+    root.classList.remove('access-high-contrast');
     if (opts.persistLocal !== false) {
         saveLocalAccessibilityPrefs(normalized);
     }
@@ -2511,7 +2519,7 @@ function syncOnekoPreference() {
             setOnekoEnabled(data.settings.onekoEnabled);
         }
         const accessibilityPrefs = {};
-        ['reduceMotion', 'highContrast'].forEach(key => {
+        ['reduceMotion'].forEach(key => {
             if (typeof data.settings[key] === 'boolean') {
                 accessibilityPrefs[key] = data.settings[key];
             }
@@ -2726,7 +2734,6 @@ function initSettingsPage() {
         const colorResetBtn = document.getElementById('color-reset');
         const mobileViewToggle = document.getElementById('mobile-friendly-toggle');
         const reduceMotionToggle = document.getElementById('reduce-motion-toggle');
-        const highContrastToggle = document.getElementById('high-contrast-toggle');
         const onekoToggle = document.getElementById('oneko-toggle');
         const saveBtn = document.getElementById('settings-save');
         const sitemapBtn = document.querySelector('[data-action="generate-sitemap"]');
@@ -2776,14 +2783,12 @@ function initSettingsPage() {
         const getAccessibilityValues = () => {
             return normalizeAccessibilityPrefs({
                 reduceMotion: !!(reduceMotionToggle && reduceMotionToggle.checked),
-                highContrast: !!(highContrastToggle && highContrastToggle.checked),
             });
         };
 
         const setAccessibilityToggles = (prefs) => {
             const normalized = normalizeAccessibilityPrefs(prefs);
             if (reduceMotionToggle) reduceMotionToggle.checked = normalized.reduceMotion;
-            if (highContrastToggle) highContrastToggle.checked = normalized.highContrast;
         };
 
         const loadMaintenanceState = async () => {
@@ -3281,7 +3286,7 @@ function initSettingsPage() {
                     setMobileViewCookie(data.settings.mobileFriendlyView);
                 }
                 const serverAccessibilityPrefs = {};
-                ['reduceMotion', 'highContrast'].forEach(key => {
+                ['reduceMotion'].forEach(key => {
                     if (typeof data.settings[key] === 'boolean') {
                         serverAccessibilityPrefs[key] = data.settings[key];
                     }
@@ -3340,7 +3345,6 @@ function initSettingsPage() {
                     const params = new URLSearchParams();
                     params.append('mobileFriendlyView', mobileViewEnabled ? 'on' : 'off');
                     params.append('reduceMotion', accessibilityPrefs.reduceMotion ? 'on' : 'off');
-                    params.append('highContrast', accessibilityPrefs.highContrast ? 'on' : 'off');
                     fetch('/api/settings', {
                         method: 'POST',
                         headers: {
@@ -3385,7 +3389,6 @@ function initSettingsPage() {
                 params.append('theme', selectedTheme);
                 params.append('mobileFriendlyView', mobileViewEnabled ? 'on' : 'off');
                 params.append('reduceMotion', accessibilityPrefs.reduceMotion ? 'on' : 'off');
-                params.append('highContrast', accessibilityPrefs.highContrast ? 'on' : 'off');
                 params.append('onekoEnabled', onekoEnabled ? 'on' : 'off');
 
                 if (themeSupportsColorPrefs(selectedTheme) && Object.keys(mergedColors).length) {

@@ -15,7 +15,7 @@ all API routes live under `/api/*` and are handled by PHP.
 
 - requires logged-in user
 - returns current settings from `data/accounts/accounts.json`
-- currently exposes `theme`, `glowIntensity`, `colors`, `mobileFriendlyView`, `onekoEnabled`, `reduceMotion`, and `highContrast`; `colors` is honored by `classic` for the full palette and by `ambercrt`/`CRT` for the single `links` phosphor color
+- currently exposes `theme`, `glowIntensity`, `colors`, `mobileFriendlyView`, `onekoEnabled`, and `reduceMotion`; `colors` is honored by `classic` for the full palette and by `ambercrt`/`CRT` for the single `links` phosphor color
 - for the hardcoded `toast` session, also returns `toastPersonalityJson`
 
 `POST`
@@ -24,7 +24,7 @@ all API routes live under `/api/*` and are handled by PHP.
 - updates user settings in `accounts.json`
 - can set `theme` to `default`, `classic`, or a valid `/themes/*.json` theme id
 - can set `mobileFriendlyView` and sync the `mobile_friendly_view` cookie
-- can set accessibility booleans for reduced motion and high contrast
+- can set the reduced-motion accessibility boolean
 - can set `onekoEnabled` for the optional cursor-following cat
 - syncs the `theme_pref` cookie so anonymous and first-load rendering can pick the active theme
 - validates color fields as `#RRGGBB`; the settings UI sends the full palette for `classic` and only `links` for `CRT`

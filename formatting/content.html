@@ -107,6 +107,19 @@
         max-width: 220px;
     }
 
+    .formatting-capture-tools {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .formatting-capture-status {
+        min-height: 18px;
+        color: var(--subtle);
+        font-size: 13px;
+    }
+
     @media (max-width: 700px) {
         .formatting-grid,
         .formatting-swatch-row {
@@ -124,6 +137,13 @@
             it should have a tiny version here so every theme can be checked without spelunking through
             the whole website.
         </p>
+
+        <div class="formatting-capture-tools" data-formatting-capture-tools>
+            <button id="form-button" type="button" data-formatting-action="capture-page">
+                save full-page picture
+            </button>
+            <span class="formatting-capture-status" id="formatting-capture-status" aria-live="polite"></span>
+        </div>
 
         <div class="formatting-swatch-row" aria-label="theme color samples">
             <div class="formatting-swatch"><span style="background: var(--bg);"></span>--bg</div>
@@ -404,9 +424,176 @@ echo "highlighted code block";
         }
     }
 
+    var captureStatus = document.getElementById('formatting-capture-status');
+    var html2CanvasPromise = null;
+
+    function writeCaptureStatus(message) {
+        if (captureStatus) {
+            captureStatus.textContent = message;
+        }
+    }
+
+    function loadHtml2Canvas() {
+        if (window.html2canvas) {
+            return Promise.resolve(window.html2canvas);
+        }
+        if (html2CanvasPromise) {
+            return html2CanvasPromise;
+        }
+
+        html2CanvasPromise = new Promise(function (resolve, reject) {
+            var script = document.createElement('script');
+            script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+            script.crossOrigin = 'anonymous';
+            script.referrerPolicy = 'no-referrer';
+            script.onload = function () {
+                resolve(window.html2canvas);
+            };
+            script.onerror = function () {
+                reject(new Error('could not load screenshot library'));
+            };
+            document.head.appendChild(script);
+        });
+
+        return html2CanvasPromise;
+    }
+
+    function getScreenshotSize() {
+        var container = document.getElementById('container');
+        var content = document.getElementById('content');
+        var layout = document.getElementById('content-layout');
+        var width = Math.max(
+            document.documentElement.clientWidth,
+            document.documentElement.scrollWidth,
+            document.body ? document.body.scrollWidth : 0
+        );
+        var height = Math.max(
+            window.innerHeight,
+            document.documentElement.scrollHeight,
+            document.body ? document.body.scrollHeight : 0,
+            container ? container.scrollHeight : 0,
+            content ? content.scrollHeight : 0,
+            layout ? layout.scrollHeight : 0
+        );
+
+        return { width: width, height: height };
+    }
+
+    function expandCloneForScreenshot(cloneDocument, height) {
+        var cloneHtml = cloneDocument.documentElement;
+        var cloneBody = cloneDocument.body;
+        var clonePage = cloneDocument.getElementById('page-wrapper');
+        var cloneContainer = cloneDocument.getElementById('container');
+        var cloneContent = cloneDocument.getElementById('content');
+        var cloneLayout = cloneDocument.getElementById('content-layout');
+        var cloneTools = cloneDocument.querySelector('[data-formatting-capture-tools]');
+
+        if (cloneTools) {
+            cloneTools.style.display = 'none';
+        }
+        [cloneHtml, cloneBody, clonePage, cloneContainer, cloneContent].forEach(function (node) {
+            if (!node) return;
+            node.style.height = 'auto';
+            node.style.minHeight = height + 'px';
+            node.style.overflow = 'visible';
+        });
+        if (clonePage) {
+            clonePage.style.alignItems = 'stretch';
+        }
+        if (cloneContainer) {
+            cloneContainer.style.overflowY = 'visible';
+        }
+        if (cloneContent) {
+            cloneContent.style.overflow = 'visible';
+        }
+        if (cloneLayout) {
+            cloneLayout.style.minHeight = '0';
+        }
+    }
+
+    function saveCanvas(canvas) {
+        return new Promise(function (resolve, reject) {
+            canvas.toBlob(function (blob) {
+                if (!blob) {
+                    reject(new Error('could not create image file'));
+                    return;
+                }
+
+                var themeClass = Array.from(document.body.classList).find(function (className) {
+                    return /-theme$/.test(className);
+                }) || 'theme';
+                var stamp = new Date().toISOString().replace(/[:.]/g, '-');
+                var link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = 'formatting-' + themeClass.replace(/-theme$/, '') + '-' + stamp + '.png';
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
+                setTimeout(function () {
+                    URL.revokeObjectURL(link.href);
+                }, 1000);
+                resolve();
+            }, 'image/png');
+        });
+    }
+
+    function captureFormattingPage(button) {
+        if (button && button.disabled) {
+            return;
+        }
+        if (button) {
+            button.disabled = true;
+        }
+        writeCaptureStatus('preparing screenshot...');
+
+        loadHtml2Canvas()
+            .then(function (html2canvas) {
+                var size = getScreenshotSize();
+                writeCaptureStatus('rendering full page...');
+                return html2canvas(document.body, {
+                    backgroundColor: null,
+                    useCORS: true,
+                    allowTaint: false,
+                    logging: false,
+                    scrollX: 0,
+                    scrollY: 0,
+                    windowWidth: size.width,
+                    windowHeight: size.height,
+                    width: size.width,
+                    height: size.height,
+                    onclone: function (cloneDocument) {
+                        expandCloneForScreenshot(cloneDocument, size.height);
+                    }
+                });
+            })
+            .then(function (canvas) {
+                writeCaptureStatus('saving image...');
+                return saveCanvas(canvas);
+            })
+            .then(function () {
+                writeCaptureStatus('saved PNG');
+            })
+            .catch(function (error) {
+                writeCaptureStatus('screenshot failed');
+                if (window.showSiteNotice) {
+                    window.showSiteNotice('screenshot failed', error && error.message ? error.message : 'could not save screenshot.');
+                }
+            })
+            .finally(function () {
+                if (button) {
+                    button.disabled = false;
+                }
+            });
+    }
+
     root.querySelectorAll('[data-formatting-action]').forEach(function (button) {
         button.addEventListener('click', function () {
             var action = button.getAttribute('data-formatting-action');
+
+            if (action === 'capture-page') {
+                captureFormattingPage(button);
+                return;
+            }
 
             if (action === 'notice' && window.showSiteNotice) {
                 window.showSiteNotice('formatting notice', 'this is the standard on-site notice popup.');

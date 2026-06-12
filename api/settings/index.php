@@ -88,7 +88,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             'mobileFriendlyView' => null,
             'onekoEnabled' => null,
             'reduceMotion' => null,
-            'highContrast' => null,
         ],
     ];
     if ($isToast) {
@@ -116,9 +115,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             }
             if (array_key_exists('reduceMotion', $account)) {
                 $result['settings']['reduceMotion'] = is_truthy_setting($account['reduceMotion']);
-            }
-            if (array_key_exists('highContrast', $account)) {
-                $result['settings']['highContrast'] = is_truthy_setting($account['highContrast']);
             }
             break;
         }
@@ -160,9 +156,6 @@ $mobileViewRaw = $mobileViewProvided ? (string)$_POST['mobileFriendlyView'] : nu
 
 $reduceMotionProvided = array_key_exists('reduceMotion', $_POST);
 $reduceMotionRaw = $reduceMotionProvided ? (string)$_POST['reduceMotion'] : null;
-
-$highContrastProvided = array_key_exists('highContrast', $_POST);
-$highContrastRaw = $highContrastProvided ? (string)$_POST['highContrast'] : null;
 
 $onekoProvided = array_key_exists('onekoEnabled', $_POST);
 $onekoRaw = $onekoProvided ? (string)$_POST['onekoEnabled'] : null;
@@ -291,13 +284,12 @@ if ($onekoProvided) {
     }
 }
 
-if ($reduceMotionProvided || $highContrastProvided) {
+if ($reduceMotionProvided) {
     $truthy = ['1', 'true', 'yes', 'y', 'on', 'enabled'];
     $falsy  = ['0', 'false', 'no', 'n', 'off', 'disabled'];
     $accessibilityValues = [];
     $accessibilityInputs = [
         'reduceMotion' => [$reduceMotionProvided, $reduceMotionRaw, 'invalid_reduce_motion_value'],
-        'highContrast' => [$highContrastProvided, $highContrastRaw, 'invalid_high_contrast_value'],
     ];
 
     foreach ($accessibilityInputs as $key => [$provided, $raw, $error]) {
@@ -531,7 +523,7 @@ if ($maintenanceProvided) {
     $didWork = true;
 }
 
-if ($didWork || $intensityProvided || $themeProvided || $maintenanceProvided || $mobileViewProvided || $reduceMotionProvided || $highContrastProvided || $onekoProvided || $toastPersonalityProvided) {
+if ($didWork || $intensityProvided || $themeProvided || $maintenanceProvided || $mobileViewProvided || $reduceMotionProvided || $onekoProvided || $toastPersonalityProvided) {
     echo json_encode(['ok' => true]);
     exit;
 }

@@ -8,6 +8,7 @@
     <link rel="preload" href="/resources/IBM_VGA.woff" as="font" type="font/woff" crossorigin>
     <link rel="preload" href="/themes/lib/littlehelps/tescomodern.ttf" as="font" type="font/ttf" crossorigin>
     <link rel="preload" href="/themes/lib/littlehelps/tescomodern-bold.ttf" as="font" type="font/ttf" crossorigin>
+    <link rel="preload" href="/themes/lib/littlehelps/itcnewtext.otf" as="font" type="font/otf" crossorigin>
     <link rel="stylesheet" href="/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
@@ -18,26 +19,35 @@
     <link rel="manifest" href="/resources/site.webmanifest" />
 </head>
 <body class="littlehelps-theme">
-<div class="littlehelps-topbar" aria-hidden="true"></div>
+<div class="littlehelps-topbar">
+    <nav class="littlehelps-utility-links" aria-label="quick links">
+        <a href="/">Home</a>
+        <a href="/discord">Discord</a>
+        <a href="/settings">Settings</a>
+    </nav>
+</div>
 <span id="show-sidebar" data-tooltip="show sidebar" style="display:none"><i class="fa-solid fa-square-caret-right"></i></span>
 <div id="page-wrapper">
 <div id="sidebar">
     <div id="header">
-        <span id="subtitle">grab a snack from the</span><br>
-        <span id="title">fridg3.org</span>
+        <span id="title">FRIDG3.ORG</span>
         <span id="hide-sidebar" data-tooltip="hide sidebar"><i class="fa-solid fa-square-caret-left"></i></span>
         <br><span id="maintenance-banner" style="color: #00539f; display: none;"><i class="fa-solid fa-hand"></i> <b>maintenance mode</b></span>
     </div>
-    <a href="/feed"><div id="tab" data-tooltip="short snippets and updates">feed</div></a>
-    <a href="/journal"><div id="tab" data-tooltip="long-form updates and blog posts">journal</div></a>
-    <a href="/contact"><div id="tab" data-tooltip="send a contact message">contact</div></a>
-    <a href="/guestbook"><div id="tab" data-tooltip="leave a message about the website">guestbook</div></a>
-    <a href="/music"><div id="tab" data-tooltip="listen to my music">music</div></a>
-    <a href="/gallery"><div id="tab" data-tooltip="a listing of all images uploaded to the site">gallery</div></a>
-    <a href="/merch"><div id="tab" data-tooltip="buy some of my merch">merch</div></a>
-    <a href="/bookmarks"><div id="tab" data-tooltip="all the stuff you've saved">saves</div></a>
-    <a href="/tools"><div id="tab" data-tooltip="web tools and utilities">tools</div></a>
-    <a href="/others"><div id="tab" data-tooltip="content that doesn't fit elsewhere">others</div></a>
+    <form id="littlehelps-search" action="/feed" method="GET" role="search">
+        <input id="littlehelps-search-box" name="q" type="search" placeholder="Search">
+        <button id="littlehelps-search-button" type="submit" data-tooltip="search feed"><i class="fa-solid fa-magnifying-glass"></i></button>
+    </form>
+    <a href="/feed"><div id="tab" data-tooltip="short snippets and updates">Feed</div></a>
+    <a href="/journal"><div id="tab" data-tooltip="long-form updates and blog posts">Journal</div></a>
+    <a href="/contact"><div id="tab" data-tooltip="send a contact message">Contact</div></a>
+    <a href="/guestbook"><div id="tab" data-tooltip="leave a message about the website">Guestbook</div></a>
+    <a href="/music"><div id="tab" data-tooltip="listen to my music">Music</div></a>
+    <a href="/gallery"><div id="tab" data-tooltip="a listing of all images uploaded to the site">Gallery</div></a>
+    <a href="/merch"><div id="tab" data-tooltip="buy some of my merch">Merch</div></a>
+    <a href="/bookmarks"><div id="tab" data-tooltip="all the stuff you've saved">Saves</div></a>
+    <a href="/tools"><div id="tab" data-tooltip="web tools and utilities">Tools</div></a>
+    <a href="/others"><div id="tab" data-tooltip="content that doesn't fit elsewhere">Others</div></a>
     {user_greeting}
     <div id="sidebar-spacer"></div>
     <div id="mini-player-tracks"></div>
@@ -50,13 +60,8 @@
         <audio id="mini-player-audio" preload="none"></audio>
     </div>
     <div id="sidebar-footer">
-        <span id="footer-text">© <span id="footer-year"></span> fridg3.org</span>
-        <script>document.getElementById('footer-year').textContent = new Date().getFullYear();</script>
         <div id="footer-buttons">
-            <a href="/"><div id="footer-button" data-tooltip="go to homepage"><i class="fa-solid fa-home"></i></div></a>
-            <a href="/discord"><div id="footer-button" data-tooltip="join the community discord"><i class="fa-brands fa-discord"></i></div></a>
             <a href="/account"><div id="footer-button" data-tooltip="access your fridg3.org account"><i class="fa-solid fa-user"></i></div></a>
-            <a href="/settings"><div id="footer-button" data-tooltip="user settings"><i class="fa-solid fa-wrench"></i></div></a>
         </div>
     </div>
 </div>
