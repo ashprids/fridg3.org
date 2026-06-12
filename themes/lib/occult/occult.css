@@ -23,6 +23,7 @@
 body {
     counter-reset: occult-nav;
     background:
+        radial-gradient(circle at 58% 42%, transparent 0 118px, rgba(209, 170, 87, 0.07) 119px 120px, transparent 121px 168px, rgba(185, 211, 107, 0.055) 169px 170px, transparent 171px),
         repeating-linear-gradient(90deg, rgba(185, 211, 107, 0.035) 0 1px, transparent 1px 56px),
         repeating-linear-gradient(0deg, rgba(209, 170, 87, 0.03) 0 1px, transparent 1px 42px),
         conic-gradient(from 18deg at 50% 18%, transparent 0 12deg, rgba(185, 211, 107, 0.08) 12deg 14deg, transparent 14deg 45deg),
@@ -35,6 +36,87 @@ body::after {
     content: "";
     position: fixed;
     pointer-events: none;
+}
+
+.occult-rune-field,
+.occult-floor-sigil {
+    position: fixed;
+    pointer-events: none;
+}
+
+.occult-rune-field {
+    inset: 0;
+    z-index: -1;
+    overflow: hidden;
+    color: rgba(209, 170, 87, 0.36);
+    font-family: Georgia, "Times New Roman", serif;
+    text-shadow: 0 0 18px rgba(185, 211, 107, 0.22);
+}
+
+.occult-rune-field span {
+    position: absolute;
+    display: grid;
+    place-items: center;
+    width: 78px;
+    height: 78px;
+    border: 1px solid rgba(209, 170, 87, 0.16);
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(7, 16, 13, 0.72), transparent 68%);
+    font-size: 30px;
+    opacity: 0.64;
+}
+
+.occult-rune-field span:nth-child(1) {
+    top: 76px;
+    right: 9vw;
+}
+
+.occult-rune-field span:nth-child(2) {
+    top: 29vh;
+    right: 23vw;
+    transform: rotate(12deg);
+}
+
+.occult-rune-field span:nth-child(3) {
+    right: 6vw;
+    bottom: 19vh;
+    transform: rotate(-10deg);
+}
+
+.occult-rune-field span:nth-child(4) {
+    left: 326px;
+    bottom: 76px;
+    transform: rotate(18deg);
+}
+
+.occult-rune-field span:nth-child(5) {
+    left: 42vw;
+    top: 13vh;
+    color: rgba(185, 211, 107, 0.3);
+}
+
+.occult-rune-field span:nth-child(6) {
+    right: 34vw;
+    bottom: 31vh;
+    width: 56px;
+    height: 56px;
+    font-size: 23px;
+}
+
+.occult-floor-sigil {
+    right: 7vw;
+    bottom: -125px;
+    z-index: -1;
+    width: min(430px, 42vw);
+    aspect-ratio: 1;
+    border-radius: 50%;
+    opacity: 0.34;
+    background:
+        linear-gradient(90deg, transparent 49.6%, rgba(185, 211, 107, 0.55) 49.6% 50.4%, transparent 50.4%),
+        linear-gradient(18deg, transparent 49.6%, rgba(209, 170, 87, 0.44) 49.6% 50.4%, transparent 50.4%),
+        linear-gradient(162deg, transparent 49.6%, rgba(142, 47, 42, 0.42) 49.6% 50.4%, transparent 50.4%),
+        repeating-radial-gradient(circle, transparent 0 50px, rgba(185, 211, 107, 0.62) 51px 52px, transparent 53px 88px);
+    filter: drop-shadow(0 0 22px rgba(185, 211, 107, 0.12));
 }
 
 body::before {
@@ -89,6 +171,20 @@ body::after {
     box-shadow:
         inset 0 0 0 1px rgba(239, 230, 207, 0.04),
         0 0 24px rgba(185, 211, 107, 0.08);
+}
+
+#header::before {
+    content: "☽  ✶  ☉";
+    position: absolute;
+    left: 12px;
+    right: 12px;
+    top: -11px;
+    color: var(--occult-brass);
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 13px;
+    letter-spacing: 8px;
+    text-align: center;
+    text-shadow: 0 0 9px rgba(209, 170, 87, 0.3);
 }
 
 #header::after {
@@ -180,14 +276,16 @@ a:hover,
 }
 
 #tab::after {
-    content: "";
+    content: "✶";
     position: absolute;
     right: 9px;
-    width: 7px;
-    height: 7px;
-    transform: rotate(45deg);
-    background: var(--occult-wax);
-    box-shadow: 0 0 10px rgba(142, 47, 42, 0.5);
+    width: auto;
+    height: auto;
+    transform: none;
+    background: transparent;
+    color: var(--occult-wax);
+    font-size: 12px;
+    text-shadow: 0 0 10px rgba(142, 47, 42, 0.72);
 }
 
 #tab:hover,

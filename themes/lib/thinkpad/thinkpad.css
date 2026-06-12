@@ -44,7 +44,10 @@ body {
 }
 
 #sidebar {
-    width: 286px;
+    width: 224px;
+    min-width: 224px;
+    max-width: 224px;
+    height: 100vh;
     background:
         linear-gradient(180deg, rgba(31, 34, 36, 0.98), rgba(10, 11, 12, 0.98)),
         var(--bg);
@@ -52,12 +55,13 @@ body {
     box-shadow:
         inset -7px 0 0 rgba(0, 0, 0, 0.32),
         12px 0 28px rgba(0, 0, 0, 0.42);
+    overflow-y: hidden;
 }
 
 #header {
     position: relative;
-    margin: 12px;
-    padding: 14px 12px;
+    margin: 9px 10px 8px;
+    padding: 9px 10px 8px;
     background:
         linear-gradient(90deg, rgba(226, 32, 26, 0.12), transparent 34%),
         #151719;
@@ -70,8 +74,8 @@ body {
 #header::after {
     content: "x230";
     position: absolute;
-    right: 11px;
-    bottom: 9px;
+    right: 9px;
+    bottom: 8px;
     color: #ff4a3d;
     font-family: "MainBold", var(--emoji-font), monospace;
     font-size: 11px;
@@ -83,9 +87,20 @@ body {
     font-family: "MainBold", var(--emoji-font), monospace;
     text-transform: none;
     text-shadow: 1px 1px 0 #000;
+    font-size: 18px;
+    line-height: 1.05;
 }
 
-#subtitle,
+#subtitle {
+    display: inline-block;
+    margin-bottom: 3px;
+    color: #9ee37d;
+    font-family: "MainRegular", var(--emoji-font), monospace;
+    font-size: 10px;
+    line-height: 1;
+    text-shadow: 1px 1px 0 #000;
+}
+
 #footer-text,
 #user-greeting,
 #content-footer,
@@ -105,11 +120,12 @@ a,
 
 #sidebar > a {
     display: block;
-    margin: 0 12px 7px;
+    margin: 0 10px 5px;
 }
 
 #tab {
-    padding: 8px 10px;
+    min-height: 0;
+    padding: 6px 9px;
     background:
         linear-gradient(180deg, #24282a, #131516);
     border: 1px solid #41484a;
@@ -118,6 +134,8 @@ a,
     box-shadow:
         inset 0 1px 0 rgba(255, 255, 255, 0.08),
         0 2px 0 #050505;
+    font-size: 12px;
+    line-height: 1.16;
     text-transform: lowercase;
 }
 
@@ -165,6 +183,106 @@ pre code.hljs,
 #content-layout {
     max-width: 930px;
     padding: 24px 28px;
+}
+
+#user-greeting {
+    padding: 4px 10px;
+    font-size: 11px;
+}
+
+#sidebar-spacer {
+    margin-top: auto;
+    min-height: 4px;
+}
+
+#mini-player,
+#mini-player-tracks {
+    width: calc(100% - 20px);
+    margin: 4px 10px;
+    flex-shrink: 0;
+    box-sizing: border-box;
+}
+
+#mini-player-tracks {
+    padding: 5px 6px;
+    max-height: 68px;
+    gap: 2px;
+}
+
+.mini-track {
+    font-size: 10px;
+    line-height: 1.15;
+}
+
+#mini-player {
+    padding: 6px;
+    gap: 4px;
+    max-height: 66px;
+    margin-bottom: 4px;
+    overflow: hidden;
+}
+
+#mini-player-main {
+    gap: 6px;
+}
+
+#mini-player-art-wrapper {
+    width: 22px;
+    height: 22px;
+    margin-top: 0;
+}
+
+#mini-player-meta {
+    gap: 2px;
+}
+
+#mini-player-title-inner {
+    font-size: 10px;
+}
+
+#mini-player-row {
+    gap: 4px;
+}
+
+#mini-player-play {
+    width: 14px;
+    height: 14px;
+    font-size: 10px;
+}
+
+#mini-player-controls {
+    font-size: 11px;
+}
+
+#mini-player-volume-wrapper:hover #mini-player-volume {
+    width: 42px;
+}
+
+#mini-player-seek,
+#mini-player-volume {
+    height: 3px;
+}
+
+#sidebar-footer {
+    width: calc(100% - 20px);
+    margin: 4px 10px 8px;
+    padding: 7px 6px 6px;
+    flex-shrink: 0;
+}
+
+#footer-text {
+    margin-bottom: 5px;
+    font-size: 10px;
+}
+
+#footer-buttons {
+    gap: 3px;
+}
+
+#footer-button {
+    min-height: 0;
+    padding: 3px 5px;
+    font-size: 11px;
 }
 
 input,
@@ -222,6 +340,11 @@ body.mobile-template {
         radial-gradient(circle at 32px 32px, rgba(226, 32, 26, 0.18), transparent 28px),
         linear-gradient(135deg, #1a1d1f 0%, #0b0c0d 58%, #151719 100%) !important;
     color: var(--fg) !important;
+}
+
+body.mobile-template #sidebar {
+    height: auto !important;
+    overflow-y: visible !important;
 }
 
 body.mobile-template #sidebar,

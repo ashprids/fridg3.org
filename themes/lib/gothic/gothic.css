@@ -18,6 +18,7 @@
 
 body {
     background:
+        radial-gradient(circle at 50% 22%, transparent 0 92px, rgba(217, 79, 114, 0.12) 93px 94px, transparent 95px 138px, rgba(239, 231, 242, 0.06) 139px 140px, transparent 141px),
         linear-gradient(135deg, rgba(217, 79, 114, 0.12) 0 1px, transparent 1px 22px),
         linear-gradient(45deg, rgba(239, 231, 242, 0.035) 0 1px, transparent 1px 18px),
         radial-gradient(ellipse at 50% 0%, rgba(111, 38, 59, 0.38), transparent 48%),
@@ -27,7 +28,9 @@ body {
 }
 
 .gothic-vault,
-.gothic-candles {
+.gothic-candles,
+.gothic-rose-window,
+.gothic-spires {
     position: fixed;
     inset: 0;
     z-index: -2;
@@ -51,6 +54,44 @@ body {
     filter: blur(4px);
 }
 
+.gothic-rose-window {
+    z-index: -1;
+    inset: 28px 0 auto 282px;
+    height: 250px;
+    opacity: 0.42;
+    background:
+        radial-gradient(circle at 50% 50%, rgba(239, 231, 242, 0.08) 0 12px, transparent 13px),
+        repeating-conic-gradient(from 0deg at 50% 50%, rgba(217, 79, 114, 0.28) 0 5deg, transparent 5deg 15deg),
+        radial-gradient(circle at 50% 50%, transparent 0 70px, rgba(170, 142, 170, 0.28) 71px 73px, transparent 74px 116px, rgba(111, 38, 59, 0.42) 117px 119px, transparent 120px);
+    mask-image: radial-gradient(circle at 50% 50%, #000 0 122px, transparent 124px);
+}
+
+.gothic-rose-window::before,
+.gothic-rose-window::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 26px;
+    width: 2px;
+    height: 198px;
+    background: rgba(239, 231, 242, 0.12);
+    transform-origin: 50% 99px;
+}
+
+.gothic-rose-window::after {
+    transform: rotate(90deg);
+}
+
+.gothic-spires {
+    z-index: -1;
+    opacity: 0.36;
+    background:
+        linear-gradient(116deg, transparent 0 46%, rgba(239, 231, 242, 0.08) 46% 47%, transparent 47%),
+        linear-gradient(64deg, transparent 0 53%, rgba(239, 231, 242, 0.06) 53% 54%, transparent 54%),
+        repeating-linear-gradient(90deg, transparent 0 86px, rgba(217, 79, 114, 0.13) 86px 88px, transparent 88px 172px);
+    clip-path: polygon(0 0, 100% 0, 100% 100%, 88% 100%, 88% 28%, 82% 16%, 76% 28%, 76% 100%, 64% 100%, 64% 34%, 58% 20%, 52% 34%, 52% 100%, 40% 100%, 40% 30%, 34% 17%, 28% 30%, 28% 100%, 16% 100%, 16% 36%, 10% 24%, 4% 36%, 4% 100%, 0 100%);
+}
+
 #page-wrapper,
 #container {
     background: transparent;
@@ -59,6 +100,7 @@ body {
 #sidebar {
     width: 282px;
     background:
+        repeating-linear-gradient(180deg, transparent 0 48px, rgba(217, 79, 114, 0.08) 48px 49px, transparent 49px 96px),
         linear-gradient(180deg, rgba(17, 10, 22, 0.96), rgba(6, 4, 9, 0.96)),
         #09070d;
     border-right: 2px solid #2e1826;
@@ -83,8 +125,22 @@ body {
     text-align: left;
 }
 
+#header::before {
+    content: "†";
+    position: absolute;
+    left: 12px;
+    top: -18px;
+    color: #d6b36a;
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 30px;
+    line-height: 1;
+    text-shadow:
+        0 0 14px rgba(214, 179, 106, 0.38),
+        2px 2px 0 #000;
+}
+
 #header::after {
-    content: "x_x";
+    content: "memento";
     position: absolute;
     right: 10px;
     bottom: 7px;
@@ -140,6 +196,7 @@ body {
     align-items: center;
     color: var(--fg);
     background:
+        radial-gradient(ellipse at 100% 50%, rgba(239, 231, 242, 0.08), transparent 36%),
         linear-gradient(90deg, rgba(217, 79, 114, 0.16), rgba(19, 10, 24, 0.92));
     border: 1px solid rgba(170, 142, 170, 0.24);
     border-left: 4px solid var(--border);
@@ -151,14 +208,18 @@ body {
 }
 
 #tab::before {
-    content: "";
+    content: "†";
     position: absolute;
     left: 8px;
-    width: 6px;
-    height: 6px;
-    transform: rotate(45deg);
-    background: var(--links);
-    box-shadow: 0 0 8px rgba(217, 79, 114, 0.58);
+    width: auto;
+    height: auto;
+    transform: none;
+    background: transparent;
+    color: var(--links);
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 15px;
+    line-height: 1;
+    text-shadow: 0 0 8px rgba(217, 79, 114, 0.58);
 }
 
 #tab:hover,
@@ -184,6 +245,7 @@ body {
     min-height: calc(100% - 2px);
     padding: 24px;
     background:
+        radial-gradient(ellipse at 50% -10%, rgba(239, 231, 242, 0.05), transparent 38%),
         linear-gradient(135deg, rgba(217, 79, 114, 0.08) 0 10%, transparent 10% 100%),
         linear-gradient(180deg, rgba(18, 10, 23, 0.94), rgba(8, 5, 12, 0.96));
     border: 2px solid var(--border);
@@ -204,7 +266,19 @@ body {
     border: 1px solid rgba(170, 142, 170, 0.18);
     border-radius: 0;
     background:
+        radial-gradient(ellipse at 50% 0, transparent 0 44px, rgba(217, 79, 114, 0.18) 45px 46px, transparent 47px 88px),
         repeating-linear-gradient(135deg, transparent 0 14px, rgba(217, 79, 114, 0.11) 14px 15px, transparent 15px 28px);
+}
+
+#content-layout::after {
+    content: "†";
+    position: absolute;
+    right: 18px;
+    top: 12px;
+    color: rgba(214, 179, 106, 0.52);
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 28px;
+    text-shadow: 0 0 14px rgba(214, 179, 106, 0.24);
 }
 
 #content-main > *:first-child {
