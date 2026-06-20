@@ -179,6 +179,24 @@
         create(context, settings) {
             const input = context.createGain();
             const output = context.createGain();
+            if (window.frdgBeatsEffects.workletsReady(context) && typeof window.AudioWorkletNode === 'function') {
+                const compressor = new window.AudioWorkletNode(context, 'frdg-compressor', {
+                    numberOfInputs: 1,
+                    numberOfOutputs: 1,
+                    outputChannelCount: [2],
+                    processorOptions: {
+                        threshold: clamp(settings.threshold, -60, 0),
+                        ratio: clamp(settings.ratio, 1, 20),
+                        attack: clamp(settings.attack, 0.001, 0.12),
+                        release: clamp(settings.release, 0.02, 1),
+                        knee: clamp(settings.knee, 0, 40),
+                        makeup: clamp(settings.makeup, 0.25, 2.5)
+                    }
+                });
+                input.connect(compressor);
+                compressor.connect(output);
+                return { input, output, nodes: [compressor] };
+            }
             const compressor = context.createDynamicsCompressor();
             const makeup = context.createGain();
             compressor.threshold.value = clamp(settings.threshold, -60, 0);

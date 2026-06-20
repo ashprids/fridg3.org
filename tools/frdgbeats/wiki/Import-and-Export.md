@@ -70,6 +70,6 @@ WAV is the export you want for posting, sending, or dropping into another editor
 
 ## Progress Popups
 
-Imports and exports show progress popups. Large MIDI files, huge samples, custom SoundFonts, or effect-heavy WAV renders may take a bit.
+Imports and exports show progress popups and yield periodically so the page remains responsive. Large MIDI files, huge samples, custom SoundFonts, or effect-heavy WAV renders may still take a bit.
 
 If the browser looks busy, let it cook. Interrupting file work is the fastest way to invent a new problem.

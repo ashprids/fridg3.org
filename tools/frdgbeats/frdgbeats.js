@@ -8,6 +8,7 @@
     let projectSteps = DEFAULT_STEPS;
     const DEFAULT_BAR_COUNT = 4;
     const MAX_BARS = 128;
+    const PLAYLIST_TRACK_COUNT = 50;
     const MAX_PATTERNS = 128;
     const MAX_AUTOMATION_LANES = 48;
     const DEFAULT_NOTE_LENGTH_SNAP = 0.5;
@@ -60,8 +61,12 @@
     const EFFECT_LIST_URL = '/tools/frdgbeats/effects/index.php';
     const SYNTH_LIST_URL = '/tools/frdgbeats/synths/index.php';
     const RUBBERBAND_WORKER_URL = '/tools/frdgbeats/vendor/rubberband-worker.js';
+    const EFFECT_WORKLET_URL = '/tools/frdgbeats/vendor/frdg-effects-worklet.js';
+    const LOW_LATENCY_EFFECTS = new Set(['bitcrush', 'compressor', 'limiter']);
 
     let audio = null;
+    const effectWorkletReadyContexts = new WeakSet();
+    const effectWorkletLoadPromises = new WeakMap();
     let schedulerTimer = null;
     let isPlaying = false;
     let isRecording = false;
@@ -90,6 +95,8 @@
     const activeSamplePlayheads = [];
     const samplePitchCache = new WeakMap();
     const samplePitchPendingCache = new WeakMap();
+    const soundfontZoneCache = new WeakMap();
+    const soundfontPresetLookupCache = new WeakMap();
     const samplePitchWarmQueue = new Set();
     const rubberBandJobs = new Map();
     let rubberBandWorker = null;
@@ -102,6 +109,9 @@
     let playlistTool = 'draw';
     let playlistPainting = false;
     let playlistRightErasing = false;
+    let playlistTrackMenuCleanup = null;
+    let playlistPatternIndexCache = null;
+    let playlistPlayheadMarker = null;
     let pianoRightErasing = false;
     const heldKeys = new Set();
     const activeKeyboardVoices = new Map();
@@ -123,11 +133,38 @@
     const effectDefinitions = new Map();
     const synthDefinitions = new Map();
     const channelOutputs = new Map();
-    const retiredChannelOutputs = new Set();
+    const pendingChannelOutputRebuilds = new Map();
     let effectCatalogPromise = null;
     let synthCatalogPromise = null;
 
     const initialChannel = emptyProjectChannel();
+
+    function playlistTrackDefaultColor(index) {
+        const hue = (174 + (index * 137.508)) % 360;
+        const saturation = 0.5;
+        const lightness = 0.58;
+        const chroma = (1 - Math.abs((2 * lightness) - 1)) * saturation;
+        const segment = hue / 60;
+        const secondary = chroma * (1 - Math.abs((segment % 2) - 1));
+        const [red, green, blue] = segment < 1 ? [chroma, secondary, 0]
+            : segment < 2 ? [secondary, chroma, 0]
+                : segment < 3 ? [0, chroma, secondary]
+                    : segment < 4 ? [0, secondary, chroma]
+                        : segment < 5 ? [secondary, 0, chroma]
+                            : [chroma, 0, secondary];
+        const match = lightness - (chroma / 2);
+        return '#' + [red, green, blue]
+            .map(value => Math.round((value + match) * 255).toString(16).padStart(2, '0'))
+            .join('');
+    }
+
+    function defaultPlaylistTrack(index) {
+        return {
+            name: 'track ' + (index + 1),
+            color: playlistTrackDefaultColor(index)
+        };
+    }
+
     const state = {
         projectName: 'Untitled',
         bpm: 128,
@@ -138,7 +175,8 @@
         barCount: DEFAULT_BAR_COUNT,
         loopRange: null,
         activePattern: 0,
-        playlistTrackCount: 8,
+        playlistTrackCount: PLAYLIST_TRACK_COUNT,
+        playlistTracks: Array.from({ length: PLAYLIST_TRACK_COUNT }, (_, index) => defaultPlaylistTrack(index)),
         playlistPatternClips: [],
         clips: { [initialChannel.id]: Array.from({ length: DEFAULT_BAR_COUNT }, () => null) },
         playlistAudioClips: [],
@@ -390,7 +428,7 @@
         visiblePatterns.forEach(index => {
             const option = document.createElement('option');
             option.value = String(index);
-            option.textContent = String(index + 1) + (patternHasNotes(index) ? '' : ' (new)');
+            option.textContent = String(index + 1) + (usedPatterns.includes(index) ? '' : ' (new)');
             options.append(option);
         });
         const addOption = document.createElement('option');
@@ -493,6 +531,14 @@
     }
 
     function ensureChannelPatterns(channel) {
+        if (channel._patternsReadyRef === channel.patterns
+            && channel._patternsReadySteps === stepCount()
+            && Array.isArray(channel.patterns)
+            && channel.patterns.length === MAX_PATTERNS) {
+            channel.activePattern = Math.max(0, Math.min(MAX_PATTERNS - 1, Number(channel.activePattern) || 0));
+            channel.pattern = channel.patterns[channel.activePattern];
+            return;
+        }
         if (!Array.isArray(channel.patterns)) {
             channel.patterns = Array.from({ length: MAX_PATTERNS }, (_, index) => {
                 if (index === 0 && Array.isArray(channel.pattern)) return channel.pattern.slice(0, stepCount());
@@ -508,6 +554,8 @@
         });
         channel.activePattern = Math.max(0, Math.min(MAX_PATTERNS - 1, Number(channel.activePattern) || 0));
         channel.pattern = channel.patterns[channel.activePattern];
+        channel._patternsReadyRef = channel.patterns;
+        channel._patternsReadySteps = stepCount();
     }
 
     function normalizeNoteEvent(value) {
@@ -546,6 +594,7 @@
     }
 
     function getStepEvents(pattern, step) {
+        if (Array.isArray(pattern[step])) return pattern[step];
         pattern[step] = normalizeStepEvents(pattern[step]);
         return pattern[step];
     }
@@ -569,23 +618,27 @@
         return channel.patterns[safeIndex];
     }
 
-    function patternHasNotes(patternIndex) {
-        return state.channels.some(channel => {
-            return getPattern(channel, patternIndex).some(stepEvents => normalizeStepEvents(stepEvents).length);
+    function channelPatternIndexesWithNotes(channel) {
+        ensureChannelPatterns(channel);
+        const indexes = new Set();
+        channel.patterns.forEach((pattern, patternIndex) => {
+            if (pattern.some(stepEvents => Array.isArray(stepEvents) ? stepEvents.length > 0 : Boolean(stepEvents))) indexes.add(patternIndex);
         });
-    }
-
-    function usedPatternIndexes() {
-        const indexes = [];
-        for (let index = 0; index < MAX_PATTERNS; index += 1) {
-            if (patternHasNotes(index)) indexes.push(index);
-        }
         return indexes;
     }
 
+    function usedPatternIndexes() {
+        const indexes = new Set();
+        state.channels.forEach(channel => {
+            channelPatternIndexesWithNotes(channel).forEach(patternIndex => indexes.add(patternIndex));
+        });
+        return Array.from(indexes).sort((a, b) => a - b);
+    }
+
     function firstEmptyPatternIndex() {
+        const used = new Set(usedPatternIndexes());
         for (let index = 0; index < MAX_PATTERNS; index += 1) {
-            if (!patternHasNotes(index)) return index;
+            if (!used.has(index)) return index;
         }
         return null;
     }
@@ -607,51 +660,50 @@
         return Math.max(0, Math.min(Math.max(0, state.barCount - 1), Math.round(Number(clip && clip.bar) || 0)));
     }
 
-    function playlistClipLength(clip) {
-        return 1;
-    }
-
-    function playlistClipStartStep(clip) {
-        return Math.round(playlistClipStart(clip) * stepCount());
-    }
-
-    function playlistClipLengthSteps(clip) {
-        return Math.max(1, Math.round(playlistClipLength(clip) * stepCount()));
-    }
-
     function playlistPositionFromPointer(cell, clientX) {
         return Math.max(0, Math.min(Math.max(0, state.barCount - 1), Number(cell && cell.dataset ? cell.dataset.bar : 0) || 0));
     }
 
-    function playlistPatternClipsAt(bar) {
-        return state.playlistPatternClips.filter(clip => {
-            const start = playlistClipStart(clip);
-            return !clip.muted && bar + 1 > start && bar < start + 1;
+    function indexPlaylistPatternClipsByBar() {
+        const index = new Map();
+        state.playlistPatternClips.forEach(clip => {
+            if (clip.muted) return;
+            const bar = playlistClipStart(clip);
+            if (!index.has(bar)) index.set(bar, []);
+            index.get(bar).push(clip);
         });
+        return index;
     }
 
-    function playlistPatternClipsStartingAt(track, bar) {
-        return state.playlistPatternClips.filter(clip => clip.track === track && Math.floor(playlistClipStart(clip)) === bar);
+    function invalidatePlaylistPatternIndex() {
+        playlistPatternIndexCache = null;
     }
 
-    function playlistPatternClipHitsAtStep(bar, step) {
-        const absoluteStep = (bar * stepCount()) + step;
-        return state.playlistPatternClips
-            .filter(clip => {
-                if (clip.muted) return false;
-                const start = playlistClipStartStep(clip);
-                return absoluteStep >= start && absoluteStep < start + stepCount();
-            })
-            .map(clip => ({
-                clip,
-                step: (absoluteStep - playlistClipStartStep(clip)) % stepCount()
-            }));
+    function livePlaylistPatternClipsByBar() {
+        if (!playlistPatternIndexCache) playlistPatternIndexCache = indexPlaylistPatternClipsByBar();
+        return playlistPatternIndexCache;
+    }
+
+    function playlistPatternClipHitsAtStep(bar, step, clipsByBar = null) {
+        const index = clipsByBar || livePlaylistPatternClipsByBar();
+        return (index.get(bar) || []).map(clip => ({ clip, step }));
     }
 
     function ensureClipMap() {
         state.barCount = normalizeBarCount();
         if (currentBar >= state.barCount) currentBar = 0;
-        state.playlistTrackCount = Math.max(1, Math.min(64, Number(state.playlistTrackCount) || 8));
+        state.playlistTrackCount = PLAYLIST_TRACK_COUNT;
+        const savedPlaylistTracks = Array.isArray(state.playlistTracks) ? state.playlistTracks : [];
+        state.playlistTracks = Array.from({ length: PLAYLIST_TRACK_COUNT }, (_, index) => {
+            const fallback = defaultPlaylistTrack(index);
+            const saved = savedPlaylistTracks[index];
+            if (!saved || typeof saved !== 'object') return fallback;
+            const name = typeof saved.name === 'string' && saved.name.trim() ? saved.name.trim() : fallback.name;
+            const color = typeof saved.color === 'string' && /^#[0-9a-f]{6}$/i.test(saved.color) ? saved.color : fallback.color;
+            saved.name = name;
+            saved.color = color;
+            return saved;
+        });
         if (state.loopRange) {
             const start = Math.max(0, Math.min(state.barCount - 1, Number(state.loopRange.start) || 0));
             const end = Math.max(start, Math.min(state.barCount - 1, Number(state.loopRange.end) || start));
@@ -714,6 +766,7 @@
             buffer: clip.buffer || null,
             muted: clip.muted === true
         })).filter(clip => state.channels.some(channel => channel.id === clip.channelId));
+        invalidatePlaylistPatternIndex();
     }
 
     renderPatternOptions();
@@ -735,6 +788,16 @@
     }
 
     function automationPatternValues(lane) {
+        const existingValues = lane.valuesByPattern;
+        const existingKeyCount = existingValues && typeof existingValues === 'object' && !Array.isArray(existingValues)
+            ? Object.keys(existingValues).length
+            : -1;
+        if (!Array.isArray(lane.values)
+            && lane._valuesReadyRef === existingValues
+            && lane._valuesReadySteps === stepCount()
+            && lane._valuesReadyKeyCount === existingKeyCount) {
+            return existingValues;
+        }
         if (!lane.valuesByPattern || typeof lane.valuesByPattern !== 'object' || Array.isArray(lane.valuesByPattern)) {
             lane.valuesByPattern = {};
         }
@@ -751,6 +814,9 @@
             if (normalizedKey !== key) delete lane.valuesByPattern[key];
             lane.valuesByPattern[normalizedKey] = values;
         });
+        lane._valuesReadyRef = lane.valuesByPattern;
+        lane._valuesReadySteps = stepCount();
+        lane._valuesReadyKeyCount = Object.keys(lane.valuesByPattern).length;
         return lane.valuesByPattern;
     }
 
@@ -761,7 +827,7 @@
             if (!create) return resizeAutomationValues([]);
             valuesByPattern[key] = resizeAutomationValues([]);
         }
-        valuesByPattern[key] = resizeAutomationValues(valuesByPattern[key]);
+        if (valuesByPattern[key].length !== stepCount()) valuesByPattern[key] = resizeAutomationValues(valuesByPattern[key]);
         return valuesByPattern[key];
     }
 
@@ -771,6 +837,11 @@
     }
 
     function ensureChannelAutomation(channel) {
+        if (channel._automationReadyRef === channel.automation
+            && channel._automationReadySteps === stepCount()
+            && channel._automationReadyLength === (Array.isArray(channel.automation) ? channel.automation.length : -1)) {
+            return;
+        }
         if (!Array.isArray(channel.automation)) channel.automation = [];
         channel.automation = channel.automation.slice(0, MAX_AUTOMATION_LANES).map(lane => {
             const normalized = lane && typeof lane === 'object' ? lane : {};
@@ -788,6 +859,9 @@
             delete normalized.patternIndex;
             return normalized;
         });
+        channel._automationReadyRef = channel.automation;
+        channel._automationReadySteps = stepCount();
+        channel._automationReadyLength = channel.automation.length;
     }
 
     function automationTargets(channel = selectedChannel()) {
@@ -911,26 +985,36 @@
         if (target.targetType === 'effect' && target.definition && target.effect) {
             const before = target.effect.settings[target.paramId];
             target.effect.settings[target.paramId] = clamped;
-            syncEffectSettings(target.definition, target.effect);
             return target.effect.settings[target.paramId] !== before;
         }
         return false;
     }
 
-    function applyAutomationStep(step, bar = currentBar) {
+    function applyAutomationStep(step, bar = currentBar, audible = null) {
         const needsRebuild = new Set();
-        const channelPatterns = currentView === 'roll'
-            ? [{ channel: selectedChannel(), patternIndex: activePatternIndex() }]
-            : playlistPatternClipHitsAtStep(bar, step).flatMap(({ clip }) => audibleChannels().map(channel => ({
-                channel,
-                patternIndex: clip.pattern
-            })));
+        const channelPatternsById = new Map();
+        if (currentView === 'roll') {
+            const channel = selectedChannel();
+            channelPatternsById.set(channel.id + ':' + activePatternIndex(), { channel, patternIndex: activePatternIndex() });
+        } else {
+            const channels = audible || audibleChannels();
+            playlistPatternClipHitsAtStep(bar, step).forEach(({ clip }) => {
+                channels.forEach(channel => {
+                    const key = channel.id + ':' + clip.pattern;
+                    if (!channelPatternsById.has(key)) channelPatternsById.set(key, { channel, patternIndex: clip.pattern });
+                });
+            });
+        }
 
-        channelPatterns.forEach(({ channel, patternIndex }) => {
+        channelPatternsById.forEach(({ channel, patternIndex }) => {
             ensureChannelAutomation(channel);
+            const targets = new Map(automationTargets(channel).map(target => [
+                target.targetType + ':' + (target.effectId || '') + ':' + target.paramId,
+                target
+            ]));
             channel.automation.forEach(lane => {
                 if (!lane.enabled) return;
-                const target = automationTargetForLane(channel, lane);
+                const target = targets.get(lane.targetType + ':' + (lane.effectId || '') + ':' + lane.paramId);
                 if (!target) return;
                 const value = automationValueAtStep(lane, target.param, step, patternIndex);
                 if (value === null) return;
@@ -938,11 +1022,14 @@
                 if (changedEffect) needsRebuild.add(channel);
             });
         });
-        needsRebuild.forEach(channel => rebuildChannelOutput(channel, true));
-        if (currentView === 'automation' && bar === currentBar) renderAutomation(false);
+        needsRebuild.forEach(channel => rebuildChannelOutput(channel));
     }
 
     function ensureChannelEffects(channel) {
+        if (channel._effectsReadyRef === channel.effects
+            && channel._effectsReadyLength === (Array.isArray(channel.effects) ? channel.effects.length : -1)) {
+            return;
+        }
         if (!Array.isArray(channel.effects)) channel.effects = [];
         channel.effects = channel.effects.map(effect => {
             const normalized = effect && typeof effect === 'object' ? effect : {};
@@ -953,6 +1040,8 @@
             normalized.settings = normalized.settings && typeof normalized.settings === 'object' ? normalized.settings : {};
             return normalized;
         });
+        channel._effectsReadyRef = channel.effects;
+        channel._effectsReadyLength = channel.effects.length;
     }
 
     function normalizeEffectSettings(definition, settings = {}) {
@@ -996,12 +1085,20 @@
         if (!channel.synthSettings || typeof channel.synthSettings !== 'object') channel.synthSettings = {};
         const definition = synthDefinitionForChannel(channel);
         if (!definition) return channel.synthSettings;
+        if (channel._synthReadyRef === channel.synthSettings
+            && channel._synthReadyType === channel.synthType
+            && channel._synthReadyDefinition === definition) {
+            return channel.synthSettings;
+        }
         if (!channel.synthType) channel.synthType = definition.id;
         const normalized = normalizeParamSettings(definition, channel.synthSettings);
         Object.keys(channel.synthSettings).forEach(key => {
             if (!Object.prototype.hasOwnProperty.call(normalized, key)) delete channel.synthSettings[key];
         });
         Object.assign(channel.synthSettings, normalized);
+        channel._synthReadyRef = channel.synthSettings;
+        channel._synthReadyType = channel.synthType;
+        channel._synthReadyDefinition = definition;
         return channel.synthSettings;
     }
 
@@ -1049,7 +1146,16 @@
         target.settings[param.id] = param.type === 'select' ? value : Number(value);
         syncEffectSettings(definition, target);
         effect.settings = target.settings;
-        rebuildChannelOutput(channel);
+        scheduleChannelOutputRebuild(channel);
+    }
+
+    function scheduleChannelOutputRebuild(channel) {
+        if (!channelOutputs.has(channel.id) || pendingChannelOutputRebuilds.has(channel.id)) return;
+        const timer = window.setTimeout(() => {
+            pendingChannelOutputRebuilds.delete(channel.id);
+            if (state.channels.includes(channel) && channelOutputs.has(channel.id)) rebuildChannelOutput(channel);
+        }, 24);
+        pendingChannelOutputRebuilds.set(channel.id, timer);
     }
 
     function setEffectParamById(channel, effect, definition, paramId, value) {
@@ -1122,6 +1228,32 @@
 
     window.frdgBeatsEffects = window.frdgBeatsEffects || {};
     window.frdgBeatsEffects.register = registerEffect;
+    window.frdgBeatsEffects.workletsReady = context => effectWorkletReadyContexts.has(context);
+
+    function prepareEffectWorklets(context, rebuildLiveChannels = true) {
+        if (!context || !context.audioWorklet || typeof context.audioWorklet.addModule !== 'function') {
+            return Promise.resolve(false);
+        }
+        if (effectWorkletReadyContexts.has(context)) return Promise.resolve(true);
+        const pending = effectWorkletLoadPromises.get(context);
+        if (pending) return pending;
+        const loading = context.audioWorklet.addModule(EFFECT_WORKLET_URL).then(() => {
+            effectWorkletReadyContexts.add(context);
+            if (rebuildLiveChannels && audio && audio.context === context) {
+                state.channels.forEach(channel => {
+                    if (!channelOutputs.has(channel.id)) return;
+                    if (channel.effects.some(effect => effect.enabled && LOW_LATENCY_EFFECTS.has(effect.type))) {
+                        // Let already-scheduled notes finish on the temporary fallback
+                        // graph while new notes move to the worklet graph immediately.
+                        rebuildChannelOutput(channel, 1500);
+                    }
+                });
+            }
+            return true;
+        }).catch(() => false);
+        effectWorkletLoadPromises.set(context, loading);
+        return loading;
+    }
 
     function registerSynth(definition) {
         if (!definition || !definition.id || typeof definition.createVoice !== 'function') return;
@@ -1139,8 +1271,8 @@
         state.channels.forEach(channel => {
             if (channel.source === 'synth') ensureChannelSynth(channel);
         });
-        renderChannels();
-        renderSynthEditor();
+        if (state.channels.some(channel => channel.source === 'synth' && channel.collapsed === false)) renderChannels();
+        if (currentView === 'synth') renderSynthEditor();
     }
 
     window.frdgBeatsSynths = window.frdgBeatsSynths || {};
@@ -1169,15 +1301,16 @@
         return rebuildChannelOutput(channel);
     }
 
-    function rebuildChannelOutput(channel, preserveOld = false) {
+    function rebuildChannelOutput(channel, retireOldAfterMs = 0) {
+        const pending = pendingChannelOutputRebuilds.get(channel.id);
+        if (pending) {
+            window.clearTimeout(pending);
+            pendingChannelOutputRebuilds.delete(channel.id);
+        }
         const engine = createAudio();
         const old = channelOutputs.get(channel.id);
-        if (old && preserveOld) {
-            retiredChannelOutputs.add(old);
-            window.setTimeout(() => {
-                old.nodes.forEach(disconnectNode);
-                retiredChannelOutputs.delete(old);
-            }, 8000);
+        if (old && retireOldAfterMs > 0) {
+            window.setTimeout(() => old.nodes.forEach(disconnectNode), retireOldAfterMs);
         } else if (old) {
             old.nodes.forEach(disconnectNode);
         }
@@ -1222,8 +1355,6 @@
         activeSamplePlayheads.length = 0;
         channelOutputs.forEach(output => output.nodes.forEach(disconnectNode));
         channelOutputs.clear();
-        retiredChannelOutputs.forEach(output => output.nodes.forEach(disconnectNode));
-        retiredChannelOutputs.clear();
         syncUtilityMeters();
         drawWaveform(true);
         if (currentView === 'waveform') drawSampleEditor();
@@ -1271,6 +1402,7 @@
             waveData: new Uint8Array(analyser.fftSize),
             waveformContext: els.waveform ? els.waveform.getContext('2d') : null
         };
+        prepareEffectWorklets(context);
         makeSyntheticKick(state.channels[0]);
         return audio;
     }
@@ -1292,16 +1424,6 @@
 
     function updateStatus(text) {
         els.status.textContent = text;
-    }
-
-    function nextFrame() {
-        return new Promise(resolve => {
-            window.requestAnimationFrame(() => window.requestAnimationFrame(resolve));
-        });
-    }
-
-    function wait(ms) {
-        return new Promise(resolve => window.setTimeout(resolve, ms));
     }
 
     function syncUtilityMeters() {
@@ -1653,10 +1775,16 @@
         }
     }
 
-    async function setExportProgress(progress, value, text, delay = 80) {
+    async function setExportProgress(progress, value, text, _delay = 0) {
         progress.set(value, text);
-        await nextFrame();
-        if (delay > 0) await wait(delay);
+        const now = performance.now();
+        if (progress.lastYieldAt && now - progress.lastYieldAt < 32) return;
+        progress.lastYieldAt = now;
+        if (window.scheduler && typeof window.scheduler.yield === 'function') {
+            await window.scheduler.yield();
+        } else {
+            await new Promise(resolve => window.setTimeout(resolve, 0));
+        }
     }
 
     function stepSeconds() {
@@ -2388,6 +2516,19 @@
         return Math.max(0, Math.min(1, start + Math.min(progress, duration)));
     }
 
+    function soundfontZoneForMidi(preset, midiNote) {
+        if (!preset || !Array.isArray(preset.zones) || !preset.zones.length) return null;
+        let cache = soundfontZoneCache.get(preset);
+        if (!cache) {
+            cache = new Map();
+            soundfontZoneCache.set(preset, cache);
+        }
+        if (cache.has(midiNote)) return cache.get(midiNote);
+        const zone = preset.zones.find(item => midiNote >= item.keyRange[0] && midiNote <= item.keyRange[1]) || preset.zones[0];
+        cache.set(midiNote, zone);
+        return zone;
+    }
+
     function playSoundfont(channel, note, time, duration, velocity = 1, slideTo = null) {
         const noteGain = velocityGain(velocity);
         if (noteGain <= 0) return;
@@ -2395,9 +2536,7 @@
         const bank = soundfontBankForChannel(channel);
         const preset = findSoundfontPreset(channel, bank);
         const midiNote = noteNumber(note);
-        const zone = preset && Array.isArray(preset.zones)
-            ? (preset.zones.find(item => midiNote >= item.keyRange[0] && midiNote <= item.keyRange[1]) || preset.zones[0])
-            : null;
+        const zone = soundfontZoneForMidi(preset, midiNote);
         if (!zone || !zone.sample || !bank.sampleData) {
             const fallbackWave = (channel.soundfontProgram || 0) < 8 ? 'triangle' : 'sawtooth';
             playWave({ ...channel, wave: fallbackWave, attack: 0.012, release: Math.max(0.16, channel.release), volume: channel.volume * 0.78 }, note, time, duration, noteGain, slideTo);
@@ -2449,9 +2588,7 @@
         const bank = soundfontBankForChannel(channel);
         const preset = findSoundfontPreset(channel, bank);
         const midiNote = noteNumber(note);
-        const zone = preset && Array.isArray(preset.zones)
-            ? (preset.zones.find(item => midiNote >= item.keyRange[0] && midiNote <= item.keyRange[1]) || preset.zones[0])
-            : null;
+        const zone = soundfontZoneForMidi(preset, midiNote);
         if (!zone || !zone.sample || !bank.sampleData) {
             const fallbackWave = (channel.soundfontProgram || 0) < 8 ? 'triangle' : 'sawtooth';
             return startWaveVoice({ ...channel, wave: fallbackWave, attack: 0.012, release: Math.max(0.16, channel.release), volume: channel.volume * 0.78 }, note);
@@ -2510,11 +2647,22 @@
 
     function findSoundfontPreset(channel, bank = soundfontBankForChannel(channel)) {
         const presets = bank && Array.isArray(bank.presets) ? bank.presets : [];
+        if (!presets.length) return null;
+        let lookup = soundfontPresetLookupCache.get(bank);
+        if (!lookup) {
+            lookup = { exact: new Map(), program: new Map(), name: new Map() };
+            presets.forEach(preset => {
+                lookup.exact.set(preset.bank + ':' + preset.program, preset);
+                if (!lookup.program.has(preset.program)) lookup.program.set(preset.program, preset);
+                lookup.name.set(preset.name, preset);
+            });
+            soundfontPresetLookupCache.set(bank, lookup);
+        }
         const program = Number(channel.soundfontProgram) || 0;
         const bankNumber = Number(channel.soundfontBankNumber) || 0;
-        return presets.find(item => item.program === program && item.bank === bankNumber)
-            || presets.find(item => item.program === program)
-            || presets.find(item => item.name === channel.soundfontPreset)
+        return lookup.exact.get(bankNumber + ':' + program)
+            || lookup.program.get(program)
+            || lookup.name.get(channel.soundfontPreset)
             || presets[0]
             || null;
     }
@@ -2655,27 +2803,30 @@
     }
 
     function scheduleStep(step, bar, time) {
-        applyAutomationStep(step, bar);
         if (currentView === 'roll') {
+            applyAutomationStep(step, bar);
             const channel = selectedChannel();
             getStepEvents(getPattern(channel), step).forEach(event => {
                 playChannelNote(channel, event.note, time + (noteStartOffset(event) * stepSeconds()), noteDurationSeconds(event, step), noteVelocity(event), event.slideTo);
             });
             return;
         }
+        const channels = audibleChannels();
+        applyAutomationStep(step, bar, channels);
         playlistPatternClipHitsAtStep(bar, step).forEach(({ clip, step: patternStep }) => {
-            audibleChannels().forEach(channel => {
+            channels.forEach(channel => {
                 getStepEvents(getPattern(channel, clip.pattern), patternStep).forEach(event => {
                     playChannelNote(channel, event.note, time + (noteStartOffset(event) * stepSeconds()), noteDurationSeconds(event, patternStep), noteVelocity(event), event.slideTo);
                 });
             });
         });
         if (step === 0) {
+            const channelsById = new Map(channels.map(channel => [channel.id, channel]));
             state.playlistAudioClips
                 .filter(clip => clip.bar === bar && clip.muted !== true)
                 .forEach(clip => {
-                    const channel = state.channels.find(item => item.id === clip.channelId);
-                    if (channel && audibleChannels().includes(channel)) playPlaylistAudioClip(channel, clip, time);
+                    const channel = channelsById.get(clip.channelId);
+                    if (channel) playPlaylistAudioClip(channel, clip, time);
                 });
         }
     }
@@ -2824,6 +2975,7 @@
 
     function renderChannels() {
         els.channelList.innerHTML = '';
+        const fragment = document.createDocumentFragment();
         state.channels.forEach(migrateWaveChannel);
         syncGlobalSoundfontButton();
         syncWaveformTab();
@@ -2849,9 +3001,11 @@
                 channel.color = color.value;
             });
             color.addEventListener('change', () => {
-                renderChannels();
-                renderRoll();
-                renderPlaylist();
+                if (currentView === 'playlist') {
+                    refreshPlaylistTracks(new Set(state.playlistPatternClips.map(clip => clip.track)));
+                } else {
+                    renderCurrentView(false);
+                }
             });
 
             const name = document.createElement('input');
@@ -2872,8 +3026,9 @@
             });
             name.addEventListener('input', () => {
                 channel.name = name.value || 'channel';
-                renderRoll();
-                renderPlaylist();
+                if (channel.id === selectedId && currentView === 'roll') {
+                    els.selectedLabel.textContent = 'selected: ' + channel.name + ' / global pattern ' + (activePatternIndex() + 1) + ' / ' + stepCount() + ' beats';
+                }
             });
             name.addEventListener('focus', () => {
                 selectedId = channel.id;
@@ -2883,8 +3038,7 @@
                 channel.name = name.value.trim() || 'channel';
                 name.value = channel.name;
                 name.readOnly = true;
-                renderRoll();
-                renderPlaylist();
+                if (channel.id === selectedId) renderCurrentView(false);
             });
             name.addEventListener('keydown', event => {
                 if (event.key === 'Enter') {
@@ -2901,14 +3055,14 @@
             mute.addEventListener('click', event => {
                 event.stopPropagation();
                 channel.muted = !channel.muted;
-                renderChannels();
+                mute.classList.toggle('is-active', channel.muted);
             });
 
             const solo = miniButton('S', 'solo channel', channel.solo);
             solo.addEventListener('click', event => {
                 event.stopPropagation();
                 channel.solo = !channel.solo;
-                renderChannels();
+                solo.classList.toggle('is-active', channel.solo);
             });
 
             const remove = miniButton('<i class="fa-solid fa-trash"></i>', 'remove channel', false);
@@ -2924,19 +3078,23 @@
             expand.addEventListener('click', event => {
                 event.stopPropagation();
                 channel.collapsed = false;
-                selectedId = channel.id;
-                renderChannels();
-                renderRoll();
+                selectChannel(channel.id);
             });
             const minimize = miniButton('<i class="fa-solid fa-chevron-up"></i>', 'minimize channel', false);
             minimize.classList.add('fdgb-channel-expand-button');
             minimize.addEventListener('click', event => {
                 event.stopPropagation();
                 channel.collapsed = true;
-                selectedId = channel.id;
-                renderChannels();
-                renderRoll();
+                selectChannel(channel.id);
             });
+
+            card.addEventListener('click', () => selectChannel(channel.id));
+            card.append(head);
+            if (collapsed) {
+                card.append(expand);
+                fragment.append(card);
+                return;
+            }
 
             const controls = document.createElement('div');
             controls.className = 'fdgb-channel-controls';
@@ -2967,8 +3125,7 @@
                 syncGlobalSoundfontButton();
                 renderChannels();
                 syncSynthTab();
-                renderSynthEditor();
-                renderAutomation();
+                renderCurrentView(false);
             }));
             controls.append(sourceField, instrumentField(channel));
             if (channel.source === 'soundfont') controls.append(soundfontBankField(channel), soundfontCustomField(channel));
@@ -2995,7 +3152,8 @@
                 button.setAttribute('aria-label', channel.name + ' step ' + (step + 1));
                 button.addEventListener('click', event => {
                     event.stopPropagation();
-                    selectChannel(channel.id);
+                    selectedId = channel.id;
+                    setActivePattern(activePatternIndex());
                     const active = getPattern(channel);
                     const events = getStepEvents(active, step);
                     if (events.length) {
@@ -3004,20 +3162,18 @@
                         events.push({ note: defaultNoteFor(channel), length: 1, velocity: 1 });
                     }
                     renderChannels();
-                    renderRoll();
+                    syncWaveformTab();
+                    syncSynthTab();
+                    renderCurrentView(false);
+                    refreshPlaylistPattern(activePatternIndex());
                 });
                 steps.append(button);
             }
 
-            card.addEventListener('click', () => selectChannel(channel.id));
-            card.append(head);
-            if (collapsed) {
-                card.append(expand);
-            } else {
-                card.append(controls, steps, minimize);
-            }
-            els.channelList.append(card);
+            card.append(controls, steps, minimize);
+            fragment.append(card);
         });
+        els.channelList.append(fragment);
     }
 
     function miniButton(text, label, active) {
@@ -3085,8 +3241,7 @@
             channel.synthType = input.value;
             channel.synthSettings = normalizeParamSettings(synthDefinitionForChannel(channel) || definitions[0], channel.synthSettings || {});
             renderChannels();
-            renderSynthEditor();
-            renderAutomation();
+            renderCurrentView(false);
             updateStatus('selected synth: ' + ((synthDefinitionForChannel(channel) || {}).name || input.value));
         });
         return input;
@@ -3116,11 +3271,11 @@
                 if (customSoundfontBank) {
                     channel.soundfontName = customSoundfontBank.name;
                     applySoundfontPresetToChannel(channel, customSoundfontBank);
-                    renderRoll();
                 } else {
                     updateStatus('choose a custom soundfont');
                 }
                 renderChannels();
+                renderCurrentView(false);
                 return;
             }
             const selected = catalog.find(item => item.url === input.value) || catalog[0];
@@ -3128,7 +3283,7 @@
             const bank = await loadChannelSoundfontFromUrl(channel, selected.url, selected.name);
             applySoundfontPresetToChannel(channel, bank);
             renderChannels();
-            renderRoll();
+            renderCurrentView(false);
         });
         return field('bank', input);
     }
@@ -3164,7 +3319,12 @@
         el.max = String(max);
         el.step = String(step);
         el.value = String(value);
-        const commit = () => onInput(Number(el.value));
+        let lastValue = el.value;
+        const commit = () => {
+            if (el.value === lastValue) return;
+            lastValue = el.value;
+            onInput(Number(el.value));
+        };
         el.addEventListener('input', commit);
         el.addEventListener('change', commit);
         return el;
@@ -3178,11 +3338,19 @@
         el.max = String(max);
         el.step = String(step);
         el.value = String(value);
-        el.addEventListener('input', () => onInput(Number(el.value)));
+        let lastValue = el.value;
+        el.addEventListener('input', () => {
+            if (el.value === lastValue) return;
+            lastValue = el.value;
+            onInput(Number(el.value));
+        });
         el.addEventListener('blur', () => {
             const clamped = Math.max(min, Math.min(max, Math.round(Number(el.value) || min)));
             el.value = String(clamped);
-            onInput(clamped);
+            if (el.value !== lastValue) {
+                lastValue = el.value;
+                onInput(clamped);
+            }
         });
         return el;
     }
@@ -3216,7 +3384,7 @@
             channel.sampleUrl = selected.url;
             channel.sampleAsset = null;
             renderChannels();
-            renderRoll();
+            renderCurrentView(false);
         });
         return field('sample', input);
     }
@@ -3305,7 +3473,7 @@
                 channel.sampleAsset = asset;
                 updateStatus('loaded sample: ' + file.name);
                 renderChannels();
-                renderSampleEditor();
+                if (currentView === 'waveform') renderSampleEditor();
                 warmSamplePitchCache(channel);
                 await setExportProgress(progress, 100, 'loaded sample', 100);
             } catch (_) {
@@ -3591,7 +3759,9 @@
     }
 
     function playlistPlayheadEl() {
-        return els.playlist ? els.playlist.querySelector('.fdgb-playlist-playhead') : null;
+        if (playlistPlayheadMarker && playlistPlayheadMarker.isConnected) return playlistPlayheadMarker;
+        playlistPlayheadMarker = els.playlist ? els.playlist.querySelector('.fdgb-playlist-playhead') : null;
+        return playlistPlayheadMarker;
     }
 
     function updatePlaylistPlayheadMarker(position) {
@@ -3606,7 +3776,7 @@
 
     function clearPaintedPlayhead() {
         if (paintedStep >= 0) {
-            root.querySelectorAll('.fdgb-step[data-step="' + paintedStep + '"], .fdgb-cell[data-step="' + paintedStep + '"], .fdgb-bar-label[data-step="' + paintedStep + '"]').forEach(el => el.classList.remove('is-playing'));
+            root.querySelectorAll('.fdgb-step[data-step="' + paintedStep + '"], .fdgb-cell[data-step="' + paintedStep + '"], .fdgb-bar-label[data-step="' + paintedStep + '"], .fdgb-automation-cell[data-step="' + paintedStep + '"]').forEach(el => el.classList.remove('is-playing'));
         }
         if (paintedBar >= 0) {
             root.querySelectorAll('.fdgb-playlist-cell[data-bar="' + paintedBar + '"], .fdgb-playlist-head[data-bar="' + paintedBar + '"], .fdgb-playlist-track.is-playing').forEach(el => el.classList.remove('is-playing'));
@@ -3664,10 +3834,7 @@
 
     function updatePlaylistTrackSelection() {
         if (!els.playlist) return;
-        els.playlist.querySelectorAll('.fdgb-playlist-track[data-track]').forEach(track => {
-            const channel = channelForPlaylistTrack(Number(track.dataset.track) || 0);
-            track.classList.toggle('is-selected', Boolean(channel && channel.id === selectedId));
-        });
+        els.playlist.querySelectorAll('.fdgb-playlist-track.is-selected').forEach(track => track.classList.remove('is-selected'));
     }
 
     function togglePlaylistLoop(bar) {
@@ -3804,6 +3971,58 @@
         if (handle) handle.style.left = (endX - startRect.left - 5) + 'px';
     }
 
+    function setInitialNoteBlockLengthStyles(block, handle, offset, length) {
+        if (block) block.style.left = 'calc(' + (offset * 100) + '% + 4px)';
+        if (block) block.style.width = 'calc(' + (length * 100) + '% - 8px)';
+        if (handle) handle.style.left = 'calc(' + (length * 100) + '% - 5px)';
+    }
+
+    function appendPianoRollNote(cell, event, eventIndex, step, note) {
+        const block = document.createElement('span');
+        block.className = 'fdgb-note-block' + (event.slideTo ? ' is-slide' : '');
+        block.dataset.step = String(step);
+        block.dataset.note = note;
+        block.dataset.eventIndex = String(eventIndex);
+        block.dataset.offset = String(noteStartOffset(event));
+        block.dataset.velocity = String(noteVelocity(event));
+        block.dataset.length = String(clampedNoteLength(event, step));
+        if (event.slideTo) {
+            block.dataset.slideTo = event.slideTo;
+            block.title = 'slides to ' + event.slideTo;
+            const slideText = document.createElement('span');
+            slideText.className = 'fdgb-slide-text';
+            slideText.textContent = event.slideTo;
+            block.append(slideText);
+        }
+        block.style.opacity = String(Math.max(0.28, noteVelocity(event)));
+        const length = clampedNoteLength(event, step);
+        const handle = document.createElement('span');
+        handle.className = 'fdgb-note-resize';
+        handle.dataset.step = String(step);
+        handle.dataset.note = note;
+        handle.dataset.eventIndex = String(eventIndex);
+        handle.dataset.offset = String(noteStartOffset(event));
+        cell.append(block, handle);
+        setInitialNoteBlockLengthStyles(block, handle, noteStartOffset(event), length);
+    }
+
+    function refreshRollStep(step, pattern = getPattern(selectedChannel())) {
+        if (currentView !== 'roll') return;
+        const events = getStepEvents(pattern, step);
+        els.pianoRoll.querySelectorAll('.fdgb-cell[data-step="' + step + '"]').forEach(cell => {
+            const note = cell.dataset.note;
+            const noteEvents = events
+                .map((event, eventIndex) => ({ event, eventIndex }))
+                .filter(item => item.event.note === note)
+                .sort((a, b) => noteStartOffset(a.event) - noteStartOffset(b.event));
+            cell.replaceChildren();
+            cell.classList.toggle('is-on', noteEvents.length > 0);
+            noteEvents.forEach(({ event, eventIndex }) => appendPianoRollNote(cell, event, eventIndex, step, note));
+        });
+        root.querySelectorAll('.fdgb-channel[data-channel-id="' + selectedId + '"] .fdgb-step[data-step="' + step + '"]')
+            .forEach(button => button.classList.toggle('is-on', events.length > 0));
+    }
+
     function renderRoll() {
         const channel = selectedChannel();
         ensureChannelPatterns(channel);
@@ -3814,17 +4033,19 @@
         els.selectedLabel.textContent = 'selected: ' + channel.name + ' / global pattern ' + (activePatternIndex() + 1) + ' / ' + stepCount() + ' beats';
         els.pianoRoll.innerHTML = '';
         els.pianoRoll.style.gridTemplateColumns = '72px repeat(' + stepCount() + ', minmax(34px, 1fr))';
+        const fragment = document.createDocumentFragment();
+        const eventsByStep = pattern.map((_, step) => getStepEvents(pattern, step));
 
         const corner = document.createElement('div');
         corner.className = 'fdgb-bar-label';
         corner.textContent = 'note';
-        els.pianoRoll.append(corner);
+        fragment.append(corner);
         for (let step = 0; step < stepCount(); step += 1) {
             const label = document.createElement('div');
             label.className = 'fdgb-bar-label';
             label.textContent = String(step + 1);
             label.dataset.step = String(step);
-            els.pianoRoll.append(label);
+            fragment.append(label);
         }
 
         const notes = [baseOctave, baseOctave + 1].flatMap(octave => CHROMATIC.map(name => name + octave)).reverse();
@@ -3838,10 +4059,10 @@
             const text = document.createElement('span');
             text.textContent = note;
             label.append(key, text);
-            els.pianoRoll.append(label);
+            fragment.append(label);
 
             for (let step = 0; step < stepCount(); step += 1) {
-                const stepEvents = getStepEvents(pattern, step);
+                const stepEvents = eventsByStep[step];
                 const noteEvents = stepEvents
                     .map((event, eventIndex) => ({ event, eventIndex }))
                     .filter(item => item.event.note === note)
@@ -3854,42 +4075,15 @@
                 cell.dataset.step = String(step);
                 cell.dataset.note = note;
                 cell.setAttribute('aria-label', note + ' step ' + (step + 1));
-                noteEvents.forEach(({ event, eventIndex }) => {
-                    const block = document.createElement('span');
-                    block.className = 'fdgb-note-block' + (event.slideTo ? ' is-slide' : '');
-                    block.dataset.step = String(step);
-                    block.dataset.note = note;
-                    block.dataset.eventIndex = String(eventIndex);
-                    block.dataset.offset = String(noteStartOffset(event));
-                    block.dataset.velocity = String(noteVelocity(event));
-                    block.dataset.length = String(clampedNoteLength(event, step));
-                    if (event.slideTo) {
-                        block.dataset.slideTo = event.slideTo;
-                        block.title = 'slides to ' + event.slideTo;
-                        const slideText = document.createElement('span');
-                        slideText.className = 'fdgb-slide-text';
-                        slideText.textContent = event.slideTo;
-                        block.append(slideText);
-                    }
-                    block.style.opacity = String(Math.max(0.28, noteVelocity(event)));
-                    const length = clampedNoteLength(event, step);
-                    const handle = document.createElement('span');
-                    handle.className = 'fdgb-note-resize';
-                    handle.dataset.step = String(step);
-                    handle.dataset.note = note;
-                    handle.dataset.eventIndex = String(eventIndex);
-                    handle.dataset.offset = String(noteStartOffset(event));
-                    cell.append(block, handle);
-                    setNoteBlockLengthStyles(block, handle, step, noteStartOffset(event), length);
-                });
-                els.pianoRoll.append(cell);
+                noteEvents.forEach(({ event, eventIndex }) => appendPianoRollNote(cell, event, eventIndex, step, note));
+                fragment.append(cell);
             }
         });
+        els.pianoRoll.append(fragment);
     }
 
     function renderPlaylistTools() {
         if (!els.playlistTools) return;
-        ensureClipMap();
         els.playlistTools.innerHTML = '';
         const toolLabel = document.createElement('div');
         toolLabel.className = 'fdgb-playlist-tool-label';
@@ -3942,8 +4136,6 @@
         picker.addEventListener('change', () => {
             setActivePattern(picker.value);
             renderChannels();
-            renderRoll();
-            renderAutomation();
             renderPlaylistTools();
         });
         const dragButton = document.createElement('button');
@@ -3958,7 +4150,6 @@
         dragButton.addEventListener('click', () => {
             const pattern = Number(picker.value);
             if (Number.isInteger(pattern)) setActivePattern(pattern);
-            renderRoll();
         });
         dragButton.addEventListener('dragstart', event => {
             const pattern = Number(picker.value);
@@ -3981,29 +4172,15 @@
         els.playlistTools.append(hint);
     }
 
-    function playlistPatternClipsFor(track, bar) {
-        return playlistPatternClipsStartingAt(track, bar);
-    }
-
-    function playlistAudioClipsFor(track, bar) {
-        return state.playlistAudioClips.filter(clip => clip.track === track && clip.bar === bar);
-    }
-
     function audioClipBars(clip) {
         const barSeconds = stepSeconds() * stepCount();
         return Math.max(1, Math.ceil((Number(clip.duration) || (clip.buffer ? clip.buffer.duration : barSeconds)) / Math.max(0.001, barSeconds)));
-    }
-
-    function channelForPlaylistTrack(trackIndex) {
-        return state.channels[trackIndex % Math.max(1, state.channels.length)] || state.channels[0];
     }
 
     function selectPlaylistPattern(patternIndex, openRoll = false) {
         setActivePattern(patternIndex);
         renderPatternOptions();
         renderChannels();
-        renderRoll();
-        renderAutomation();
         renderPlaylistTools();
         if (openRoll) showView('roll');
         updateStatus('selected pattern ' + (patternIndex + 1));
@@ -4012,8 +4189,9 @@
     function patternPreviewNotes(patternIndex) {
         const notes = [];
         state.channels.forEach(channel => {
-            getPattern(channel, patternIndex).forEach((stepEvents, step) => {
-                getStepEvents(getPattern(channel, patternIndex), step).forEach(event => {
+            const pattern = getPattern(channel, patternIndex);
+            pattern.forEach((stepEvents, step) => {
+                getStepEvents(pattern, step).forEach(event => {
                     const midi = noteNumber(event.note);
                     if (!Number.isFinite(midi)) return;
                     notes.push({
@@ -4028,9 +4206,17 @@
         return notes;
     }
 
-    function appendPatternClipPreview(clipEl, patternIndex) {
+    function appendPatternClipPreview(clipEl, patternIndex, previewCache = null) {
+        if (previewCache && previewCache.has(patternIndex)) {
+            const cached = previewCache.get(patternIndex);
+            if (cached) clipEl.append(cached.cloneNode(true));
+            return;
+        }
         const notes = patternPreviewNotes(patternIndex);
-        if (!notes.length) return;
+        if (!notes.length) {
+            if (previewCache) previewCache.set(patternIndex, null);
+            return;
+        }
         const min = Math.min(...notes.map(note => note.midi));
         const max = Math.max(...notes.map(note => note.midi));
         const range = Math.max(1, max - min);
@@ -4045,7 +4231,12 @@
             bar.style.background = note.color;
             preview.append(bar);
         });
-        clipEl.append(preview);
+        if (previewCache) {
+            previewCache.set(patternIndex, preview);
+            clipEl.append(preview.cloneNode(true));
+        } else {
+            clipEl.append(preview);
+        }
     }
 
     function addPatternClip(pattern, trackIndex, bar, length = 1) {
@@ -4069,13 +4260,14 @@
             muted: false
         };
         state.playlistPatternClips.push(clip);
+        invalidatePlaylistPatternIndex();
         return clip;
     }
 
     function paintPlaylistCell(trackIndex, bar, clientX = null, cell = null) {
         const position = cell && clientX !== null ? playlistPositionFromPointer(cell, clientX) : bar;
         const added = addPatternClip(activePatternIndex(), trackIndex, position);
-        if (added) renderPlaylist();
+        if (added) refreshPlaylistCell(trackIndex, position);
     }
 
     function deletePlaylistClipAtPoint(clientX, clientY) {
@@ -4087,13 +4279,15 @@
             state.playlistAudioClips = state.playlistAudioClips.filter(clip => clip.id !== id);
         } else {
             state.playlistPatternClips = state.playlistPatternClips.filter(clip => clip.id !== id);
+            invalidatePlaylistPatternIndex();
         }
-        renderPlaylist();
+        const cell = clipEl.closest('.fdgb-playlist-cell');
+        if (cell) refreshPlaylistCell(Number(cell.dataset.track), Number(cell.dataset.bar));
         return true;
     }
 
-    function playlistLaneCell(trackIndex, bar) {
-        const hasClips = playlistPatternClipsFor(trackIndex, bar).length > 0 || playlistAudioClipsFor(trackIndex, bar).length > 0;
+    function playlistLaneCell(trackIndex, bar, patternClips = [], audioClips = [], previewCache = null) {
+        const hasClips = patternClips.length > 0 || audioClips.length > 0;
         const cell = document.createElement('div');
         cell.className = 'fdgb-playlist-cell'
             + (hasClips ? ' is-on' : '')
@@ -4116,8 +4310,8 @@
         cell.addEventListener('click', event => {
             if (playlistTool === 'delete' || playlistTool === 'mute') return;
             if (playlistTool === 'paint') return;
-            addPatternClip(activePatternIndex(), trackIndex, playlistPositionFromPointer(cell, event.clientX));
-            renderPlaylist();
+            const position = playlistPositionFromPointer(cell, event.clientX);
+            if (addPatternClip(activePatternIndex(), trackIndex, position)) refreshPlaylistCell(trackIndex, position);
         });
         cell.addEventListener('contextmenu', event => {
             event.preventDefault();
@@ -4133,7 +4327,7 @@
             cell.classList.remove('is-drop-target');
             handlePlaylistDrop(event, trackIndex, bar, cell);
         });
-        playlistPatternClipsFor(trackIndex, bar).forEach(patternClip => {
+        patternClips.forEach(patternClip => {
             const clip = document.createElement('div');
             clip.className = 'fdgb-playlist-clip fdgb-playlist-pattern-clip' + (patternClip.muted ? ' is-muted' : '');
             clip.dataset.clipId = patternClip.id;
@@ -4142,23 +4336,24 @@
             clip.style.left = '0';
             clip.style.width = '100%';
             clip.innerHTML = '<div class="fdgb-playlist-clip-title"><i class="fa-solid fa-wave-square"></i><span>' + (patternClip.pattern + 1) + '</span></div>';
-            appendPatternClipPreview(clip, patternClip.pattern);
+            appendPatternClipPreview(clip, patternClip.pattern, previewCache);
             clip.title = 'pattern ' + (patternClip.pattern + 1);
             clip.addEventListener('click', event => {
                 event.stopPropagation();
                 if (playlistTool === 'delete') {
                     state.playlistPatternClips = state.playlistPatternClips.filter(item => item.id !== patternClip.id);
-                    renderPlaylist();
+                    invalidatePlaylistPatternIndex();
+                    refreshPlaylistCell(trackIndex, bar);
                     return;
                 }
                 if (playlistTool === 'mute') {
                     patternClip.muted = !patternClip.muted;
-                    renderPlaylist();
+                    invalidatePlaylistPatternIndex();
+                    refreshPlaylistCell(trackIndex, bar);
                     updateStatus((patternClip.muted ? 'muted ' : 'unmuted ') + 'pattern ' + (patternClip.pattern + 1));
                     return;
                 }
                 selectPlaylistPattern(patternClip.pattern, false);
-                renderPlaylist();
             });
             clip.addEventListener('dblclick', event => {
                 event.preventDefault();
@@ -4181,11 +4376,12 @@
                 event.preventDefault();
                 event.stopPropagation();
                 state.playlistPatternClips = state.playlistPatternClips.filter(item => item.id !== patternClip.id);
-                renderPlaylist();
+                invalidatePlaylistPatternIndex();
+                refreshPlaylistCell(trackIndex, bar);
             });
             cell.append(clip);
         });
-        playlistAudioClipsFor(trackIndex, bar).forEach(audioClip => {
+        audioClips.forEach(audioClip => {
             const clip = document.createElement('div');
             clip.className = 'fdgb-playlist-clip fdgb-playlist-audio-clip' + (audioClip.muted ? ' is-muted' : '');
             clip.dataset.clipId = audioClip.id;
@@ -4198,12 +4394,12 @@
                 event.stopPropagation();
                 if (playlistTool === 'delete') {
                     state.playlistAudioClips = state.playlistAudioClips.filter(item => item.id !== audioClip.id);
-                    renderPlaylist();
+                    refreshPlaylistCell(trackIndex, bar);
                     return;
                 }
                 if (playlistTool === 'mute') {
                     audioClip.muted = !audioClip.muted;
-                    renderPlaylist();
+                    refreshPlaylistCell(trackIndex, bar);
                 }
             });
             clip.addEventListener('dragstart', event => {
@@ -4217,7 +4413,7 @@
             clip.addEventListener('contextmenu', event => {
                 event.preventDefault();
                 state.playlistAudioClips = state.playlistAudioClips.filter(item => item.id !== audioClip.id);
-                renderPlaylist();
+                refreshPlaylistCell(trackIndex, bar);
             });
             cell.append(clip);
         });
@@ -4238,11 +4434,15 @@
     async function handlePlaylistDrop(event, trackIndex, bar, cell = null) {
         const files = Array.from(event.dataTransfer.files || []).filter(file => /^audio\//i.test(file.type) || /\.(wav|mp3|ogg|flac|m4a|aac)$/i.test(file.name));
         if (files.length) {
+            const initialBarCount = state.barCount;
+            const affectedTracks = new Set();
             for (const file of files) {
                 await addAudioFileToPlaylist(file, trackIndex, bar);
+                affectedTracks.add(trackIndex);
                 bar = Math.min(state.barCount - 1, bar + 1);
             }
-            renderPlaylist();
+            if (state.barCount !== initialBarCount) renderPlaylist();
+            else refreshPlaylistTracks(affectedTracks);
             return;
         }
         const data = playlistDropData(event);
@@ -4252,21 +4452,28 @@
             const position = cell ? playlistPositionFromPointer(cell, event.clientX) : bar;
             const existing = data.id ? state.playlistPatternClips.find(clip => clip.id === data.id) : null;
             if (existing) {
+                const sourceTrack = existing.track;
+                const sourceBar = playlistClipStart(existing);
                 existing.track = trackIndex;
                 existing.bar = position;
                 existing.length = 1;
+                invalidatePlaylistPatternIndex();
+                refreshPlaylistCell(sourceTrack, sourceBar);
+                refreshPlaylistCell(trackIndex, position);
             } else {
-                addPatternClip(patternIndex, trackIndex, position);
+                if (addPatternClip(patternIndex, trackIndex, position)) refreshPlaylistCell(trackIndex, position);
             }
-            renderPlaylist();
             return;
         }
         if (data.type === 'audio') {
             const clip = state.playlistAudioClips.find(item => item.id === data.id);
             if (!clip) return;
+            const sourceTrack = clip.track;
+            const sourceBar = clip.bar;
             clip.track = trackIndex;
             clip.bar = bar;
-            renderPlaylist();
+            refreshPlaylistCell(sourceTrack, sourceBar);
+            refreshPlaylistCell(trackIndex, bar);
         }
     }
 
@@ -4302,56 +4509,189 @@
         }
     }
 
+    function closePlaylistTrackMenu() {
+        if (playlistTrackMenuCleanup) {
+            playlistTrackMenuCleanup();
+            return;
+        }
+        document.querySelectorAll('.fdgb-playlist-track-menu').forEach(menu => menu.remove());
+    }
+
+    function refreshPlaylistTracks(trackIndexes) {
+        if (!els.playlist || currentView !== 'playlist') return;
+        invalidatePlaylistPatternIndex();
+        const tracks = new Set(Array.from(trackIndexes || [])
+            .map(index => Number(index))
+            .filter(index => Number.isInteger(index) && index >= 0 && index < state.playlistTrackCount));
+        if (!tracks.size) return;
+        const patternClipsByCell = new Map();
+        state.playlistPatternClips.forEach(clip => {
+            if (!tracks.has(clip.track)) return;
+            const key = clip.track + ':' + Math.floor(playlistClipStart(clip));
+            if (!patternClipsByCell.has(key)) patternClipsByCell.set(key, []);
+            patternClipsByCell.get(key).push(clip);
+        });
+        const audioClipsByCell = new Map();
+        state.playlistAudioClips.forEach(clip => {
+            if (!tracks.has(clip.track)) return;
+            const key = clip.track + ':' + clip.bar;
+            if (!audioClipsByCell.has(key)) audioClipsByCell.set(key, []);
+            audioClipsByCell.get(key).push(clip);
+        });
+        const previewCache = new Map();
+        tracks.forEach(trackIndex => {
+            const cellsByBar = new Map(Array.from(els.playlist.querySelectorAll('.fdgb-playlist-cell[data-track="' + trackIndex + '"]'))
+                .map(cell => [Number(cell.dataset.bar), cell]));
+            for (let bar = 0; bar < state.barCount; bar += 1) {
+                const current = cellsByBar.get(bar);
+                if (!current) continue;
+                const key = trackIndex + ':' + bar;
+                current.replaceWith(playlistLaneCell(
+                    trackIndex,
+                    bar,
+                    patternClipsByCell.get(key) || [],
+                    audioClipsByCell.get(key) || [],
+                    previewCache
+                ));
+            }
+        });
+        paintPlaylistHead();
+    }
+
+    function refreshPlaylistCell(trackIndex, bar) {
+        if (!els.playlist || currentView !== 'playlist') return;
+        const safeTrack = Number(trackIndex);
+        const safeBar = Number(bar);
+        if (!Number.isInteger(safeTrack) || !Number.isInteger(safeBar)) return;
+        const current = els.playlist.querySelector('.fdgb-playlist-cell[data-track="' + safeTrack + '"][data-bar="' + safeBar + '"]');
+        if (!current) return;
+        const patternClips = state.playlistPatternClips.filter(clip => clip.track === safeTrack && playlistClipStart(clip) === safeBar);
+        const audioClips = state.playlistAudioClips.filter(clip => clip.track === safeTrack && clip.bar === safeBar);
+        current.replaceWith(playlistLaneCell(safeTrack, safeBar, patternClips, audioClips, new Map()));
+        paintPlaylistHead();
+    }
+
+    function refreshPlaylistPattern(patternIndex) {
+        if (currentView !== 'playlist') return;
+        refreshPlaylistTracks(new Set(state.playlistPatternClips
+            .filter(clip => clip.pattern === patternIndex)
+            .map(clip => clip.track)));
+    }
+
+    function clearPlaylistTrack(trackIndex) {
+        const patternCount = state.playlistPatternClips.length;
+        const audioCount = state.playlistAudioClips.length;
+        state.playlistPatternClips = state.playlistPatternClips.filter(clip => clip.track !== trackIndex);
+        state.playlistAudioClips = state.playlistAudioClips.filter(clip => clip.track !== trackIndex);
+        invalidatePlaylistPatternIndex();
+        const removed = (patternCount - state.playlistPatternClips.length) + (audioCount - state.playlistAudioClips.length);
+        if (removed && currentView === 'playlist') {
+            els.playlist.querySelectorAll('.fdgb-playlist-cell[data-track="' + trackIndex + '"]').forEach(cell => {
+                cell.replaceChildren();
+                cell.classList.remove('is-on', 'is-drop-target');
+            });
+            paintPlaylistHead();
+        }
+        updateStatus(removed ? 'deleted everything from track ' + (trackIndex + 1) : 'track ' + (trackIndex + 1) + ' was already empty');
+    }
+
+    function showPlaylistTrackMenu(event, trackIndex) {
+        event.preventDefault();
+        event.stopPropagation();
+        closePlaylistTrackMenu();
+        const menu = document.createElement('div');
+        menu.className = 'fdgb-menu fdgb-playlist-track-menu';
+        menu.setAttribute('role', 'menu');
+        const deleteButton = document.createElement('button');
+        deleteButton.className = 'fdgb-menu-option fdgb-playlist-track-delete';
+        deleteButton.type = 'button';
+        deleteButton.setAttribute('role', 'menuitem');
+        deleteButton.innerHTML = '<i class="fa-solid fa-trash"></i><span><span class="fdgb-menu-title">Delete</span><span class="fdgb-menu-desc">remove every clip from this track</span></span>';
+        menu.append(deleteButton);
+        applyPopupTheme(menu);
+        document.body.append(menu);
+        const close = () => {
+            document.removeEventListener('pointerdown', onOutside, true);
+            document.removeEventListener('keydown', onKeydown, true);
+            menu.remove();
+            if (playlistTrackMenuCleanup === close) playlistTrackMenuCleanup = null;
+        };
+        const onOutside = pointerEvent => {
+            if (!menu.contains(pointerEvent.target)) close();
+        };
+        const onKeydown = keyEvent => {
+            if (keyEvent.key === 'Escape') close();
+        };
+        deleteButton.addEventListener('click', () => {
+            close();
+            clearPlaylistTrack(trackIndex);
+        });
+        playlistTrackMenuCleanup = close;
+        document.addEventListener('pointerdown', onOutside, true);
+        document.addEventListener('keydown', onKeydown, true);
+        const rect = menu.getBoundingClientRect();
+        menu.style.left = Math.min(window.innerWidth - rect.width - 8, Math.max(8, event.clientX)) + 'px';
+        menu.style.top = Math.min(window.innerHeight - rect.height - 8, Math.max(8, event.clientY)) + 'px';
+        deleteButton.focus();
+    }
+
+    function playlistHeader(bar) {
+        const head = document.createElement('div');
+        head.className = 'fdgb-bar-label fdgb-playlist-head'
+            + (state.loopRange && !isBarInLoop(bar) ? ' is-loop-muted' : '')
+            + (state.loopRange && isBarInLoop(bar) ? ' is-looped' : '');
+        head.dataset.bar = String(bar);
+        const label = document.createElement('button');
+        label.className = 'fdgb-playlist-start-column';
+        label.type = 'button';
+        label.textContent = String(bar + 1);
+        label.setAttribute('aria-label', 'play from playlist row ' + (bar + 1));
+        label.addEventListener('click', event => {
+            event.stopPropagation();
+            startFromBar(bar);
+        });
+        const loop = document.createElement('button');
+        loop.className = 'fdgb-playlist-loop-column' + (state.loopRange && isBarInLoop(bar) ? ' is-active' : '');
+        loop.type = 'button';
+        loop.innerHTML = '<i class="fa-solid fa-repeat"></i>';
+        loop.setAttribute('aria-label', 'toggle loop row ' + (bar + 1));
+        loop.addEventListener('click', event => {
+            event.stopPropagation();
+            togglePlaylistLoop(bar);
+        });
+        const deleteColumn = document.createElement('button');
+        deleteColumn.className = 'fdgb-playlist-delete-column';
+        deleteColumn.type = 'button';
+        deleteColumn.disabled = state.barCount <= 1;
+        deleteColumn.innerHTML = '<i class="fa-solid fa-trash"></i>';
+        deleteColumn.setAttribute('aria-label', 'delete playlist row ' + (bar + 1));
+        deleteColumn.addEventListener('click', event => {
+            event.stopPropagation();
+            removePlaylistColumn(bar);
+        });
+        head.append(label, loop, deleteColumn);
+        return head;
+    }
+
     function renderPlaylist() {
-        ensureClipMap();
+        invalidatePlaylistPatternIndex();
         renderPlaylistTools();
+        closePlaylistTrackMenu();
         els.playlist.innerHTML = '';
         els.playlist.style.setProperty('--fdgb-playlist-columns', '132px repeat(' + state.barCount + ', 96px) 42px');
         els.playlist.style.setProperty('--fdgb-playlist-min-width', (174 + (state.barCount * 96)) + 'px');
+        const fragment = document.createDocumentFragment();
         const playhead = document.createElement('div');
         playhead.className = 'fdgb-playlist-playhead' + (currentView === 'roll' ? ' fdgb-hidden' : '');
-        els.playlist.append(playhead);
+        playlistPlayheadMarker = playhead;
+        fragment.append(playhead);
         const first = document.createElement('div');
         first.className = 'fdgb-playlist-track fdgb-playlist-corner';
         first.textContent = 'tracks';
-        els.playlist.append(first);
+        fragment.append(first);
 
         for (let bar = 0; bar < state.barCount; bar += 1) {
-            const head = document.createElement('div');
-            head.className = 'fdgb-bar-label fdgb-playlist-head'
-                + (state.loopRange && !isBarInLoop(bar) ? ' is-loop-muted' : '')
-                + (state.loopRange && isBarInLoop(bar) ? ' is-looped' : '');
-            head.dataset.bar = String(bar);
-            const label = document.createElement('button');
-            label.className = 'fdgb-playlist-start-column';
-            label.type = 'button';
-            label.textContent = String(bar + 1);
-            label.setAttribute('aria-label', 'play from playlist row ' + (bar + 1));
-            label.addEventListener('click', event => {
-                event.stopPropagation();
-                startFromBar(bar);
-            });
-            const loop = document.createElement('button');
-            loop.className = 'fdgb-playlist-loop-column' + (state.loopRange && isBarInLoop(bar) ? ' is-active' : '');
-            loop.type = 'button';
-            loop.innerHTML = '<i class="fa-solid fa-repeat"></i>';
-            loop.setAttribute('aria-label', 'toggle loop row ' + (bar + 1));
-            loop.addEventListener('click', event => {
-                event.stopPropagation();
-                togglePlaylistLoop(bar);
-            });
-            const deleteColumn = document.createElement('button');
-            deleteColumn.className = 'fdgb-playlist-delete-column';
-            deleteColumn.type = 'button';
-            deleteColumn.disabled = state.barCount <= 1;
-            deleteColumn.innerHTML = '<i class="fa-solid fa-trash"></i>';
-            deleteColumn.setAttribute('aria-label', 'delete playlist row ' + (bar + 1));
-            deleteColumn.addEventListener('click', event => {
-                event.stopPropagation();
-                removePlaylistColumn(bar);
-            });
-            head.append(label, loop, deleteColumn);
-            els.playlist.append(head);
+            fragment.append(playlistHeader(bar));
         }
         const addColumn = document.createElement('button');
         addColumn.className = 'fdgb-playlist-column-button';
@@ -4360,45 +4700,75 @@
         addColumn.innerHTML = '<i class="fa-solid fa-plus"></i>';
         addColumn.setAttribute('aria-label', state.barCount >= MAX_BARS ? 'maximum bars reached' : 'add playlist bar');
         addColumn.addEventListener('click', addPlaylistColumn);
-        els.playlist.append(addColumn);
+        fragment.append(addColumn);
+
+        const patternClipsByCell = new Map();
+        state.playlistPatternClips.forEach(clip => {
+            const key = clip.track + ':' + Math.floor(playlistClipStart(clip));
+            if (!patternClipsByCell.has(key)) patternClipsByCell.set(key, []);
+            patternClipsByCell.get(key).push(clip);
+        });
+        const audioClipsByCell = new Map();
+        state.playlistAudioClips.forEach(clip => {
+            const key = clip.track + ':' + clip.bar;
+            if (!audioClipsByCell.has(key)) audioClipsByCell.set(key, []);
+            audioClipsByCell.get(key).push(clip);
+        });
+        const previewCache = new Map();
 
         for (let trackIndex = 0; trackIndex < state.playlistTrackCount; trackIndex += 1) {
             const track = document.createElement('div');
             track.className = 'fdgb-playlist-track';
             track.dataset.track = String(trackIndex);
-            const channel = channelForPlaylistTrack(trackIndex);
-            if (channel && channel.id === selectedId) track.classList.add('is-selected');
-            if (channel) {
-                track.addEventListener('click', () => {
-                    selectedId = channel.id;
-                    renderChannels();
-                    renderRoll();
-                    renderMixer();
-                    renderAutomation();
-                    syncWaveformTab();
-                    syncSynthTab();
-                    renderSampleEditor();
-                    renderSynthEditor();
-                    updatePlaylistTrackSelection();
-                    updateStatus('selected ' + channel.name);
-                });
-                const color = document.createElement('span');
-                color.className = 'fdgb-playlist-track-color';
-                color.style.background = channel.color;
-                track.append(color);
-            }
-            const name = document.createElement('span');
-            name.textContent = channel ? channel.name : 'Track ' + (trackIndex + 1);
-            track.append(name);
-            els.playlist.append(track);
+            const trackData = state.playlistTracks[trackIndex];
+            const color = document.createElement('input');
+            color.className = 'fdgb-playlist-track-color';
+            color.type = 'color';
+            color.value = trackData.color;
+            color.setAttribute('aria-label', 'track ' + (trackIndex + 1) + ' color');
+            color.addEventListener('pointerdown', event => event.stopPropagation());
+            color.addEventListener('input', () => {
+                trackData.color = color.value;
+            });
+            const name = document.createElement('input');
+            name.className = 'fdgb-playlist-track-name';
+            name.type = 'text';
+            name.value = trackData.name;
+            name.maxLength = 80;
+            name.setAttribute('aria-label', 'track ' + (trackIndex + 1) + ' name');
+            name.addEventListener('pointerdown', event => event.stopPropagation());
+            name.addEventListener('input', () => {
+                trackData.name = name.value;
+            });
+            name.addEventListener('blur', () => {
+                trackData.name = name.value.trim() || ('track ' + (trackIndex + 1));
+                name.value = trackData.name;
+            });
+            name.addEventListener('keydown', event => {
+                if (event.key === 'Enter') name.blur();
+            });
+            track.addEventListener('pointerdown', event => {
+                if (event.button === 2) event.stopPropagation();
+            });
+            track.addEventListener('contextmenu', event => showPlaylistTrackMenu(event, trackIndex));
+            track.append(color, name);
+            fragment.append(track);
 
             for (let bar = 0; bar < state.barCount; bar += 1) {
-                els.playlist.append(playlistLaneCell(trackIndex, bar));
+                const key = trackIndex + ':' + bar;
+                fragment.append(playlistLaneCell(
+                    trackIndex,
+                    bar,
+                    patternClipsByCell.get(key) || [],
+                    audioClipsByCell.get(key) || [],
+                    previewCache
+                ));
             }
             const spacer = document.createElement('div');
             spacer.className = 'fdgb-playlist-column-spacer';
-            els.playlist.append(spacer);
+            fragment.append(spacer);
         }
+        els.playlist.append(fragment);
     }
 
     function renderMixer() {
@@ -4458,7 +4828,6 @@
                 effect.enabled = !effect.enabled;
                 rebuildChannelOutput(channel);
                 renderMixer();
-                renderAutomation();
             });
 
             const up = miniButton('<i class="fa-solid fa-arrow-up"></i>', 'move effect up', false);
@@ -4469,7 +4838,6 @@
                 channel.effects.splice(index - 1, 0, channel.effects.splice(index, 1)[0]);
                 rebuildChannelOutput(channel);
                 renderMixer();
-                renderAutomation();
             });
 
             const down = miniButton('<i class="fa-solid fa-arrow-down"></i>', 'move effect down', false);
@@ -4480,7 +4848,6 @@
                 channel.effects.splice(index + 1, 0, channel.effects.splice(index, 1)[0]);
                 rebuildChannelOutput(channel);
                 renderMixer();
-                renderAutomation();
             });
 
             const remove = miniButton('<i class="fa-solid fa-trash"></i>', 'remove effect', false);
@@ -4490,7 +4857,6 @@
                 channel.effects.splice(index, 1);
                 rebuildChannelOutput(channel);
                 renderMixer();
-                renderAutomation();
             });
 
             actions.append(collapse, bypass, up, down, remove);
@@ -4519,7 +4885,7 @@
                         settings: effect.settings,
                         params: definition.params || [],
                         setParam: (paramId, value) => setEffectParamById(channel, effect, definition, paramId, value),
-                        rebuild: () => rebuildChannelOutput(channel),
+                        rebuild: () => scheduleChannelOutputRebuild(channel),
                         stepSeconds,
                         makeField: field,
                         controls: { range, numberInput, select }
@@ -4819,7 +5185,6 @@
             effect.settings = normalizeEffectSettings(definition, { ...effect.settings, ...preset.settings });
             rebuildChannelOutput(channel);
             renderMixer();
-            renderAutomation();
             updateStatus('loaded ' + preset.name + ' preset');
         });
         wrap.append(label, picker);
@@ -4888,7 +5253,6 @@
         });
         rebuildChannelOutput(channel);
         renderMixer();
-        renderAutomation();
         updateStatus('added ' + definition.name + ' to ' + channel.name);
     }
 
@@ -5374,11 +5738,22 @@
         clearFloatingTooltips();
         const newBar = state.barCount;
         state.barCount += 1;
-        ensureClipMap();
         state.channels.forEach(channel => {
+            if (!Array.isArray(state.clips[channel.id])) state.clips[channel.id] = [];
             state.clips[channel.id][newBar] = null;
         });
-        renderPlaylist();
+        if (currentView === 'playlist' && els.playlist.querySelector('.fdgb-playlist-column-button')) {
+            els.playlist.style.setProperty('--fdgb-playlist-columns', '132px repeat(' + state.barCount + ', 96px) 42px');
+            els.playlist.style.setProperty('--fdgb-playlist-min-width', (174 + (state.barCount * 96)) + 'px');
+            const addColumn = els.playlist.querySelector('.fdgb-playlist-column-button');
+            addColumn.before(playlistHeader(newBar));
+            Array.from(els.playlist.querySelectorAll('.fdgb-playlist-column-spacer')).forEach((spacer, trackIndex) => {
+                spacer.before(playlistLaneCell(trackIndex, newBar));
+            });
+            addColumn.disabled = state.barCount >= MAX_BARS;
+            addColumn.setAttribute('aria-label', state.barCount >= MAX_BARS ? 'maximum bars reached' : 'add playlist bar');
+            paintPlaylistHead();
+        }
         updateStatus('added playlist bar ' + state.barCount);
     }
 
@@ -5626,8 +6001,9 @@
         if (safeStep === movingNote.step && targetNote === movingNote.note && noteStartKey(noteEvent) === Math.round(safeOffset * 1000)) return;
         const toEvents = getStepEvents(movingNote.pattern, safeStep);
         if (toEvents.some(item => item !== noteEvent && item.note === targetNote && noteStartKey(item) === Math.round(safeOffset * 1000))) return;
+        const previousStep = movingNote.step;
         fromEvents.splice(eventIndex, 1);
-        movingNote.pattern[movingNote.step] = fromEvents;
+        movingNote.pattern[previousStep] = fromEvents;
         noteEvent.note = targetNote;
         if (noteEvent.slideTo && noteEvent.slideTo === movingNote.note) delete noteEvent.slideTo;
         if (safeOffset > 0) noteEvent.offset = safeOffset;
@@ -5641,7 +6017,8 @@
         movingNote.note = targetNote;
         movingNote.eventIndex = toEvents.length - 1;
         movingNote.noteEvent = noteEvent;
-        renderRoll();
+        refreshRollStep(previousStep, movingNote.pattern);
+        if (safeStep !== previousStep) refreshRollStep(safeStep, movingNote.pattern);
     }
 
     function updateSlideDragLabel(block, text) {
@@ -5790,8 +6167,8 @@
         const eventIndex = Number(block.dataset.eventIndex);
         removeNoteEvent(channel, pattern, step, note, Number.isFinite(eventIndex) ? eventIndex : null);
         closeVelocityEditor();
-        renderRoll();
-        renderChannels();
+        refreshRollStep(step, pattern);
+        refreshPlaylistPattern(activePatternIndex());
         return true;
     }
 
@@ -5808,9 +6185,9 @@
         if (offset > 0) noteEvent.offset = offset;
         events.push(noteEvent);
         channel.pattern = pattern;
-        renderRoll();
-        renderChannels();
-        const renderedPattern = getPattern(channel);
+        refreshRollStep(step, pattern);
+        refreshPlaylistPattern(activePatternIndex());
+        const renderedPattern = pattern;
         const renderedEvents = getStepEvents(renderedPattern, step);
         const renderedIndex = renderedEvents.findIndex(item => item.note === note && noteStartKey(item) === Math.round(offset * 1000));
         return {
@@ -5962,8 +6339,7 @@
             const eventIndex = Number(block.dataset.eventIndex);
             removeNoteEvent(channel, pattern, step, note, Number.isFinite(eventIndex) ? eventIndex : null);
             closeVelocityEditor();
-            renderRoll();
-            renderChannels();
+            refreshRollStep(step, pattern);
             return;
         }
         if (event.target.closest('.fdgb-cell')) event.preventDefault();
@@ -5985,10 +6361,16 @@
 
     function activeBars() {
         ensureClipMap();
-        return Array.from({ length: state.barCount }, (_, bar) => {
-            return playlistPatternClipsAt(bar).length > 0
-                || state.playlistAudioClips.some(clip => clip.muted !== true && bar >= clip.bar && bar < clip.bar + audioClipBars(clip));
+        const bars = Array(state.barCount).fill(false);
+        state.playlistPatternClips.forEach(clip => {
+            if (!clip.muted) bars[playlistClipStart(clip)] = true;
         });
+        state.playlistAudioClips.forEach(clip => {
+            if (clip.muted === true) return;
+            const end = Math.min(state.barCount, clip.bar + audioClipBars(clip));
+            for (let bar = clip.bar; bar < end; bar += 1) bars[bar] = true;
+        });
+        return bars;
     }
 
     function usedBarCount() {
@@ -6111,10 +6493,14 @@
         let lastTick = 0;
         const events = [];
         const barCount = usedBarCount();
+        const clipsByBar = indexPlaylistPatternClipsByBar();
         for (let absoluteStep = 0; absoluteStep < barCount * stepCount(); absoluteStep += 1) {
             const bar = Math.floor(absoluteStep / stepCount());
             const step = absoluteStep % stepCount();
-            playlistPatternClipHitsAtStep(bar, step).forEach(({ clip, step: patternStep }) => {
+            if (step === 0 && bar % 16 === 0) {
+                await setExportProgress(progress, 8 + ((bar / Math.max(1, barCount)) * 50), 'building MIDI bar ' + (bar + 1) + ' / ' + barCount);
+            }
+            playlistPatternClipHitsAtStep(bar, step, clipsByBar).forEach(({ clip, step: patternStep }) => {
                 state.channels.forEach((channel, channelIndex) => {
                     getStepEvents(getPattern(channel, clip.pattern), patternStep).forEach(event => {
                         const tick = Math.round((absoluteStep + noteStartOffset(event)) * ticksPerStep);
@@ -6200,9 +6586,7 @@
         const bank = soundfontBankForChannel(channel);
         const preset = findSoundfontPreset(channel, bank);
         const midiNote = noteNumber(note);
-        const zone = preset && Array.isArray(preset.zones)
-            ? (preset.zones.find(item => midiNote >= item.keyRange[0] && midiNote <= item.keyRange[1]) || preset.zones[0])
-            : null;
+        const zone = soundfontZoneForMidi(preset, midiNote);
         if (!zone || !zone.sample || !bank.sampleData) {
             mixTone(left, right, sampleRate, start, length, channel, note, noteGain, slideTo);
             return;
@@ -6389,6 +6773,7 @@
         if (!OfflineContext) return { left: dryLeft, right: dryRight };
 
         const context = new OfflineContext(2, dryLeft.length, sampleRate);
+        await prepareEffectWorklets(context, false);
         const dryBuffer = context.createBuffer(2, dryLeft.length, sampleRate);
         dryBuffer.copyToChannel(dryLeft, 0);
         dryBuffer.copyToChannel(dryRight, 1);
@@ -6442,6 +6827,7 @@
         updateStatus('rendering WAV...');
         const sampleRate = 44100;
         const barCount = usedBarCount();
+        const clipsByBar = indexPlaylistPatternClipsByBar();
         const totalSteps = barCount * stepCount();
         const samplesPerStep = Math.floor(stepSeconds() * sampleRate);
         const totalSamples = totalSteps * samplesPerStep + sampleRate;
@@ -6462,7 +6848,7 @@
                 const detail = 'rendering ' + channel.name + ', bar ' + (bar + 1) + ' / ' + barCount;
                 await setExportProgress(progress, (completed / renderUnits) * 100, detail, 12);
                 for (let step = 0; step < stepCount(); step += 1) {
-                    playlistPatternClipHitsAtStep(bar, step).forEach(({ clip, step: patternStep }) => {
+                    playlistPatternClipHitsAtStep(bar, step, clipsByBar).forEach(({ clip, step: patternStep }) => {
                         getStepEvents(getPattern(channel, clip.pattern), patternStep).forEach(event => {
                             const start = Math.floor(((bar * stepCount()) + step + noteStartOffset(event)) * samplesPerStep);
                             const velocity = noteVelocity(event);
@@ -6578,6 +6964,7 @@
             const banks = Array(16).fill(0);
             const pitchBends = Array(16).fill(0);
             const activeNotes = new Map();
+            let parsedEvents = 0;
 
             const closeNote = (midiChannel, midiNote) => {
                 const key = midiChannel + ':' + midiNote;
@@ -6598,6 +6985,10 @@
             };
 
             while (cursor.offset < end) {
+                parsedEvents += 1;
+                if (parsedEvents % 8192 === 0) {
+                    await setExportProgress(progress, 10 + ((trackIndex / Math.max(1, trackCount)) * 45), 'parsing MIDI track ' + (trackIndex + 1) + ' / ' + trackCount);
+                }
                 tick += readVar(cursor);
                 let eventType = data.getUint8(cursor.offset);
                 if (eventType < 0x80) {
@@ -6614,6 +7005,7 @@
                     if (velocity > 0) {
                         const group = groupFor(trackIndex, midiChannel, programs[midiChannel], banks[midiChannel], trackName);
                         activeNotes.set(midiChannel + ':' + note, {
+                            midiChannel,
                             tick,
                             group,
                             velocity: velocity / 127,
@@ -6642,8 +7034,8 @@
                     cursor.offset += 2;
                     const bend = (((msb << 7) | lsb) - 8192) / 8192;
                     pitchBends[midiChannel] = bend;
-                    activeNotes.forEach((started, key) => {
-                        if (Number(key.split(':')[0]) === midiChannel) started.bends.push({ tick, value: bend });
+                    activeNotes.forEach(started => {
+                        if (started.midiChannel === midiChannel) started.bends.push({ tick, value: bend });
                     });
                 } else if ((eventType & 0xf0) === 0xc0) {
                     programs[eventType & 0x0f] = data.getUint8(cursor.offset);
@@ -6688,9 +7080,12 @@
         const midiGroups = Array.from(groups.values()).filter(group => group.notes.length);
         if (!midiGroups.length) throw new Error('empty MIDI');
         setProjectSteps(importSteps, false);
-        const lastImportedBar = midiGroups.reduce((highest, group) => {
-            return Math.max(highest, ...group.notes.map(note => Math.floor(Math.round(note.tick / ticksPerStep) / stepCount())));
-        }, 0);
+        let lastImportedBar = 0;
+        midiGroups.forEach(group => {
+            group.notes.forEach(note => {
+                lastImportedBar = Math.max(lastImportedBar, Math.floor(Math.round(note.tick / ticksPerStep) / stepCount()));
+            });
+        });
         stop(true);
         channelOutputs.forEach(output => output.nodes.forEach(disconnectNode));
         channelOutputs.clear();
@@ -6702,7 +7097,8 @@
         state.loopRange = null;
         state.activePattern = 0;
         const importedGroups = midiGroups.slice(0, 16);
-        state.playlistTrackCount = Math.max(8, importedGroups.length);
+        state.playlistTrackCount = PLAYLIST_TRACK_COUNT;
+        state.playlistTracks = Array.from({ length: PLAYLIST_TRACK_COUNT }, (_, index) => defaultPlaylistTrack(index));
         state.channels = [];
         const importedChannelData = [];
         for (let index = 0; index < importedGroups.length; index += 1) {
@@ -6748,6 +7144,9 @@
         const importedPatternMaps = importedChannelData.map(() => new Map());
         let nextPatternIndex = 0;
         for (let bar = 0; bar < state.barCount; bar += 1) {
+            if (bar % 8 === 0) {
+                await setExportProgress(progress, 88 + ((bar / Math.max(1, state.barCount)) * 8), 'mapping MIDI bar ' + (bar + 1) + ' / ' + state.barCount);
+            }
             for (let channelIndex = 0; channelIndex < importedChannelData.length; channelIndex += 1) {
                 const normalizedPattern = normalizeImportedPattern(importedChannelData[channelIndex].importedBars[bar]);
                 const hasNotes = normalizedPattern.some(stepEvents => stepEvents.length);
@@ -6801,18 +7200,16 @@
     }
 
     function selectChannel(id) {
+        if (!state.channels.some(channel => channel.id === id)) return;
         selectedId = id;
         const channel = selectedChannel();
         ensureChannelPatterns(channel);
         setActivePattern(activePatternIndex());
+        const previousView = currentView;
         renderChannels();
-        renderRoll();
-        renderMixer();
-        renderAutomation();
         syncWaveformTab();
         syncSynthTab();
-        renderSampleEditor();
-        renderSynthEditor();
+        if (currentView === previousView) renderCurrentView(false);
         warmSamplePitchCache(channel);
     }
 
@@ -6824,16 +7221,63 @@
         const index = state.channels.findIndex(channel => channel.id === id);
         if (index === -1) return;
         const removed = state.channels[index];
+        const removedPatterns = channelPatternIndexesWithNotes(removed);
+        const affectedTracks = new Set();
+        state.playlistPatternClips.forEach(clip => {
+            if (removedPatterns.has(clip.pattern)) affectedTracks.add(clip.track);
+        });
+        state.playlistAudioClips.forEach(clip => {
+            if (clip.channelId === id) affectedTracks.add(clip.track);
+        });
         state.channels.splice(index, 1);
         delete state.clips[id];
+        const remainingPatterns = new Set();
+        state.channels.forEach(channel => {
+            channelPatternIndexesWithNotes(channel).forEach(patternIndex => remainingPatterns.add(patternIndex));
+        });
+        const orphanedPatterns = new Set(Array.from(removedPatterns)
+            .filter(patternIndex => !remainingPatterns.has(patternIndex)));
+        const patternClipCount = state.playlistPatternClips.length;
+        const audioClipCount = state.playlistAudioClips.length;
+        state.playlistPatternClips = state.playlistPatternClips.filter(clip => !orphanedPatterns.has(clip.pattern));
+        state.playlistAudioClips = state.playlistAudioClips.filter(clip => clip.channelId !== id);
+        const removedPlaylistClips = (patternClipCount - state.playlistPatternClips.length)
+            + (audioClipCount - state.playlistAudioClips.length);
+        affectedTracks.forEach(trackIndex => {
+            const stillUsed = state.playlistPatternClips.some(clip => clip.track === trackIndex)
+                || state.playlistAudioClips.some(clip => clip.track === trackIndex);
+            if (!stillUsed) state.playlistTracks[trackIndex] = defaultPlaylistTrack(trackIndex);
+        });
         const output = channelOutputs.get(id);
         if (output) output.nodes.forEach(disconnectNode);
         channelOutputs.delete(id);
         if (selectedId === id) {
             selectedId = (state.channels[index] || state.channels[index - 1] || state.channels[0]).id;
         }
-        renderAll();
-        updateStatus('removed ' + removed.name);
+        ensureClipMap();
+        renderChannels();
+        syncWaveformTab();
+        syncSynthTab();
+        if (currentView === 'playlist') {
+            renderPlaylistTools();
+            refreshPlaylistTracks(affectedTracks);
+            affectedTracks.forEach(trackIndex => {
+                const track = els.playlist.querySelector('.fdgb-playlist-track[data-track="' + trackIndex + '"]');
+                if (!track) return;
+                const trackData = state.playlistTracks[trackIndex];
+                const color = track.querySelector('.fdgb-playlist-track-color');
+                const name = track.querySelector('.fdgb-playlist-track-name');
+                if (color) color.value = trackData.color;
+                if (name) name.value = trackData.name;
+            });
+        }
+        else if (currentView === 'mixer') renderMixer();
+        else if (currentView === 'automation') renderAutomation();
+        else if (currentView === 'waveform') renderSampleEditor();
+        else if (currentView === 'synth') renderSynthEditor();
+        else renderRoll();
+        paintPlayhead();
+        updateStatus('removed ' + removed.name + (removedPlaylistClips ? ' and ' + removedPlaylistClips + ' playlist clip' + (removedPlaylistClips === 1 ? '' : 's') : ''));
     }
 
     function paintPlayhead() {
@@ -6845,7 +7289,7 @@
         updatePlaylistPlayheadMarker(position);
         if (visualStep !== paintedStep || visualBar !== paintedBar) {
             clearPaintedPlayhead();
-            root.querySelectorAll('.fdgb-step[data-step="' + visualStep + '"], .fdgb-cell[data-step="' + visualStep + '"], .fdgb-bar-label[data-step="' + visualStep + '"]').forEach(el => el.classList.add('is-playing'));
+            root.querySelectorAll('.fdgb-step[data-step="' + visualStep + '"], .fdgb-cell[data-step="' + visualStep + '"], .fdgb-bar-label[data-step="' + visualStep + '"], .fdgb-automation-cell[data-step="' + visualStep + '"]').forEach(el => el.classList.add('is-playing'));
             if (currentView !== 'roll') {
                 root.querySelectorAll('.fdgb-playlist-cell[data-bar="' + visualBar + '"], .fdgb-playlist-head[data-bar="' + visualBar + '"]').forEach(el => el.classList.add('is-playing'));
             }
@@ -6868,7 +7312,6 @@
         state.clips[id] = Array.from({ length: state.barCount }, () => null);
         ensureClipMap();
         selectChannel(id);
-        renderPlaylist();
         paintPlayhead();
     }
 
@@ -6885,9 +7328,10 @@
             barCount: state.barCount,
             loopRange: state.loopRange,
             playlistTrackCount: state.playlistTrackCount,
+            playlistTracks: state.playlistTracks.map(track => ({ name: track.name, color: track.color })),
             assets: {
-                soundfont: soundfontBank.asset || null,
-                soundfontUrl: soundfontBank.asset ? null : (soundfontBank.url || DEFAULT_SOUNDFONT_URL)
+                soundfont: hasSoundfontChannels() ? (soundfontBank.asset || null) : null,
+                soundfontUrl: hasSoundfontChannels() && !soundfontBank.asset ? (soundfontBank.url || DEFAULT_SOUNDFONT_URL) : null
             },
             clips: state.clips,
             playlistPatternClips: state.playlistPatternClips.map(clip => ({
@@ -6973,8 +7417,6 @@
     async function hydrate(saved) {
         channelOutputs.forEach(output => output.nodes.forEach(disconnectNode));
         channelOutputs.clear();
-        retiredChannelOutputs.forEach(output => output.nodes.forEach(disconnectNode));
-        retiredChannelOutputs.clear();
         state.bpm = Number(saved.bpm) || 128;
         state.projectName = typeof saved.projectName === 'string' && saved.projectName.trim() ? saved.projectName.trim() : 'Untitled';
         state.octave = octavePage(saved.octave);
@@ -6982,7 +7424,10 @@
         state.activePattern = Math.max(0, Math.min(MAX_PATTERNS - 1, Number(saved.activePattern) || 0));
         state.masterVolume = Math.max(0, Math.min(1, Number(saved.masterVolume) || 0.82));
         setProjectSteps(inferProjectSteps(saved), false);
-        state.playlistTrackCount = Math.max(1, Math.min(64, Number(saved.playlistTrackCount) || 8));
+        state.playlistTrackCount = PLAYLIST_TRACK_COUNT;
+        state.playlistTracks = Array.isArray(saved.playlistTracks)
+            ? saved.playlistTracks.map(track => ({ ...track }))
+            : Array.from({ length: PLAYLIST_TRACK_COUNT }, (_, index) => defaultPlaylistTrack(index));
         state.loopRange = saved.loopRange && typeof saved.loopRange === 'object'
             ? { start: Number(saved.loopRange.start) || 0, end: Number(saved.loopRange.end) || 0 }
             : null;
@@ -7037,10 +7482,11 @@
     }
 
     async function hydrateAssets(saved) {
+        const soundfontChannels = state.channels.filter(channel => channel.source === 'soundfont');
         const savedSoundfont = saved && saved.assets && saved.assets.soundfont && saved.assets.soundfont.data
             ? saved.assets.soundfont
             : null;
-        if (savedSoundfont) {
+        if (soundfontChannels.length && savedSoundfont) {
             try {
                 soundfontBank = parseSoundfont(base64ToArrayBuffer(savedSoundfont.data), (savedSoundfont.name || 'embedded soundfont').replace(/\.sf2$/i, ''));
                 soundfontBank.asset = savedSoundfont;
@@ -7051,11 +7497,10 @@
             } catch (_) {
                 updateStatus('embedded soundfont failed to load');
             }
-        } else if (saved && saved.assets && typeof saved.assets.soundfontUrl === 'string' && saved.assets.soundfontUrl) {
+        } else if (soundfontChannels.length && saved && saved.assets && typeof saved.assets.soundfontUrl === 'string' && saved.assets.soundfontUrl) {
             await loadSoundfontFromUrl(saved.assets.soundfontUrl, saved.assets.soundfontUrl.split('/').pop().replace(/\.sf2$/i, '') || 'SoundFont');
         }
 
-        const soundfontChannels = state.channels.filter(channel => channel.source === 'soundfont');
         for (const channel of soundfontChannels) {
             if (channel.soundfontSource === 'custom') {
                 if (customSoundfontBank) applySoundfontPresetToChannel(channel, customSoundfontBank);
@@ -7139,7 +7584,8 @@
         state.barCount = DEFAULT_BAR_COUNT;
         state.loopRange = null;
         state.activePattern = 0;
-        state.playlistTrackCount = 8;
+        state.playlistTrackCount = PLAYLIST_TRACK_COUNT;
+        state.playlistTracks = Array.from({ length: PLAYLIST_TRACK_COUNT }, (_, index) => defaultPlaylistTrack(index));
         state.playlistPatternClips = [];
         state.channels = [emptyProjectChannel()];
         state.playlistAudioClips = [];
@@ -7325,7 +7771,7 @@
             applySoundfontPresetToChannel(channel, bank);
         });
         renderChannels();
-        renderRoll();
+        renderCurrentView(false);
         updateStatus('set all SoundFont channels to ' + soundfontBank.name);
     }
 
@@ -7345,7 +7791,7 @@
                 applySoundfontPresetToChannel(channel, customSoundfontBank);
             });
             renderChannels();
-            renderRoll();
+            renderCurrentView(false);
             updateStatus('set all SoundFont channels to ' + soundfontBank.name);
         } catch (_) {
             updateStatus('soundfont import failed');
@@ -7379,12 +7825,24 @@
         els.waveformTab.classList.toggle('is-active', isWaveform);
         els.synthTab.classList.toggle('is-active', isSynth);
         els.rollTab.classList.toggle('is-active', !isPlaylist && !isMixer && !isAutomation && !isWaveform && !isSynth);
-        if (!isPlaylist && !isMixer && !isAutomation && !isWaveform && !isSynth) renderRoll();
-        if (isMixer) renderMixer();
-        if (isAutomation) renderAutomation();
-        if (isWaveform) renderSampleEditor();
-        if (isSynth) renderSynthEditor();
+        renderCurrentView(true);
         paintPlayhead();
+    }
+
+    function renderCurrentView(includePlaylist = true) {
+        if (currentView === 'playlist') {
+            if (includePlaylist) renderPlaylist();
+        } else if (currentView === 'mixer') {
+            renderMixer();
+        } else if (currentView === 'automation') {
+            renderAutomation();
+        } else if (currentView === 'waveform') {
+            renderSampleEditor();
+        } else if (currentView === 'synth') {
+            renderSynthEditor();
+        } else {
+            renderRoll();
+        }
     }
 
     function closeMenus() {
@@ -7403,15 +7861,11 @@
 
     function renderAll() {
         ensureClipMap();
+        const previousView = currentView;
         renderChannels();
-        renderRoll();
-        renderPlaylist();
-        renderMixer();
-        renderAutomation();
         syncWaveformTab();
         syncSynthTab();
-        renderSampleEditor();
-        renderSynthEditor();
+        if (currentView === previousView) renderCurrentView(true);
         paintPlayhead();
     }
 
@@ -7492,7 +7946,7 @@
                     : [];
                 if (listed.length) {
                     soundfontCatalog = listed;
-                    renderChannels();
+                    if (state.channels.some(channel => channel.source === 'soundfont' && channel.collapsed === false)) renderChannels();
                     renderSoundfontMenu(soundfontCatalog, false);
                 }
             } catch (_) {
@@ -7515,7 +7969,7 @@
                 sampleCatalog = Array.isArray(items)
                     ? items.filter(item => item && item.url && item.name)
                     : [];
-                renderChannels();
+                if (state.channels.some(channel => channel.source === 'sample' && channel.collapsed === false)) renderChannels();
             } catch (_) {
                 updateStatus('sample catalog unavailable');
             } finally {
@@ -7541,7 +7995,7 @@
             channel.sampleSource = 'bundled';
             channel.sampleAsset = null;
             updateStatus('loaded sample: ' + channel.sampleName);
-            renderSampleEditor();
+            if (currentView === 'waveform') renderSampleEditor();
             warmSamplePitchCache(channel);
             if (ownProgress) await setExportProgress(ownProgress, 100, 'loaded sample', 80);
         } catch (_) {
@@ -7559,7 +8013,7 @@
             }
             const script = document.createElement('script');
             script.src = url;
-            script.async = false;
+            script.async = true;
             script.dataset.effectUrl = url;
             script.addEventListener('load', resolve, { once: true });
             script.addEventListener('error', reject, { once: true });
@@ -7575,7 +8029,7 @@
             }
             const script = document.createElement('script');
             script.src = url;
-            script.async = false;
+            script.async = true;
             script.dataset.synthUrl = url;
             script.addEventListener('load', resolve, { once: true });
             script.addEventListener('error', reject, { once: true });
@@ -7592,10 +8046,10 @@
                 if (!response.ok) throw new Error('effect list failed');
                 const items = await response.json();
                 const urls = Array.isArray(items) ? items.map(item => item.url).filter(Boolean) : [];
-                for (const url of urls) await loadEffectScript(url);
+                await Promise.allSettled(urls.map(url => loadEffectScript(url)));
                 renderEffectPicker();
-                renderMixer();
-                renderAutomation();
+                if (currentView === 'mixer') renderMixer();
+                if (currentView === 'automation') renderAutomation();
                 rebuildAllChannelOutputs();
                 updateStatus('loaded ' + effectDefinitions.size + ' effects');
             } catch (_) {
@@ -7615,7 +8069,7 @@
                 if (!response.ok) throw new Error('synth list failed');
                 const items = await response.json();
                 const urls = Array.isArray(items) ? items.map(item => item.url).filter(Boolean) : [];
-                for (const url of urls) await loadSynthScript(url);
+                await Promise.allSettled(urls.map(url => loadSynthScript(url)));
                 state.channels.forEach(channel => {
                     migrateWaveChannel(channel);
                     if (channel.source === 'synth' && !synthDefinitions.has(channel.synthType)) {
@@ -7624,9 +8078,9 @@
                     }
                     if (channel.source === 'synth') ensureChannelSynth(channel);
                 });
-                renderChannels();
-                renderSynthEditor();
-                renderAutomation();
+                if (state.channels.some(channel => channel.source === 'synth' && channel.collapsed === false)) renderChannels();
+                if (currentView === 'synth') renderSynthEditor();
+                if (currentView === 'automation') renderAutomation();
                 syncSynthTab();
                 updateStatus('loaded ' + synthDefinitions.size + ' synths');
             } catch (_) {
@@ -7700,14 +8154,11 @@
         }
         renderChannels();
         renderRoll();
-        renderAutomation();
-        renderPlaylist();
     });
     els.patternSteps.addEventListener('change', () => {
         setProjectSteps(els.patternSteps.value, true);
         renderChannels();
-        renderRoll();
-        renderPlaylist();
+        renderCurrentView(true);
         paintPlayhead();
         updateStatus('beats set to ' + stepCount());
     });
@@ -7718,7 +8169,7 @@
             channel.pattern = channel.patterns[activePatternIndex()];
         });
         renderChannels();
-        renderRoll();
+        renderCurrentView(true);
     });
     els.clearPlaylist.addEventListener('click', () => {
         state.channels.forEach(channel => {
@@ -7726,7 +8177,14 @@
         });
         state.playlistPatternClips = [];
         state.playlistAudioClips = [];
-        renderPlaylist();
+        invalidatePlaylistPatternIndex();
+        if (currentView === 'playlist') {
+            els.playlist.querySelectorAll('.fdgb-playlist-cell').forEach(cell => {
+                cell.replaceChildren();
+                cell.classList.remove('is-on', 'is-drop-target');
+            });
+            paintPlaylistHead();
+        }
     });
     els.rollTab.addEventListener('click', () => showView('roll'));
     els.playlistTab.addEventListener('click', () => showView('playlist'));
@@ -7737,7 +8195,6 @@
     els.automationPattern.addEventListener('change', () => {
         setActivePattern(normalizeAutomationPatternIndex(els.automationPattern.value));
         renderChannels();
-        renderRoll();
         renderAutomation();
     });
     els.addAutomation.addEventListener('click', addAutomationLaneToSelectedChannel);
@@ -7887,8 +8344,7 @@
                 events.push({ note, length: 1, velocity: 1 });
             }
             channel.pattern = pattern;
-            renderChannels();
-            renderRoll();
+            refreshRollStep(currentStep, pattern);
         }
         startKeyboardNote(key, note);
     });
@@ -7940,8 +8396,7 @@
                 /* no-op */
             }
             movingNote = null;
-            renderRoll();
-            renderChannels();
+            refreshPlaylistPattern(activePatternIndex());
             return;
         }
         if (!resizingNote && !slidingNote) return;
@@ -7949,10 +8404,12 @@
             removeNoteEvent(slidingNote.channel, slidingNote.pattern, slidingNote.step, slidingNote.note, slidingNote.eventIndex);
             suppressRollClick = true;
         }
+        const changedStep = slidingNote ? slidingNote.step : (resizingNote ? resizingNote.step : null);
+        const changedPattern = slidingNote ? slidingNote.pattern : (resizingNote ? resizingNote.pattern : null);
         resizingNote = null;
         slidingNote = null;
-        renderRoll();
-        renderChannels();
+        if (changedStep !== null && changedPattern) refreshRollStep(changedStep, changedPattern);
+        refreshPlaylistPattern(activePatternIndex());
     });
 
     document.addEventListener('pointercancel', event => {
@@ -8009,5 +8466,4 @@
     loadSampleCatalog();
     loadEffectCatalog();
     loadSynthCatalog();
-    loadDefaultSoundfont();
 })();

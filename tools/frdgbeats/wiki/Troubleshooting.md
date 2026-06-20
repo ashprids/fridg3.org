@@ -67,6 +67,14 @@ After import:
 - Fix playlist clips.
 - Adjust velocity or volume.
 
+## Performance And Large Projects
+
+frdgBeats keeps inactive editors lazy, updates individual playlist cells and piano-roll steps instead of rebuilding whole grids, and indexes arrangement clips for playback and export. SoundFonts load only when a project actually uses a SoundFont channel.
+
+Large imports and exports periodically yield to the browser so controls and progress feedback stay responsive. A huge SoundFont or effect-heavy WAV render still has real work to do, but ordinary editing should react immediately rather than waiting for an unrelated hidden view to redraw.
+
+For the smoothest results, keep the browser hardware acceleration enabled and avoid running several audio-heavy tabs at once.
+
 ## Automation Did Not Affect The Pattern
 
 Check:

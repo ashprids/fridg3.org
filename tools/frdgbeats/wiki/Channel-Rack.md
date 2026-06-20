@@ -56,8 +56,10 @@ Quick steps are great for drums. For melodies, the piano roll is less cursed.
 
 Click the channel name to edit it. Press Enter to commit or Escape to cancel.
 
-The color swatch affects channel visuals in the rack, piano roll, and playlist. Use colors to keep your brain from melting once the project has more than three tracks.
+The color swatch affects channel visuals in the rack, piano roll, and note previews inside playlist clips. Playlist track labels have their own independent colors.
 
 ## Deleting Channels
 
-The delete button removes the channel, its patterns, clips, effects, and automation. frdgBeats keeps at least one channel around.
+The delete button removes the channel, its patterns, effects, automation, linked playlist audio clips, and any playlist pattern clips that became empty when the channel disappeared. Pattern clips that still contain notes from another channel are kept.
+
+If that cleanup leaves an affected playlist track empty, its label and color reset to the default `track X` values. frdgBeats keeps at least one channel around.

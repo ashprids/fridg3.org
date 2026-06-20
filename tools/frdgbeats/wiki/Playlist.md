@@ -10,7 +10,13 @@ Rows are generic clip tracks, FL-style.
 
 Columns are bars in the song timeline.
 
-Click a track name to select that channel. Playlist tracks show the matching channel color and name, repeating through channels if the playlist has more lanes than instruments.
+The playlist has 50 independently named and colored tracks. New projects call them `track 1` through `track 50`; scroll vertically to reach the later tracks.
+
+Click a track name to rename it, or click its color swatch to choose a new color. Track labels and colors are separate from instrument channels and are saved with the project.
+
+Right-click a track header and choose **Delete** to remove every pattern and audio clip from that track. The empty track remains available for new clips.
+
+Deleting an instrument channel also clears its linked audio clips and pattern clips that no longer contain any notes. Shared pattern clips remain in place.
 
 Use the plus button at the end of the header to add more bars. Use a bar header's trash button to remove that bar.
 

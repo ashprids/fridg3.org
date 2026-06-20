@@ -129,6 +129,28 @@
         create(context, settings) {
             const input = context.createGain();
             const output = context.createGain();
+            const ceilingGain = dbToGain(clamp(settings.ceiling, -12, 0));
+            const outputGain = clamp(settings.output, 0.2, 1.25);
+            if (window.frdgBeatsEffects.workletsReady(context) && typeof window.AudioWorkletNode === 'function') {
+                const limiter = new window.AudioWorkletNode(context, 'frdg-limiter', {
+                    numberOfInputs: 1,
+                    numberOfOutputs: 1,
+                    outputChannelCount: [2],
+                    processorOptions: {
+                        threshold: clamp(settings.ceiling, -12, 0),
+                        ratio: 20,
+                        attack: 0.001,
+                        release: clamp(settings.release, 0.02, 1),
+                        knee: clamp(settings.knee, 0, 30),
+                        drive: dbToGain(clamp(settings.drive, 0, 18)),
+                        makeup: ceilingGain * outputGain,
+                        ceiling: ceilingGain * outputGain
+                    }
+                });
+                input.connect(limiter);
+                limiter.connect(output);
+                return { input, output, nodes: [limiter] };
+            }
             const drive = context.createGain();
             const limiter = context.createDynamicsCompressor();
             const post = context.createGain();
@@ -138,7 +160,7 @@
             limiter.attack.value = 0.001;
             limiter.release.value = clamp(settings.release, 0.02, 1);
             limiter.knee.value = clamp(settings.knee, 0, 30);
-            post.gain.value = dbToGain(clamp(settings.ceiling, -12, 0)) * clamp(settings.output, 0.2, 1.25);
+            post.gain.value = ceilingGain * outputGain;
             input.connect(drive);
             drive.connect(limiter);
             limiter.connect(post);

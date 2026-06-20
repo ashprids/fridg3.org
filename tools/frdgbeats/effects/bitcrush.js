@@ -159,42 +159,39 @@
         create(context, settings) {
             const input = context.createGain();
             const output = context.createGain();
-            const dry = context.createGain();
-            const wet = context.createGain();
-            const post = context.createGain();
-            const processor = context.createScriptProcessor(1024, 1, 1);
             const bits = clamp(settings.bits, 2, 16);
-            const reduction = Math.max(1, Math.round(clamp(settings.rate, 1, 40)));
+            const rate = Math.max(1, Math.round(clamp(settings.rate, 1, 40)));
             const jitter = clamp(settings.jitter, 0, 1);
             const mix = clamp(settings.mix, 0, 1);
-            let hold = 0;
-            let phase = 0;
+            const outputGain = clamp(settings.output, 0.15, 1.2);
+            if (window.frdgBeatsEffects.workletsReady(context) && typeof window.AudioWorkletNode === 'function') {
+                const processor = new window.AudioWorkletNode(context, 'frdg-bitcrush', {
+                    numberOfInputs: 1,
+                    numberOfOutputs: 1,
+                    outputChannelCount: [2],
+                    processorOptions: { bits, rate, jitter, mix, output: outputGain }
+                });
+                input.connect(processor);
+                processor.connect(output);
+                return { input, output, nodes: [processor] };
+            }
 
-            dry.gain.value = 1 - (mix * 0.85);
-            wet.gain.value = mix;
-            post.gain.value = clamp(settings.output, 0.15, 1.2);
-            processor.onaudioprocess = event => {
-                const source = event.inputBuffer.getChannelData(0);
-                const dest = event.outputBuffer.getChannelData(0);
-                for (let index = 0; index < source.length; index += 1) {
-                    const chance = jitter ? Math.random() * jitter * reduction : 0;
-                    if (phase <= 0) {
-                        hold = crushSample(source[index], bits);
-                        phase = reduction + chance;
-                    }
-                    dest[index] = hold;
-                    phase -= 1;
-                }
-            };
-
-            input.connect(dry);
-            dry.connect(output);
-            input.connect(processor);
-            processor.connect(wet);
-            wet.connect(post);
+            // Worklets are unavailable only on older browsers. Keep this fallback
+            // buffer-free: it preserves the bit-depth colour without delaying audio.
+            const shaper = context.createWaveShaper();
+            const post = context.createGain();
+            const curve = new Float32Array(4097);
+            for (let index = 0; index < curve.length; index += 1) {
+                const sample = (index / (curve.length - 1)) * 2 - 1;
+                curve[index] = (sample * (1 - (mix * 0.85))) + (crushSample(sample, bits) * mix);
+            }
+            shaper.curve = curve;
+            shaper.oversample = 'none';
+            post.gain.value = outputGain;
+            input.connect(shaper);
+            shaper.connect(post);
             post.connect(output);
-
-            return { input, output, nodes: [dry, wet, post, processor] };
+            return { input, output, nodes: [shaper, post] };
         },
         renderGui(api) {
             const root = document.createElement('div');
