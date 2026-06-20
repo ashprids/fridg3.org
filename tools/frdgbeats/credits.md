@@ -1,6 +1,6 @@
 # frdgBeats
 
-Version v1.0
+Version v1.45
 
 Made by Ashton "fridge" Prideaux
 

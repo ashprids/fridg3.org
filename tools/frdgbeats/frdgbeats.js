@@ -70,6 +70,12 @@
     let currentBar = 0;
     let currentView = 'roll';
     let nextStepTime = 0;
+    let playheadAnimation = null;
+    let playheadAnchorTime = 0;
+    let playheadAnchorPosition = 0;
+    let paintedStep = -1;
+    let paintedBar = -1;
+    let lastPlayheadStatusAt = 0;
     let levelDecay = 0.08;
     let meterAnimation = null;
     let resizingNote = null;
@@ -93,6 +99,10 @@
     let suppressAutomationClick = false;
     let velocityEditor = null;
     let playlistDrag = null;
+    let playlistTool = 'draw';
+    let playlistPainting = false;
+    let playlistRightErasing = false;
+    let pianoRightErasing = false;
     const heldKeys = new Set();
     const activeKeyboardVoices = new Map();
     let soundfontBank = {
@@ -593,8 +603,49 @@
         if (els.pattern) els.pattern.value = String(state.activePattern);
     }
 
+    function playlistClipStart(clip) {
+        return Math.max(0, Math.min(Math.max(0, state.barCount - 1), Math.round(Number(clip && clip.bar) || 0)));
+    }
+
+    function playlistClipLength(clip) {
+        return 1;
+    }
+
+    function playlistClipStartStep(clip) {
+        return Math.round(playlistClipStart(clip) * stepCount());
+    }
+
+    function playlistClipLengthSteps(clip) {
+        return Math.max(1, Math.round(playlistClipLength(clip) * stepCount()));
+    }
+
+    function playlistPositionFromPointer(cell, clientX) {
+        return Math.max(0, Math.min(Math.max(0, state.barCount - 1), Number(cell && cell.dataset ? cell.dataset.bar : 0) || 0));
+    }
+
     function playlistPatternClipsAt(bar) {
-        return state.playlistPatternClips.filter(clip => clip.bar === bar);
+        return state.playlistPatternClips.filter(clip => {
+            const start = playlistClipStart(clip);
+            return !clip.muted && bar + 1 > start && bar < start + 1;
+        });
+    }
+
+    function playlistPatternClipsStartingAt(track, bar) {
+        return state.playlistPatternClips.filter(clip => clip.track === track && Math.floor(playlistClipStart(clip)) === bar);
+    }
+
+    function playlistPatternClipHitsAtStep(bar, step) {
+        const absoluteStep = (bar * stepCount()) + step;
+        return state.playlistPatternClips
+            .filter(clip => {
+                if (clip.muted) return false;
+                const start = playlistClipStartStep(clip);
+                return absoluteStep >= start && absoluteStep < start + stepCount();
+            })
+            .map(clip => ({
+                clip,
+                step: (absoluteStep - playlistClipStartStep(clip)) % stepCount()
+            }));
     }
 
     function ensureClipMap() {
@@ -635,7 +686,9 @@
                         id: 'pattern-' + Date.now() + '-' + bar + '-' + track + '-' + pattern,
                         pattern,
                         bar,
-                        track: track % state.playlistTrackCount
+                        track: track % state.playlistTrackCount,
+                        length: 1,
+                        muted: false
                     });
                 });
             }
@@ -644,8 +697,10 @@
         state.playlistPatternClips = state.playlistPatternClips.map(clip => ({
             id: clip.id || ('pattern-' + Date.now() + '-' + Math.random().toString(16).slice(2)),
             pattern: Math.max(0, Math.min(MAX_PATTERNS - 1, Number(clip.pattern) || 0)),
-            bar: Math.max(0, Math.min(state.barCount - 1, Number(clip.bar) || 0)),
-            track: Math.max(0, Math.min(state.playlistTrackCount - 1, Number(clip.track) || 0))
+            bar: Math.max(0, Math.min(Math.max(0, state.barCount - 1), Math.round(Number(clip.bar) || 0))),
+            track: Math.max(0, Math.min(state.playlistTrackCount - 1, Number(clip.track) || 0)),
+            length: 1,
+            muted: clip.muted === true
         }));
         if (!Array.isArray(state.playlistAudioClips)) state.playlistAudioClips = [];
         state.playlistAudioClips = state.playlistAudioClips.map(clip => ({
@@ -656,7 +711,8 @@
             name: typeof clip.name === 'string' && clip.name ? clip.name : 'audio clip',
             duration: Math.max(0.001, Number(clip.duration) || (clip.buffer ? clip.buffer.duration : 1)),
             asset: clip.asset || null,
-            buffer: clip.buffer || null
+            buffer: clip.buffer || null,
+            muted: clip.muted === true
         })).filter(clip => state.channels.some(channel => channel.id === clip.channelId));
     }
 
@@ -865,7 +921,7 @@
         const needsRebuild = new Set();
         const channelPatterns = currentView === 'roll'
             ? [{ channel: selectedChannel(), patternIndex: activePatternIndex() }]
-            : playlistPatternClipsAt(bar).flatMap(clip => audibleChannels().map(channel => ({
+            : playlistPatternClipHitsAtStep(bar, step).flatMap(({ clip }) => audibleChannels().map(channel => ({
                 channel,
                 patternIndex: clip.pattern
             })));
@@ -2607,16 +2663,16 @@
             });
             return;
         }
-        playlistPatternClipsAt(bar).forEach(clip => {
+        playlistPatternClipHitsAtStep(bar, step).forEach(({ clip, step: patternStep }) => {
             audibleChannels().forEach(channel => {
-                getStepEvents(getPattern(channel, clip.pattern), step).forEach(event => {
-                    playChannelNote(channel, event.note, time + (noteStartOffset(event) * stepSeconds()), noteDurationSeconds(event, step), noteVelocity(event), event.slideTo);
+                getStepEvents(getPattern(channel, clip.pattern), patternStep).forEach(event => {
+                    playChannelNote(channel, event.note, time + (noteStartOffset(event) * stepSeconds()), noteDurationSeconds(event, patternStep), noteVelocity(event), event.slideTo);
                 });
             });
         });
         if (step === 0) {
             state.playlistAudioClips
-                .filter(clip => clip.bar === bar)
+                .filter(clip => clip.bar === bar && clip.muted !== true)
                 .forEach(clip => {
                     const channel = state.channels.find(item => item.id === clip.channelId);
                     if (channel && audibleChannels().includes(channel)) playPlaylistAudioClip(channel, clip, time);
@@ -2632,7 +2688,6 @@
         const engine = createAudio();
         while (nextStepTime < engine.context.currentTime + 0.12) {
             scheduleStep(currentStep, currentBar, nextStepTime);
-            paintPlayhead();
             nextStepTime += stepSeconds();
             currentStep += 1;
             if (currentStep >= stepCount()) {
@@ -2657,15 +2712,18 @@
         if (currentView === 'roll') currentBar = 0;
         isPlaying = true;
         nextStepTime = engine.context.currentTime + 0.04;
+        setPlayheadAnchor(currentBar, currentStep, nextStepTime);
         els.play.classList.add('is-active');
         els.play.innerHTML = '<i class="fa-solid fa-pause"></i>';
         updateStatus(currentView === 'roll' ? 'playing selected pattern' : 'playing bar ' + (currentBar + 1));
         schedulerTimer = window.setInterval(scheduler, 25);
+        startPlayheadAnimation();
         animateMeter();
     }
 
     function stop(resetPosition) {
         isPlaying = false;
+        stopPlayheadAnimation();
         if (schedulerTimer) window.clearInterval(schedulerTimer);
         schedulerTimer = null;
         els.play.classList.remove('is-active');
@@ -2674,6 +2732,7 @@
             currentStep = 0;
             currentBar = 0;
         }
+        setPlayheadAnchor(currentBar, currentStep);
         paintPlayhead();
         updateStatus('stopped');
     }
@@ -3505,12 +3564,79 @@
         Array.from(activeKeyboardVoices.keys()).forEach(stopKeyboardNote);
     }
 
+    function playlistLoopStartStep() {
+        return state.loopRange ? state.loopRange.start * stepCount() : 0;
+    }
+
+    function playlistLoopEndStep() {
+        return state.loopRange ? (state.loopRange.end + 1) * stepCount() : state.barCount * stepCount();
+    }
+
+    function setPlayheadAnchor(bar = currentBar, step = currentStep, time = null) {
+        playheadAnchorTime = time === null ? (audio ? audio.context.currentTime : 0) : time;
+        playheadAnchorPosition = (Math.max(0, Number(bar) || 0) * stepCount()) + Math.max(0, Number(step) || 0);
+    }
+
+    function playbackPosition() {
+        const basePosition = (currentBar * stepCount()) + currentStep;
+        if (!isPlaying || !audio) return basePosition;
+        const elapsedSteps = (audio.context.currentTime - playheadAnchorTime) / Math.max(0.001, stepSeconds());
+        let position = playheadAnchorPosition + Math.max(0, elapsedSteps);
+        if (currentView === 'roll') return position % stepCount();
+        const start = playlistLoopStartStep();
+        const end = Math.max(start + 1, playlistLoopEndStep());
+        if (position < start) return start;
+        if (position >= end) position = start + ((position - start) % (end - start));
+        return Math.max(0, Math.min(Math.max(1, state.barCount * stepCount()) - 0.001, position));
+    }
+
+    function playlistPlayheadEl() {
+        return els.playlist ? els.playlist.querySelector('.fdgb-playlist-playhead') : null;
+    }
+
+    function updatePlaylistPlayheadMarker(position) {
+        const marker = playlistPlayheadEl();
+        if (!marker) return;
+        const hidden = currentView === 'roll';
+        marker.classList.toggle('fdgb-hidden', hidden);
+        if (hidden) return;
+        const left = 132 + ((position / stepCount()) * 96);
+        marker.style.transform = 'translateX(' + left + 'px)';
+    }
+
+    function clearPaintedPlayhead() {
+        if (paintedStep >= 0) {
+            root.querySelectorAll('.fdgb-step[data-step="' + paintedStep + '"], .fdgb-cell[data-step="' + paintedStep + '"], .fdgb-bar-label[data-step="' + paintedStep + '"]').forEach(el => el.classList.remove('is-playing'));
+        }
+        if (paintedBar >= 0) {
+            root.querySelectorAll('.fdgb-playlist-cell[data-bar="' + paintedBar + '"], .fdgb-playlist-head[data-bar="' + paintedBar + '"], .fdgb-playlist-track.is-playing').forEach(el => el.classList.remove('is-playing'));
+        }
+        paintedStep = -1;
+        paintedBar = -1;
+    }
+
+    function animatePlayhead() {
+        paintPlayhead();
+        if (isPlaying) playheadAnimation = window.requestAnimationFrame(animatePlayhead);
+    }
+
+    function startPlayheadAnimation() {
+        if (playheadAnimation) window.cancelAnimationFrame(playheadAnimation);
+        playheadAnimation = window.requestAnimationFrame(animatePlayhead);
+    }
+
+    function stopPlayheadAnimation() {
+        if (playheadAnimation) window.cancelAnimationFrame(playheadAnimation);
+        playheadAnimation = null;
+    }
+
     async function startFromBar(bar) {
         currentBar = Math.max(0, Math.min(state.barCount - 1, Number(bar) || 0));
         currentStep = 0;
         if (isPlaying) {
             const engine = createAudio();
             nextStepTime = engine.context.currentTime + 0.04;
+            setPlayheadAnchor(currentBar, currentStep, nextStepTime);
             paintPlayhead();
             updateStatus('playing bar ' + (currentBar + 1));
             return;
@@ -3520,6 +3646,28 @@
 
     function isBarInLoop(bar) {
         return !state.loopRange || (bar >= state.loopRange.start && bar <= state.loopRange.end);
+    }
+
+    function updatePlaylistLoopClasses() {
+        if (!els.playlist) return;
+        els.playlist.querySelectorAll('.fdgb-playlist-head[data-bar], .fdgb-playlist-cell[data-bar]').forEach(el => {
+            const bar = Number(el.dataset.bar) || 0;
+            el.classList.toggle('is-loop-muted', Boolean(state.loopRange && !isBarInLoop(bar)));
+            el.classList.toggle('is-looped', Boolean(state.loopRange && isBarInLoop(bar)));
+        });
+        els.playlist.querySelectorAll('.fdgb-playlist-loop-column').forEach(button => {
+            const head = button.closest('.fdgb-playlist-head');
+            const bar = head ? Number(head.dataset.bar) || 0 : 0;
+            button.classList.toggle('is-active', Boolean(state.loopRange && isBarInLoop(bar)));
+        });
+    }
+
+    function updatePlaylistTrackSelection() {
+        if (!els.playlist) return;
+        els.playlist.querySelectorAll('.fdgb-playlist-track[data-track]').forEach(track => {
+            const channel = channelForPlaylistTrack(Number(track.dataset.track) || 0);
+            track.classList.toggle('is-selected', Boolean(channel && channel.id === selectedId));
+        });
     }
 
     function togglePlaylistLoop(bar) {
@@ -3545,8 +3693,14 @@
         if (state.loopRange && (currentBar < state.loopRange.start || currentBar > state.loopRange.end)) {
             currentBar = state.loopRange.start;
             currentStep = 0;
+            if (isPlaying && audio) {
+                nextStepTime = audio.context.currentTime + 0.04;
+                setPlayheadAnchor(currentBar, currentStep, nextStepTime);
+            } else {
+                setPlayheadAnchor(currentBar, currentStep);
+            }
         }
-        renderPlaylist();
+        updatePlaylistLoopClasses();
         paintPlayhead();
         updateStatus(state.loopRange ? 'looping bar ' + (state.loopRange.start + 1) + '-' + (state.loopRange.end + 1) : 'playlist loop off');
     }
@@ -3607,6 +3761,14 @@
             }
         }
         return maxLength;
+    }
+
+    function noteBlockSelector(step, note, eventIndex) {
+        return '.fdgb-note-block[data-step="' + step + '"][data-note="' + note + '"][data-event-index="' + eventIndex + '"]';
+    }
+
+    function noteHandleSelector(step, note, eventIndex) {
+        return '.fdgb-note-resize[data-step="' + step + '"][data-note="' + note + '"][data-event-index="' + eventIndex + '"]';
     }
 
     function notePositionX(position) {
@@ -3700,6 +3862,7 @@
                     block.dataset.eventIndex = String(eventIndex);
                     block.dataset.offset = String(noteStartOffset(event));
                     block.dataset.velocity = String(noteVelocity(event));
+                    block.dataset.length = String(clampedNoteLength(event, step));
                     if (event.slideTo) {
                         block.dataset.slideTo = event.slideTo;
                         block.title = 'slides to ' + event.slideTo;
@@ -3728,6 +3891,32 @@
         if (!els.playlistTools) return;
         ensureClipMap();
         els.playlistTools.innerHTML = '';
+        const toolLabel = document.createElement('div');
+        toolLabel.className = 'fdgb-playlist-tool-label';
+        toolLabel.textContent = 'tool';
+        els.playlistTools.append(toolLabel);
+        const tools = [
+            ['draw', 'fa-pen', 'draw clips'],
+            ['paint', 'fa-brush', 'paint clips'],
+            ['delete', 'fa-eraser', 'delete clips'],
+            ['mute', 'fa-volume-xmark', 'mute clips']
+        ];
+        const toolGroup = document.createElement('div');
+        toolGroup.className = 'fdgb-playlist-tool-group';
+        tools.forEach(([tool, icon, labelText]) => {
+            const button = document.createElement('button');
+            button.className = 'fdgb-button fdgb-mini-button' + (playlistTool === tool ? ' is-active' : '');
+            button.type = 'button';
+            button.dataset.tooltip = labelText;
+            button.innerHTML = '<i class="fa-solid ' + icon + '"></i>';
+            button.addEventListener('click', () => {
+                playlistTool = tool;
+                renderPlaylistTools();
+                updateStatus('playlist tool: ' + tool);
+            });
+            toolGroup.append(button);
+        });
+        els.playlistTools.append(toolGroup);
         const label = document.createElement('div');
         label.className = 'fdgb-playlist-tool-label';
         label.textContent = 'pattern clip';
@@ -3763,7 +3952,9 @@
         dragButton.draggable = true;
         dragButton.disabled = selectedPattern === null;
         dragButton.draggable = selectedPattern !== null;
-        dragButton.textContent = selectedPattern === null ? 'no pattern' : 'drag pattern ' + (selectedPattern + 1);
+        dragButton.innerHTML = selectedPattern === null
+            ? '<i class="fa-solid fa-grip-lines"></i><span>no pattern</span>'
+            : '<i class="fa-solid fa-grip-lines"></i><span>pattern ' + (selectedPattern + 1) + '</span>';
         dragButton.addEventListener('click', () => {
             const pattern = Number(picker.value);
             if (Number.isInteger(pattern)) setActivePattern(pattern);
@@ -3786,12 +3977,12 @@
         els.playlistTools.append(picker, dragButton);
         const hint = document.createElement('div');
         hint.className = 'fdgb-playlist-drop-hint';
-        hint.textContent = 'drop audio files onto lanes';
+        hint.textContent = 'double-click patterns to edit, drop audio files onto lanes';
         els.playlistTools.append(hint);
     }
 
     function playlistPatternClipsFor(track, bar) {
-        return state.playlistPatternClips.filter(clip => clip.track === track && clip.bar === bar);
+        return playlistPatternClipsStartingAt(track, bar);
     }
 
     function playlistAudioClipsFor(track, bar) {
@@ -3803,22 +3994,129 @@
         return Math.max(1, Math.ceil((Number(clip.duration) || (clip.buffer ? clip.buffer.duration : barSeconds)) / Math.max(0.001, barSeconds)));
     }
 
+    function channelForPlaylistTrack(trackIndex) {
+        return state.channels[trackIndex % Math.max(1, state.channels.length)] || state.channels[0];
+    }
+
+    function selectPlaylistPattern(patternIndex, openRoll = false) {
+        setActivePattern(patternIndex);
+        renderPatternOptions();
+        renderChannels();
+        renderRoll();
+        renderAutomation();
+        renderPlaylistTools();
+        if (openRoll) showView('roll');
+        updateStatus('selected pattern ' + (patternIndex + 1));
+    }
+
+    function patternPreviewNotes(patternIndex) {
+        const notes = [];
+        state.channels.forEach(channel => {
+            getPattern(channel, patternIndex).forEach((stepEvents, step) => {
+                getStepEvents(getPattern(channel, patternIndex), step).forEach(event => {
+                    const midi = noteNumber(event.note);
+                    if (!Number.isFinite(midi)) return;
+                    notes.push({
+                        step: step + noteStartOffset(event),
+                        length: clampedNoteLength(event, step),
+                        midi,
+                        color: channel.color
+                    });
+                });
+            });
+        });
+        return notes;
+    }
+
+    function appendPatternClipPreview(clipEl, patternIndex) {
+        const notes = patternPreviewNotes(patternIndex);
+        if (!notes.length) return;
+        const min = Math.min(...notes.map(note => note.midi));
+        const max = Math.max(...notes.map(note => note.midi));
+        const range = Math.max(1, max - min);
+        const preview = document.createElement('div');
+        preview.className = 'fdgb-playlist-note-preview';
+        notes.slice(0, 90).forEach(note => {
+            const bar = document.createElement('span');
+            bar.className = 'fdgb-playlist-preview-note';
+            bar.style.left = ((note.step / stepCount()) * 100) + '%';
+            bar.style.width = Math.max(2, (note.length / stepCount()) * 100) + '%';
+            bar.style.top = (8 + ((max - note.midi) / range) * 58) + '%';
+            bar.style.background = note.color;
+            preview.append(bar);
+        });
+        clipEl.append(preview);
+    }
+
+    function addPatternClip(pattern, trackIndex, bar, length = 1) {
+        const safeBar = Math.max(0, Math.min(Math.max(0, state.barCount - 1), Math.round(Number(bar) || 0)));
+        const duplicate = state.playlistPatternClips.some(clip => {
+            return clip.track === trackIndex
+                && clip.pattern === pattern
+                && playlistClipStart(clip) === safeBar
+                && clip.muted !== true;
+        });
+        if (duplicate) {
+            updateStatus('pattern ' + (pattern + 1) + ' is already there');
+            return null;
+        }
+        const clip = {
+            id: 'pattern-' + Date.now() + '-' + Math.random().toString(16).slice(2),
+            pattern,
+            bar: safeBar,
+            track: trackIndex,
+            length: 1,
+            muted: false
+        };
+        state.playlistPatternClips.push(clip);
+        return clip;
+    }
+
+    function paintPlaylistCell(trackIndex, bar, clientX = null, cell = null) {
+        const position = cell && clientX !== null ? playlistPositionFromPointer(cell, clientX) : bar;
+        const added = addPatternClip(activePatternIndex(), trackIndex, position);
+        if (added) renderPlaylist();
+    }
+
+    function deletePlaylistClipAtPoint(clientX, clientY) {
+        const target = document.elementFromPoint(clientX, clientY);
+        const clipEl = target && target.closest ? target.closest('.fdgb-playlist-clip[data-clip-id]') : null;
+        if (!clipEl || !els.playlist.contains(clipEl)) return false;
+        const id = clipEl.dataset.clipId;
+        if (clipEl.dataset.clipType === 'audio') {
+            state.playlistAudioClips = state.playlistAudioClips.filter(clip => clip.id !== id);
+        } else {
+            state.playlistPatternClips = state.playlistPatternClips.filter(clip => clip.id !== id);
+        }
+        renderPlaylist();
+        return true;
+    }
+
     function playlistLaneCell(trackIndex, bar) {
+        const hasClips = playlistPatternClipsFor(trackIndex, bar).length > 0 || playlistAudioClipsFor(trackIndex, bar).length > 0;
         const cell = document.createElement('div');
         cell.className = 'fdgb-playlist-cell'
+            + (hasClips ? ' is-on' : '')
             + (state.loopRange && !isBarInLoop(bar) ? ' is-loop-muted' : '')
             + (state.loopRange && isBarInLoop(bar) ? ' is-looped' : '');
         cell.dataset.bar = String(bar);
         cell.dataset.track = String(trackIndex);
         cell.setAttribute('role', 'button');
         cell.tabIndex = 0;
-        cell.addEventListener('click', () => {
-            state.playlistPatternClips.push({
-                id: 'pattern-' + Date.now() + '-' + Math.random().toString(16).slice(2),
-                pattern: activePatternIndex(),
-                bar,
-                track: trackIndex
-            });
+        cell.addEventListener('pointerdown', event => {
+            if (event.button !== 0 || playlistTool !== 'paint') return;
+            event.preventDefault();
+            playlistPainting = true;
+            paintPlaylistCell(trackIndex, bar, event.clientX, cell);
+        });
+        cell.addEventListener('pointerenter', event => {
+            if (!playlistPainting || playlistTool !== 'paint') return;
+            paintPlaylistCell(trackIndex, bar, event.clientX, cell);
+        });
+        cell.addEventListener('click', event => {
+            if (playlistTool === 'delete' || playlistTool === 'mute') return;
+            if (playlistTool === 'paint') return;
+            addPatternClip(activePatternIndex(), trackIndex, playlistPositionFromPointer(cell, event.clientX));
             renderPlaylist();
         });
         cell.addEventListener('contextmenu', event => {
@@ -3833,16 +4131,45 @@
         cell.addEventListener('drop', event => {
             event.preventDefault();
             cell.classList.remove('is-drop-target');
-            handlePlaylistDrop(event, trackIndex, bar);
+            handlePlaylistDrop(event, trackIndex, bar, cell);
         });
         playlistPatternClipsFor(trackIndex, bar).forEach(patternClip => {
             const clip = document.createElement('div');
-            clip.className = 'fdgb-playlist-clip fdgb-playlist-pattern-clip';
+            clip.className = 'fdgb-playlist-clip fdgb-playlist-pattern-clip' + (patternClip.muted ? ' is-muted' : '');
+            clip.dataset.clipId = patternClip.id;
+            clip.dataset.clipType = 'pattern';
             clip.draggable = true;
-            clip.textContent = 'pattern ' + (patternClip.pattern + 1);
+            clip.style.left = '0';
+            clip.style.width = '100%';
+            clip.innerHTML = '<div class="fdgb-playlist-clip-title"><i class="fa-solid fa-wave-square"></i><span>' + (patternClip.pattern + 1) + '</span></div>';
+            appendPatternClipPreview(clip, patternClip.pattern);
             clip.title = 'pattern ' + (patternClip.pattern + 1);
-            clip.addEventListener('click', event => event.stopPropagation());
+            clip.addEventListener('click', event => {
+                event.stopPropagation();
+                if (playlistTool === 'delete') {
+                    state.playlistPatternClips = state.playlistPatternClips.filter(item => item.id !== patternClip.id);
+                    renderPlaylist();
+                    return;
+                }
+                if (playlistTool === 'mute') {
+                    patternClip.muted = !patternClip.muted;
+                    renderPlaylist();
+                    updateStatus((patternClip.muted ? 'muted ' : 'unmuted ') + 'pattern ' + (patternClip.pattern + 1));
+                    return;
+                }
+                selectPlaylistPattern(patternClip.pattern, false);
+                renderPlaylist();
+            });
+            clip.addEventListener('dblclick', event => {
+                event.preventDefault();
+                event.stopPropagation();
+                selectPlaylistPattern(patternClip.pattern, true);
+            });
             clip.addEventListener('dragstart', event => {
+                if (playlistTool === 'delete' || playlistTool === 'mute') {
+                    event.preventDefault();
+                    return;
+                }
                 playlistDrag = { type: 'pattern', id: patternClip.id, pattern: patternClip.pattern, sourceTrack: trackIndex, sourceBar: bar };
                 event.dataTransfer.effectAllowed = 'move';
                 event.dataTransfer.setData('application/frdgbeats-pattern', JSON.stringify(playlistDrag));
@@ -3860,12 +4187,25 @@
         });
         playlistAudioClipsFor(trackIndex, bar).forEach(audioClip => {
             const clip = document.createElement('div');
-            clip.className = 'fdgb-playlist-clip fdgb-playlist-audio-clip';
+            clip.className = 'fdgb-playlist-clip fdgb-playlist-audio-clip' + (audioClip.muted ? ' is-muted' : '');
+            clip.dataset.clipId = audioClip.id;
+            clip.dataset.clipType = 'audio';
             clip.draggable = true;
-            clip.textContent = audioClip.name;
+            clip.innerHTML = '<div class="fdgb-playlist-clip-title"><i class="fa-solid fa-file-waveform"></i><span>' + escapeHtml(audioClip.name) + '</span></div>';
             clip.title = audioClip.name;
             clip.style.width = 'calc(' + audioClipBars(audioClip) + '00% - 8px)';
-            clip.addEventListener('click', event => event.stopPropagation());
+            clip.addEventListener('click', event => {
+                event.stopPropagation();
+                if (playlistTool === 'delete') {
+                    state.playlistAudioClips = state.playlistAudioClips.filter(item => item.id !== audioClip.id);
+                    renderPlaylist();
+                    return;
+                }
+                if (playlistTool === 'mute') {
+                    audioClip.muted = !audioClip.muted;
+                    renderPlaylist();
+                }
+            });
             clip.addEventListener('dragstart', event => {
                 playlistDrag = { type: 'audio', id: audioClip.id };
                 event.dataTransfer.effectAllowed = 'move';
@@ -3895,7 +4235,7 @@
         return null;
     }
 
-    async function handlePlaylistDrop(event, trackIndex, bar) {
+    async function handlePlaylistDrop(event, trackIndex, bar, cell = null) {
         const files = Array.from(event.dataTransfer.files || []).filter(file => /^audio\//i.test(file.type) || /\.(wav|mp3|ogg|flac|m4a|aac)$/i.test(file.name));
         if (files.length) {
             for (const file of files) {
@@ -3909,17 +4249,14 @@
         if (!data) return;
         if (data.type === 'pattern') {
             const patternIndex = Math.max(0, Math.min(MAX_PATTERNS - 1, Number(data.pattern) || 0));
+            const position = cell ? playlistPositionFromPointer(cell, event.clientX) : bar;
             const existing = data.id ? state.playlistPatternClips.find(clip => clip.id === data.id) : null;
             if (existing) {
                 existing.track = trackIndex;
-                existing.bar = bar;
+                existing.bar = position;
+                existing.length = 1;
             } else {
-                state.playlistPatternClips.push({
-                    id: 'pattern-' + Date.now() + '-' + Math.random().toString(16).slice(2),
-                    pattern: patternIndex,
-                    bar,
-                    track: trackIndex
-                });
+                addPatternClip(patternIndex, trackIndex, position);
             }
             renderPlaylist();
             return;
@@ -3969,8 +4306,11 @@
         ensureClipMap();
         renderPlaylistTools();
         els.playlist.innerHTML = '';
-        els.playlist.style.setProperty('--fdgb-playlist-columns', '118px repeat(' + state.barCount + ', minmax(72px, 1fr)) 42px');
-        els.playlist.style.setProperty('--fdgb-playlist-min-width', (160 + (state.barCount * 74)) + 'px');
+        els.playlist.style.setProperty('--fdgb-playlist-columns', '132px repeat(' + state.barCount + ', 96px) 42px');
+        els.playlist.style.setProperty('--fdgb-playlist-min-width', (174 + (state.barCount * 96)) + 'px');
+        const playhead = document.createElement('div');
+        playhead.className = 'fdgb-playlist-playhead' + (currentView === 'roll' ? ' fdgb-hidden' : '');
+        els.playlist.append(playhead);
         const first = document.createElement('div');
         first.className = 'fdgb-playlist-track fdgb-playlist-corner';
         first.textContent = 'tracks';
@@ -4026,8 +4366,29 @@
             const track = document.createElement('div');
             track.className = 'fdgb-playlist-track';
             track.dataset.track = String(trackIndex);
+            const channel = channelForPlaylistTrack(trackIndex);
+            if (channel && channel.id === selectedId) track.classList.add('is-selected');
+            if (channel) {
+                track.addEventListener('click', () => {
+                    selectedId = channel.id;
+                    renderChannels();
+                    renderRoll();
+                    renderMixer();
+                    renderAutomation();
+                    syncWaveformTab();
+                    syncSynthTab();
+                    renderSampleEditor();
+                    renderSynthEditor();
+                    updatePlaylistTrackSelection();
+                    updateStatus('selected ' + channel.name);
+                });
+                const color = document.createElement('span');
+                color.className = 'fdgb-playlist-track-color';
+                color.style.background = channel.color;
+                track.append(color);
+            }
             const name = document.createElement('span');
-            name.textContent = 'Track ' + (trackIndex + 1);
+            name.textContent = channel ? channel.name : 'Track ' + (trackIndex + 1);
             track.append(name);
             els.playlist.append(track);
 
@@ -5045,8 +5406,11 @@
             if (Array.isArray(state.clips[channel.id])) state.clips[channel.id].splice(removedColumn, 1);
         });
         state.playlistPatternClips = state.playlistPatternClips
-            .filter(clip => clip.bar !== removedColumn)
-            .map(clip => ({ ...clip, bar: clip.bar > removedColumn ? clip.bar - 1 : clip.bar }));
+            .filter(clip => Math.floor(playlistClipStart(clip)) !== removedColumn)
+            .map(clip => {
+                const start = playlistClipStart(clip);
+                return { ...clip, bar: start > removedColumn ? start - 1 : start, length: 1 };
+            });
         state.playlistAudioClips = state.playlistAudioClips
             .filter(clip => clip.bar !== removedColumn)
             .map(clip => ({ ...clip, bar: clip.bar > removedColumn ? clip.bar - 1 : clip.bar }));
@@ -5225,15 +5589,28 @@
 
     function movePlacedNote(clientX, clientY) {
         if (!placingNote) return;
-        const event = moveNoteVertically(placingNote, clientX, clientY);
+        const movedEvent = moveNoteVertically(placingNote, clientX, clientY);
+        const pattern = getPattern(placingNote.channel);
+        const events = getStepEvents(pattern, placingNote.step);
+        const event = events[placingNote.eventIndex];
         if (!event) return;
-        stopRollPreviewVoice(placingNote.pointerId);
-        startRollPreviewVoice(placingNote.channel, event, placingNote.pointerId);
+        const offset = noteStartOffset(event);
+        const rawLength = noteLengthAtPointer(placingNote.step, offset, clientX);
+        const length = Math.max(noteLengthSnap, Math.min(stepCount() - placingNote.step - offset, snapNoteLength(rawLength)));
+        event.length = length;
+        placingNote.channel.pattern = pattern;
+        const block = els.pianoRoll.querySelector(noteBlockSelector(placingNote.step, event.note, placingNote.eventIndex));
+        const handle = els.pianoRoll.querySelector(noteHandleSelector(placingNote.step, event.note, placingNote.eventIndex));
+        setNoteBlockLengthStyles(block, handle, placingNote.step, offset, length);
+        if (movedEvent) {
+            stopRollPreviewVoice(placingNote.pointerId);
+            startRollPreviewVoice(placingNote.channel, movedEvent, placingNote.pointerId);
+        }
     }
 
     function moveExistingNote(clientX, clientY) {
         if (!movingNote) return;
-        if (!movingNote.dragged && Math.abs(clientX - movingNote.startX) < 5) return;
+        if (!movingNote.dragged && Math.max(Math.abs(clientX - movingNote.startX), Math.abs(clientY - movingNote.startY)) < 5) return;
         movingNote.pattern = getPattern(movingNote.channel);
         const fromEvents = getStepEvents(movingNote.pattern, movingNote.step);
         const eventIndex = fromEvents[movingNote.eventIndex] && fromEvents[movingNote.eventIndex].note === movingNote.note
@@ -5242,14 +5619,17 @@
         if (eventIndex < 0) return;
         const noteEvent = fromEvents[eventIndex];
         const targetStart = rollStartAtPointer(clientX, clientY, noteEvent);
+        const targetNote = rollNoteAtPointer(clientX, clientY) || movingNote.note;
         if (!targetStart) return;
         const safeStep = targetStart.step;
         const safeOffset = targetStart.offset;
-        if (safeStep === movingNote.step && noteStartKey(noteEvent) === Math.round(safeOffset * 1000)) return;
+        if (safeStep === movingNote.step && targetNote === movingNote.note && noteStartKey(noteEvent) === Math.round(safeOffset * 1000)) return;
         const toEvents = getStepEvents(movingNote.pattern, safeStep);
-        if (toEvents.some(item => item.note === movingNote.note && noteStartKey(item) === Math.round(safeOffset * 1000))) return;
+        if (toEvents.some(item => item !== noteEvent && item.note === targetNote && noteStartKey(item) === Math.round(safeOffset * 1000))) return;
         fromEvents.splice(eventIndex, 1);
         movingNote.pattern[movingNote.step] = fromEvents;
+        noteEvent.note = targetNote;
+        if (noteEvent.slideTo && noteEvent.slideTo === movingNote.note) delete noteEvent.slideTo;
         if (safeOffset > 0) noteEvent.offset = safeOffset;
         else delete noteEvent.offset;
         toEvents.push(noteEvent);
@@ -5258,6 +5638,7 @@
         suppressRollClick = true;
         movingNote.channel.pattern = movingNote.pattern;
         movingNote.step = safeStep;
+        movingNote.note = targetNote;
         movingNote.eventIndex = toEvents.length - 1;
         movingNote.noteEvent = noteEvent;
         renderRoll();
@@ -5386,6 +5767,34 @@
         }) || null;
     }
 
+    function noteBlockAtPoint(clientX, clientY) {
+        const target = document.elementFromPoint(clientX, clientY);
+        const direct = target && target.closest ? target.closest('.fdgb-note-block') : null;
+        if (direct && els.pianoRoll.contains(direct)) return direct;
+        return Array.from(els.pianoRoll.querySelectorAll('.fdgb-note-block')).find(block => {
+            const rect = block.getBoundingClientRect();
+            return clientX >= rect.left
+                && clientX <= rect.right
+                && clientY >= rect.top
+                && clientY <= rect.bottom;
+        }) || null;
+    }
+
+    function deleteNoteAtPoint(clientX, clientY) {
+        const block = noteBlockAtPoint(clientX, clientY);
+        if (!block) return false;
+        const channel = selectedChannel();
+        const pattern = getPattern(channel);
+        const step = Number(block.dataset.step);
+        const note = block.dataset.note;
+        const eventIndex = Number(block.dataset.eventIndex);
+        removeNoteEvent(channel, pattern, step, note, Number.isFinite(eventIndex) ? eventIndex : null);
+        closeVelocityEditor();
+        renderRoll();
+        renderChannels();
+        return true;
+    }
+
     function placePianoRollNoteFromCell(cell, clientX = null) {
         const channel = selectedChannel();
         const pattern = getPattern(channel);
@@ -5439,6 +5848,18 @@
     }
 
     function handlePianoRollPointerDown(event) {
+        if (event.button === 2) {
+            event.preventDefault();
+            event.stopPropagation();
+            pianoRightErasing = true;
+            deleteNoteAtPoint(event.clientX, event.clientY);
+            try {
+                els.pianoRoll.setPointerCapture(event.pointerId);
+            } catch (_) {
+                /* no-op */
+            }
+            return;
+        }
         if (event.button === 1) {
             const block = noteBlockAtEvent(event);
             if (block) {
@@ -5466,6 +5887,7 @@
                     noteEvent: placed.noteEvent,
                     note: placed.noteEvent.note,
                     pointerId: event.pointerId,
+                    startX: event.clientX,
                     startY: event.clientY,
                     dragged: false
                 };
@@ -5565,7 +5987,7 @@
         ensureClipMap();
         return Array.from({ length: state.barCount }, (_, bar) => {
             return playlistPatternClipsAt(bar).length > 0
-                || state.playlistAudioClips.some(clip => bar >= clip.bar && bar < clip.bar + audioClipBars(clip));
+                || state.playlistAudioClips.some(clip => clip.muted !== true && bar >= clip.bar && bar < clip.bar + audioClipBars(clip));
         });
     }
 
@@ -5689,25 +6111,25 @@
         let lastTick = 0;
         const events = [];
         const barCount = usedBarCount();
-        for (let bar = 0; bar < barCount; bar += 1) {
-            playlistPatternClipsAt(bar).forEach(clip => {
+        for (let absoluteStep = 0; absoluteStep < barCount * stepCount(); absoluteStep += 1) {
+            const bar = Math.floor(absoluteStep / stepCount());
+            const step = absoluteStep % stepCount();
+            playlistPatternClipHitsAtStep(bar, step).forEach(({ clip, step: patternStep }) => {
                 state.channels.forEach((channel, channelIndex) => {
-                    getPattern(channel, clip.pattern).forEach((stepEvents, step) => {
-                        getStepEvents(getPattern(channel, clip.pattern), step).forEach(event => {
-                            const tick = Math.round(((bar * stepCount()) + step + noteStartOffset(event)) * ticksPerStep);
-                            const midiNote = noteNumber(event.note);
-                            const midiChannel = channelIndex % 16;
-                            const velocity = Math.max(1, Math.min(127, Math.round(noteVelocity(event) * 127)));
-                            const eventTicks = Math.max(1, Math.floor(ticksPerStep * clampedNoteLength(event, step)));
-                            if (event.slideTo && event.slideTo !== event.note) {
-                                const semitones = Math.max(-2, Math.min(2, noteNumber(event.slideTo) - midiNote));
-                                events.push({ tick, data: pitchBendData(midiChannel, 0) });
-                                events.push({ tick: tick + Math.max(1, eventTicks - 1), data: pitchBendData(midiChannel, semitones / 2) });
-                                events.push({ tick: tick + eventTicks + 1, data: pitchBendData(midiChannel, 0) });
-                            }
-                            events.push({ tick, data: [0x90 + midiChannel, midiNote, velocity] });
-                            events.push({ tick: tick + eventTicks, data: [0x80 + midiChannel, midiNote, 0] });
-                        });
+                    getStepEvents(getPattern(channel, clip.pattern), patternStep).forEach(event => {
+                        const tick = Math.round((absoluteStep + noteStartOffset(event)) * ticksPerStep);
+                        const midiNote = noteNumber(event.note);
+                        const midiChannel = channelIndex % 16;
+                        const velocity = Math.max(1, Math.min(127, Math.round(noteVelocity(event) * 127)));
+                        const eventTicks = Math.max(1, Math.floor(ticksPerStep * clampedNoteLength(event, patternStep)));
+                        if (event.slideTo && event.slideTo !== event.note) {
+                            const semitones = Math.max(-2, Math.min(2, noteNumber(event.slideTo) - midiNote));
+                            events.push({ tick, data: pitchBendData(midiChannel, 0) });
+                            events.push({ tick: tick + Math.max(1, eventTicks - 1), data: pitchBendData(midiChannel, semitones / 2) });
+                            events.push({ tick: tick + eventTicks + 1, data: pitchBendData(midiChannel, 0) });
+                        }
+                        events.push({ tick, data: [0x90 + midiChannel, midiNote, velocity] });
+                        events.push({ tick: tick + eventTicks, data: [0x80 + midiChannel, midiNote, 0] });
                     });
                 });
             });
@@ -6039,20 +6461,20 @@
                 const completed = (channelIndex * barCount) + bar;
                 const detail = 'rendering ' + channel.name + ', bar ' + (bar + 1) + ' / ' + barCount;
                 await setExportProgress(progress, (completed / renderUnits) * 100, detail, 12);
-                playlistPatternClipsAt(bar).forEach(clip => {
-                    getPattern(channel, clip.pattern).forEach((stepEvents, step) => {
-                        getStepEvents(getPattern(channel, clip.pattern), step).forEach(event => {
+                for (let step = 0; step < stepCount(); step += 1) {
+                    playlistPatternClipHitsAtStep(bar, step).forEach(({ clip, step: patternStep }) => {
+                        getStepEvents(getPattern(channel, clip.pattern), patternStep).forEach(event => {
                             const start = Math.floor(((bar * stepCount()) + step + noteStartOffset(event)) * samplesPerStep);
                             const velocity = noteVelocity(event);
-                            const lengthSamples = Math.max(1, Math.floor(samplesPerStep * clampedNoteLength(event, step)));
+                            const lengthSamples = Math.max(1, Math.floor(samplesPerStep * clampedNoteLength(event, patternStep)));
                             if (channel.source === 'sample') mixSample(channelLeft, channelRight, sampleRate, start, Math.max(Math.floor(sampleRate * 0.38), lengthSamples), channel, event.note, velocity);
                             else if (channel.source === 'soundfont') mixSoundfont(channelLeft, channelRight, sampleRate, start, lengthSamples, channel, event.note, velocity, event.slideTo);
                             else mixTone(channelLeft, channelRight, sampleRate, start, lengthSamples, channel, event.note, velocity, event.slideTo);
                         });
                     });
-                });
+                }
                 state.playlistAudioClips
-                    .filter(clip => clip.channelId === channel.id && clip.bar === bar)
+                    .filter(clip => clip.channelId === channel.id && clip.bar === bar && clip.muted !== true)
                     .forEach(clip => {
                         const start = Math.floor(((bar * stepCount()) * samplesPerStep));
                         mixPlaylistAudioClip(channelLeft, channelRight, sampleRate, start, channel, clip);
@@ -6279,8 +6701,8 @@
         state.barCount = normalizeBarCount(Math.max(DEFAULT_BAR_COUNT, lastImportedBar + 1));
         state.loopRange = null;
         state.activePattern = 0;
-        state.playlistTrackCount = 8;
         const importedGroups = midiGroups.slice(0, 16);
+        state.playlistTrackCount = Math.max(8, importedGroups.length);
         state.channels = [];
         const importedChannelData = [];
         for (let index = 0; index < importedGroups.length; index += 1) {
@@ -6321,30 +6743,33 @@
                 || noteVelocity(a) - noteVelocity(b)
                 || String(a.slideTo || '').localeCompare(String(b.slideTo || ''));
         }));
-        const globalPatternMap = new Map();
+        const clonePattern = pattern => pattern.map(stepEvents => stepEvents.map(event => ({ ...event })));
+        const makeEmptyImportedPattern = () => Array.from({ length: stepCount() }, () => []);
+        const importedPatternMaps = importedChannelData.map(() => new Map());
         let nextPatternIndex = 0;
         for (let bar = 0; bar < state.barCount; bar += 1) {
-            const normalizedByChannel = importedChannelData.map(({ importedBars }) => normalizeImportedPattern(importedBars[bar]));
-            const hasNotes = normalizedByChannel.some(pattern => pattern.some(stepEvents => stepEvents.length));
-            if (!hasNotes) continue;
-            const signature = JSON.stringify(normalizedByChannel);
-            let patternIndex = globalPatternMap.get(signature);
-            if (patternIndex === undefined) {
-                patternIndex = nextPatternIndex;
-                nextPatternIndex += 1;
-                if (patternIndex < MAX_PATTERNS) {
-                    normalizedByChannel.forEach((pattern, index) => {
-                        importedChannelData[index].channel.patterns[patternIndex] = pattern.map(stepEvents => stepEvents.map(event => ({ ...event })));
+            for (let channelIndex = 0; channelIndex < importedChannelData.length; channelIndex += 1) {
+                const normalizedPattern = normalizeImportedPattern(importedChannelData[channelIndex].importedBars[bar]);
+                const hasNotes = normalizedPattern.some(stepEvents => stepEvents.length);
+                if (!hasNotes) continue;
+                const signature = JSON.stringify(normalizedPattern);
+                let patternIndex = importedPatternMaps[channelIndex].get(signature);
+                if (patternIndex === undefined) {
+                    if (nextPatternIndex >= MAX_PATTERNS) continue;
+                    patternIndex = nextPatternIndex;
+                    nextPatternIndex += 1;
+                    importedChannelData.forEach(({ channel }, index) => {
+                        channel.patterns[patternIndex] = index === channelIndex
+                            ? clonePattern(normalizedPattern)
+                            : makeEmptyImportedPattern();
                     });
-                    globalPatternMap.set(signature, patternIndex);
+                    importedPatternMaps[channelIndex].set(signature, patternIndex);
                 }
-            }
-            if (patternIndex < MAX_PATTERNS) {
                 state.playlistPatternClips.push({
-                    id: 'midi-pattern-' + Date.now() + '-' + bar + '-' + patternIndex,
+                    id: 'midi-pattern-' + Date.now() + '-' + channelIndex + '-' + bar + '-' + patternIndex,
                     pattern: patternIndex,
                     bar,
-                    track: 0
+                    track: channelIndex
                 });
             }
         }
@@ -6360,9 +6785,11 @@
         els.masterVolume.value = String(state.masterVolume);
         if (audio) audio.master.gain.value = state.masterVolume;
         els.pattern.value = '0';
-        await setExportProgress(progress, 94, 'loading SoundFont presets');
+        await setExportProgress(progress, 90, 'loading SoundFont bank', 20);
         await loadDefaultSoundfont();
+        await setExportProgress(progress, 96, 'applying SoundFont presets', 20);
         applySoundfontPresetsToChannels();
+        await setExportProgress(progress, 98, 'building project view', 20);
         renderAll();
         await setExportProgress(progress, 100, 'imported MIDI project', 120);
         updateStatus('imported MIDI project');
@@ -6410,15 +6837,27 @@
     }
 
     function paintPlayhead() {
-        root.querySelectorAll('.fdgb-step.is-playing, .fdgb-cell.is-playing, .fdgb-bar-label.is-playing, .fdgb-playlist-cell.is-playing, .fdgb-playlist-track.is-playing, .fdgb-playlist-head.is-playing').forEach(el => el.classList.remove('is-playing'));
-        root.querySelectorAll('.fdgb-step[data-step="' + currentStep + '"], .fdgb-cell[data-step="' + currentStep + '"], .fdgb-bar-label[data-step="' + currentStep + '"]').forEach(el => el.classList.add('is-playing'));
-        if (currentView !== 'roll') {
-            root.querySelectorAll('.fdgb-playlist-cell[data-bar="' + currentBar + '"], .fdgb-playlist-head[data-bar="' + currentBar + '"]').forEach(el => el.classList.add('is-playing'));
+        const position = playbackPosition();
+        const visualStep = Math.max(0, Math.min(stepCount() - 1, Math.floor(position % stepCount())));
+        const visualBar = currentView === 'roll'
+            ? 0
+            : Math.max(0, Math.min(state.barCount - 1, Math.floor(position / stepCount())));
+        updatePlaylistPlayheadMarker(position);
+        if (visualStep !== paintedStep || visualBar !== paintedBar) {
+            clearPaintedPlayhead();
+            root.querySelectorAll('.fdgb-step[data-step="' + visualStep + '"], .fdgb-cell[data-step="' + visualStep + '"], .fdgb-bar-label[data-step="' + visualStep + '"]').forEach(el => el.classList.add('is-playing'));
+            if (currentView !== 'roll') {
+                root.querySelectorAll('.fdgb-playlist-cell[data-bar="' + visualBar + '"], .fdgb-playlist-head[data-bar="' + visualBar + '"]').forEach(el => el.classList.add('is-playing'));
+            }
+            paintedStep = visualStep;
+            paintedBar = currentView === 'roll' ? -1 : visualBar;
         }
-        if (isPlaying) {
+        const now = performance.now();
+        if (isPlaying && now - lastPlayheadStatusAt > 400) {
+            lastPlayheadStatusAt = now;
             updateStatus(currentView === 'roll'
-                ? 'playing selected pattern, step ' + (currentStep + 1)
-                : 'playing bar ' + (currentBar + 1) + ', step ' + (currentStep + 1));
+                ? 'playing selected pattern, step ' + (visualStep + 1)
+                : 'playing bar ' + (visualBar + 1) + ', step ' + (visualStep + 1));
         }
     }
 
@@ -6455,7 +6894,9 @@
                 id: clip.id,
                 pattern: clip.pattern,
                 bar: clip.bar,
-                track: clip.track
+                track: clip.track,
+                length: 1,
+                muted: clip.muted === true
             })),
             playlistAudioClips: state.playlistAudioClips.map(clip => ({
                 id: clip.id,
@@ -6464,7 +6905,8 @@
                 bar: clip.bar,
                 name: clip.name,
                 duration: clip.duration,
-                asset: clip.asset || null
+                asset: clip.asset || null,
+                muted: clip.muted === true
             })),
             selectedId,
             channels: state.channels.map(channel => {
@@ -6923,6 +7365,7 @@
             currentStep = 0;
             if (currentView === 'roll') currentBar = 0;
             nextStepTime = createAudio().context.currentTime + 0.04;
+            setPlayheadAnchor(currentBar, currentStep, nextStepTime);
         }
         els.playlistView.classList.toggle('fdgb-hidden', !isPlaylist);
         els.mixerView.classList.toggle('fdgb-hidden', !isMixer);
@@ -7413,6 +7856,14 @@
     });
     els.pianoRoll.addEventListener('click', handlePianoRollClick);
     els.pianoRoll.addEventListener('pointerdown', handlePianoRollPointerDown);
+    els.playlist.addEventListener('pointerdown', event => {
+        if (event.button !== 2) return;
+        event.preventDefault();
+        event.stopPropagation();
+        playlistRightErasing = true;
+        deletePlaylistClipAtPoint(event.clientX, event.clientY);
+    });
+    els.playlist.addEventListener('contextmenu', event => event.preventDefault());
 
     document.addEventListener('keydown', event => {
         if (!root.isConnected) return;
@@ -7449,8 +7900,16 @@
     });
 
     document.addEventListener('pointermove', event => {
-        if (!resizingNote && !slidingNote && !placingNote && !movingNote) return;
+        if (!resizingNote && !slidingNote && !placingNote && !movingNote && !playlistRightErasing && !pianoRightErasing) return;
         event.preventDefault();
+        if (playlistRightErasing) {
+            deletePlaylistClipAtPoint(event.clientX, event.clientY);
+            return;
+        }
+        if (pianoRightErasing) {
+            deleteNoteAtPoint(event.clientX, event.clientY);
+            return;
+        }
         if (resizingNote) resizeActiveNote(event.clientX, event.clientY);
         if (slidingNote) slideActiveNote(event.clientX, event.clientY);
         if (placingNote && placingNote.pointerId === event.pointerId) movePlacedNote(event.clientX, event.clientY);
@@ -7459,6 +7918,9 @@
 
     document.addEventListener('pointerup', event => {
         stopRollPreviewVoice(event.pointerId);
+        playlistPainting = false;
+        playlistRightErasing = false;
+        pianoRightErasing = false;
         if (placingNote && placingNote.pointerId === event.pointerId) {
             try {
                 if (els.pianoRoll.hasPointerCapture(event.pointerId)) els.pianoRoll.releasePointerCapture(event.pointerId);
@@ -7504,6 +7966,9 @@
             placingNote = null;
         }
         if (movingNote) movingNote = null;
+        playlistPainting = false;
+        playlistRightErasing = false;
+        pianoRightErasing = false;
     });
 
     window.addEventListener('blur', () => {
@@ -7511,6 +7976,9 @@
         stopRollPreviewVoice();
         placingNote = null;
         movingNote = null;
+        playlistPainting = false;
+        playlistRightErasing = false;
+        pianoRightErasing = false;
     });
 
     window.addEventListener('resize', () => {

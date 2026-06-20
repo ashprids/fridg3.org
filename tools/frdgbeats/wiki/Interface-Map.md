@@ -33,8 +33,8 @@ Expanded channel cards show source, instrument controls, volume, pan, and quick 
 
 The editor is the large panel on the right. It changes depending on the selected tab.
 
-- Piano roll: edit notes in the selected channel pattern.
-- Playlist: arrange patterns into rows.
+- Piano roll: edit notes in the selected channel pattern with draw-to-length notes and drag-to-move timing/pitch.
+- Playlist: arrange patterns into rows, select pattern clips, and jump back into the piano roll by double-clicking a clip.
 - Mixer: add and edit channel effects.
 - Automate: draw parameter changes over steps.
 - Waveform: edit sample trim and note zones for sample channels.

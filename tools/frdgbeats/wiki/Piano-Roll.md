@@ -22,17 +22,19 @@ Changing step count resizes patterns. If a project needs more detail, 32 steps g
 
 Click an empty cell to place a note.
 
+Click and drag an empty cell to extend the placed note. Horizontal movement changes length by the current snap value, and vertical movement changes pitch before you let go.
+
 When snap is `1/2` or `1/4`, click inside a cell to place the note on that half-step or quarter-step position.
 
-Right-click an existing note to remove it.
+Right-click an existing note to remove it. Hold right-click and drag across the piano roll to erase every note under the pointer.
 
-Drag after placing to move the note vertically before letting go.
+Drag after placing to resize or reposition the new note before letting go.
 
 ## Moving Notes
 
 Drag a note block sideways to move it to another step.
 
-Drag it vertically to change pitch.
+Drag it vertically to change pitch. A single drag can move both time and pitch, so you can throw notes around the grid the way you would in a desktop DAW piano roll.
 
 If the target pitch and step already has a note, frdgBeats avoids stacking the same note in the same cell.
 
