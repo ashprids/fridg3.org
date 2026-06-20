@@ -56,6 +56,8 @@ frdgBeats includes:
 - Pitch Shift: semitone and cent shifting.
 - Sample Speed: sample playback speed and tempo matching.
 
+Bitcrush, Compressor, and Limiter use low-latency audio processors during live playback. Their processing stays aligned with untreated tracks instead of adding a hidden lookahead or large buffered delay. Delay, Chorus, Flanger, Phaser, and reverb predelay still add their deliberate time-based sound where configured.
+
 ## Rendering Effects
 
 WAV export renders enabled channel effects. MIDI export does not include audio effects because MIDI is note data, not sound.

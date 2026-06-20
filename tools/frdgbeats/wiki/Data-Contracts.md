@@ -19,7 +19,8 @@ The exported top-level object includes:
   "steps": 16,
   "barCount": 4,
   "activePattern": 0,
-  "playlistTrackCount": 8,
+  "playlistTrackCount": 50,
+  "playlistTracks": [],
   "playlistPatternClips": [],
   "clips": {},
   "playlistAudioClips": [],
@@ -40,7 +41,8 @@ The exported top-level object includes:
 - `barCount`: playlist bar count.
 - `activePattern`: selected global pattern index.
 - `loopRange`: playlist loop range or `null`.
-- `playlistTrackCount`: number of FL-style playlist lanes.
+- `playlistTrackCount`: number of FL-style playlist lanes. Current projects use 50.
+- `playlistTracks`: independent playlist lane names and colors.
 - `assets`: embedded or bundled asset references.
 - `playlistPatternClips`: global pattern clips placed on the playlist timeline.
 - `clips`: legacy channel clip map, kept for old project compatibility.
@@ -95,6 +97,19 @@ Each pattern slot is an array of steps. A global pattern is the same pattern ind
 - `0` or higher: pattern index.
 
 The current playlist UI does not edit this map directly.
+
+## Playlist Tracks
+
+`playlistTracks` stores one entry for each playlist lane:
+
+```json
+{
+  "name": "verse drums",
+  "color": "#50c0ba"
+}
+```
+
+Tracks are arrangement labels rather than instrument channels. Clearing a track removes its pattern and audio clips but keeps its name and color.
 
 ## Playlist Pattern Clips
 
