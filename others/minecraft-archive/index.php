@@ -2,8 +2,8 @@
 
 session_start();
 
-$title = 'example title';
-$description = 'example description.';
+$title = 'minecraft world archive';
+$description = 'an archive of some of the notable minecraft worlds i have dedicated time towards.';
 
 
 function find_template_file($filename) {
