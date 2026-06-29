@@ -90,7 +90,7 @@ rclone config file
 The workflow supports:
 
 1. Manual runs via `workflow_dispatch`
-2. Scheduled runs once per day at `03:00 UTC`
+2. Scheduled runs once per day at `00:00 UTC`
 
 ## Manual Run
 

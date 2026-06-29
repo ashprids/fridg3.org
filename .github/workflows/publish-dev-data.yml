@@ -2,9 +2,8 @@ name: publish development /data/ copy
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - main
+  schedule:
+    - cron: '0 0 * * *'
 
 jobs:
   publish-dev-data:
@@ -90,7 +89,7 @@ jobs:
               command -v php >/dev/null 2>&1 || { echo "php is not installed on the server" >&2; exit 1; }
 
               work_dir="$REMOTE_WORK_DIR"
-              archive_name="fridg3-dev-data.zip"
+              archive_name="$(date +"%d-%m-%y_%H-%M-%S").zip"
               archive_path="${work_dir%/}/$archive_name"
               sanitized_data="${work_dir%/}/data"
               sanitizer="${work_dir%/}/sanitize-dev-data.php"
@@ -124,26 +123,35 @@ jobs:
           set -euo pipefail
           scp "$REMOTE:${{ steps.remote-dev-data.outputs.remote_archive_path }}" "${{ steps.remote-dev-data.outputs.archive_name }}"
 
-      - name: replace public development archive on Google Drive
+      - name: upload development archive to Google Drive
         run: |
           set -euo pipefail
-
-          existing_files="$(
-            rclone lsjson "${GDRIVE_REMOTE}:" \
-              --drive-root-folder-id "${GDRIVE_FOLDER_ID}" \
-              --files-only \
-            | jq -r '.[]?.Path'
-          )"
-
-          while IFS= read -r file_path; do
-            [ -n "$file_path" ] || continue
-            rclone deletefile "${GDRIVE_REMOTE}:${file_path}" --drive-root-folder-id "${GDRIVE_FOLDER_ID}"
-          done <<< "$existing_files"
 
           rclone copy \
             "${{ steps.remote-dev-data.outputs.archive_name }}" \
             "${GDRIVE_REMOTE}:" \
             --drive-root-folder-id "${GDRIVE_FOLDER_ID}"
+
+      - name: keep only the 10 newest development archives
+        run: |
+          set -euo pipefail
+
+          old_files="$(
+            rclone lsjson "${GDRIVE_REMOTE}:" \
+              --drive-root-folder-id "${GDRIVE_FOLDER_ID}" \
+              --files-only \
+            | jq -r 'sort_by(.ModTime) | reverse | .[10:][]?.Path'
+          )"
+
+          if [ -z "$old_files" ]; then
+            echo "No old development archives to delete."
+            exit 0
+          fi
+
+          while IFS= read -r file_path; do
+            [ -n "$file_path" ] || continue
+            rclone deletefile "${GDRIVE_REMOTE}:${file_path}" --drive-root-folder-id "${GDRIVE_FOLDER_ID}"
+          done <<< "$old_files"
 
       - name: add download link to workflow summary
         run: |

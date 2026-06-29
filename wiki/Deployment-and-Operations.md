@@ -122,13 +122,13 @@ setup notes live in `/.github/workflows/backup-data-setup.md`.
 
 `/.github/workflows/publish-dev-data.yml`
 
-on each push to `main`, this workflow:
+on the same daily schedule as the private backup workflow, this workflow:
 
 1. copies production `/var/www/fridg3.org/data` into a temporary server workspace
 2. runs `/.github/scripts/sanitize-dev-data.php` against the copy
-3. zips the sanitized directory as `fridg3-dev-data.zip`
+3. zips the sanitized directory as `DD-MM-YY_hh-mm-ss.zip`
 4. uploads it to the public Google Drive developer data folder
-5. removes older files from that folder so only one zip remains
+5. keeps only the 10 newest zip files in that folder
 6. removes temporary server and runner files
 
 the sanitizer currently replaces accounts with a placeholder admin account, clears login/page-view/IP/rate-limit logs, blanks Toast bot and Groq credentials, blanks Toast private lore, clears Toast DM/notification state, clears webhooks, removes upload room tokens, clears encrypted mdpaste records, clears encrypted chat data and local chat keys, replaces the off-topic Discord archive with an empty placeholder, and replaces private journal drafts with a harmless placeholder draft.

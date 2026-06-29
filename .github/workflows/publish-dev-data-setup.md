@@ -2,7 +2,7 @@
 
 This repository includes a GitHub Actions workflow at `.github/workflows/publish-dev-data.yml` that publishes a sanitized developer copy of the production `data` directory.
 
-The workflow runs whenever `main` receives a push, and it can also be run manually from GitHub Actions.
+The workflow runs daily at `00:00 UTC`, matching the private `/data` backup workflow, and it can also be run manually from GitHub Actions.
 
 ## What It Does
 
@@ -11,9 +11,9 @@ Each run:
 1. Connects to `deploy@45.76.134.105` over SSH
 2. Copies `/var/www/fridg3.org/data` into a temporary server workspace
 3. Runs `.github/scripts/sanitize-dev-data.php` against that copy
-4. Compresses the sanitized `data` directory into `fridg3-dev-data.zip`
+4. Compresses the sanitized `data` directory into a zip file named `DD-MM-YY_hh-mm-ss.zip`
 5. Uploads the zip file into the public Google Drive developer data folder
-6. Deletes any older files in that folder so only one developer copy remains
+6. Keeps only the 10 newest developer copies in that folder
 7. Deletes temporary files from the runner and server
 
 ## Required GitHub Secrets
@@ -58,7 +58,7 @@ Create this repository variable in `Settings` -> `Secrets and variables` -> `Act
 
 ### `GDRIVE_DEV_DATA_FOLDER_URL`
 
-Set this to the public Google Drive folder URL. The workflow writes it into the run summary so developers can find the latest zip without digging through repo settings.
+Set this to the public Google Drive folder URL. The workflow writes it into the run summary so developers can find the latest archives without digging through repo settings.
 
 ## Sanitized Paths
 
@@ -94,6 +94,13 @@ To run it manually:
 2. Go to `Actions`
 3. Select `publish development /data/ copy`
 4. Click `Run workflow`
+
+## Workflow Triggers
+
+The workflow supports:
+
+1. Manual runs via `workflow_dispatch`
+2. Scheduled runs once per day at `00:00 UTC`
 
 ## Troubleshooting
 

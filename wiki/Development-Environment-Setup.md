@@ -85,7 +85,7 @@ this matters a lot.
 
 the repo ignores `/data`, but the site expects it to exist. if you want more than static wrapper pages, you need local runtime data.
 
-the easiest path is downloading the sanitized developer copy from the public Google Drive folder linked in the `publish development /data/ copy` workflow summary. unzip `fridg3-dev-data.zip` into the repo root so it creates `data/`.
+the easiest path is downloading one of the sanitized developer copy zips from the public Google Drive folder linked in the `publish development /data/ copy` workflow summary. unzip it into the repo root so it creates `data/`.
 
 if that workflow link is missing, check `.github/workflows/publish-dev-data-setup.md`; the repo variable `GDRIVE_DEV_DATA_FOLDER_URL` is probably not configured yet.
 
