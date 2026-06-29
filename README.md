@@ -1,51 +1,69 @@
-[![deploy to fridg3.org](https://github.com/ashprids/fridg3.org/actions/workflows/deploy.yml/badge.svg?branch=main)](https://github.com/ashprids/fridg3.org/actions/workflows/deploy.yml)
-[![code lint](https://github.com/ashprids/fridg3.org/actions/workflows/code-lint.yml/badge.svg?branch=main)](https://github.com/ashprids/fridg3.org/actions/workflows/code-lint.yml)
-[![backup data directory](https://github.com/ashprids/fridg3.org/actions/workflows/backup-data.yml/badge.svg?branch=main)](https://github.com/ashprids/fridg3.org/actions/workflows/backup-data.yml)
-[![publish development data copy](https://github.com/ashprids/fridg3.org/actions/workflows/publish-dev-data.yml/badge.svg?branch=main)](https://github.com/ashprids/fridg3.org/actions/workflows/publish-dev-data.yml)
+[![deploy](https://github.com/ashprids/fridg3.org/actions/workflows/deploy.yml/badge.svg?branch=main)](https://github.com/ashprids/fridg3.org/actions/workflows/deploy.yml)
+[![lint](https://github.com/ashprids/fridg3.org/actions/workflows/code-lint.yml/badge.svg?branch=main)](https://github.com/ashprids/fridg3.org/actions/workflows/code-lint.yml)
+[![dev data](https://github.com/ashprids/fridg3.org/actions/workflows/publish-dev-data.yml/badge.svg?branch=main)](https://github.com/ashprids/fridg3.org/actions/workflows/publish-dev-data.yml)
 
 # fridg3.org
 
-This repository serves as a method to implement version control for the website, as well as allowing for a more modular workflow when creating future updates.
+source for <https://fridg3.org> and <https://m.fridg3.org>.
 
-This repository should not be treated as a backup for the website. Backups are automatically made on the webserver's online dashboard.
+this is a plain PHP website with file-backed runtime data. there is no database. the repo contains source code, templates, assets, tools, and docs; production content/state lives in `/data`, which is intentionally ignored by git.
 
-## Workflow
+## Fresh Clone Setup
 
-When a change is made to the repository, GitHub Actions will automatically begin making the change on the webserver. Here are the steps it takes to do so:
+requirements:
 
-1. Repo is checked out
-2. Installs rsync + SSH
-3. Sets up SSH key + known hosts
-4. Runs rsync to copy repo → server (at /var/www/fridg3.org)
+- PHP 8.3 or newer
+- Node.js 18 or newer
 
-When making an update yet to be released, you can create a new branch and then pull it to main whenever it's ready.
-
-## Data Storage
-
-All site data (accounts, audio, downloads, posts and images) must be stored in /data. This directory should be backed up to a location outside the web server every so often.
-
-This directory has to be manually modified and then updated, any updates via Git will not be tracked. This is to ensure the security of the directory's data (sensitive information is stored here) and to keep the total size of the repository low.
-
-Sensitive information must be stored in .json files. The web server will block client access to the .json files, so any reference to the .json files need to be within PHP, not JavaScript.
-
-### Permissions
-
-Every file and directory in the website's root must belong to the "deploy" user, otherwise GitHub Actions won't be able to update it.
-
-/data/ and sitemap.xml will not be writeable by the web server unless they're owned by the "http" user.
-
-Here's a single command that handles all permission issues highlighted above:
+clone and serve locally:
 
 ```bash
-sudo chown -R deploy:http /var/www/fridg3.org && find /var/www/fridg3.org -type d -exec chmod 755 {} \; && find /var/www/fridg3.org -type f -exec chmod 644 {} \; && sudo chown -R http:http /var/www/fridg3.org/data && sudo chmod -R 755 /var/www/fridg3.org/data && sudo chown -R http:http /var/www/fridg3.org/sitemap.xml && sudo chmod -R 755 /var/www/fridg3.org/sitemap.xml
+git clone https://github.com/ashprids/fridg3.org.git
+cd fridg3.org
+php -S localhost:8000
 ```
 
-## Development
+then open:
 
-If you wish to develop for or work on fridg3.org, I've made a developer wiki that highlights how the website works and my typical workflow.
+```text
+http://localhost:8000
+```
 
-You can view the Wiki on GitHub or on the website at <https://fridg3.org/wiki>.
+## Runtime Data
 
-The GitHub Wiki is a mirror of the website's Wiki.
+the site expects a local `data/` directory. without it, static-ish pages may load, but anything backed by posts, accounts, music, images, guestbook entries, chat, or Toast state will be missing or weird.
 
-A sanitized developer copy of `/data` is published by GitHub Actions. Setup details live in [`.github/workflows/publish-dev-data-setup.md`](.github/workflows/publish-dev-data-setup.md), and the latest public folder link is shown in the workflow run summary.
+download a sanitized developer copy from the public Google Drive folder linked in the latest [`publish development /data/ copy`](https://github.com/ashprids/fridg3.org/actions/workflows/publish-dev-data.yml) workflow run summary.
+
+unzip one of the archives into the repo root so it creates:
+
+```text
+data/
+```
+
+the developer copy is generated daily from production `/data`, scrubbed for private content, and kept as a rolling set of 10 archives. setup details live in [`.github/workflows/publish-dev-data-setup.md`](.github/workflows/publish-dev-data-setup.md).
+
+## Useful Commands
+
+```bash
+bash scripts/lint-php.sh
+bash scripts/lint-javascript.sh
+bash scripts/lint-css.sh
+```
+
+## Deployment
+
+pushes to `main` deploy to `/var/www/fridg3.org` through GitHub Actions using rsync over SSH. deployment excludes runtime data, so `/data` is managed separately from git.
+
+production `/data` backups and sanitized developer copies are handled by separate scheduled GitHub Actions workflows.
+
+## Docs
+
+developer docs live in [`wiki/`](wiki/). start with:
+
+- [`wiki/Development-Environment-Setup.md`](wiki/Development-Environment-Setup.md)
+- [`wiki/Architecture.md`](wiki/Architecture.md)
+- [`wiki/Data-Contracts.md`](wiki/Data-Contracts.md)
+- [`wiki/Deployment-and-Operations.md`](wiki/Deployment-and-Operations.md)
+
+the website also exposes the wiki at <https://fridg3.org/wiki>.
