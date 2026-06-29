@@ -30,27 +30,23 @@ It must allow SSH access to:
 deploy@45.76.134.105
 ```
 
-### `GDRIVE_DEV_DATA_FOLDER_ID`
-
-This must be the Google Drive folder ID that should hold the public developer data zip.
-
-The folder itself should be shared publicly. Do not reuse the private backup folder, because that would be impressively bad.
-
-Example Google Drive folder URL:
-
-```text
-https://drive.google.com/drive/folders/1AbCdEfGhIjKlMnOpQrStUvWxYz
-```
-
-In that example, the folder ID is:
-
-```text
-1AbCdEfGhIjKlMnOpQrStUvWxYz
-```
-
 ### `RCLONE_CONFIG`
 
 This is the same rclone config used by the private backup workflow. It must contain a remote named `gdrive`.
+
+## Required GitHub Variables
+
+Create these repository variables in `Settings` -> `Secrets and variables` -> `Actions` -> `Variables`.
+
+### `GDRIVE_DEV_DATA_FOLDER_ID`
+
+This must be the Google Drive folder ID that should hold the public developer data zip:
+
+```text
+1dltxdqQjfUfGwEEXVxUrOw5fuv9nk_ex
+```
+
+This must be a variable, not a secret. If it is stored as a secret, GitHub will mask the folder ID in the workflow summary and the download link will show `***`.
 
 ## Public Developer Data Folder
 

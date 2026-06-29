@@ -16,7 +16,7 @@ jobs:
       TARGET: /var/www/fridg3.org
       REMOTE_WORK_DIR: /home/deploy
       GDRIVE_REMOTE: gdrive
-      GDRIVE_FOLDER_ID: ${{ secrets.GDRIVE_DEV_DATA_FOLDER_ID }}
+      GDRIVE_FOLDER_ID: ${{ vars.GDRIVE_DEV_DATA_FOLDER_ID }}
 
     steps:
       - name: check out repository
