@@ -17,7 +17,6 @@ jobs:
       REMOTE_WORK_DIR: /home/deploy
       GDRIVE_REMOTE: gdrive
       GDRIVE_FOLDER_ID: ${{ secrets.GDRIVE_DEV_DATA_FOLDER_ID }}
-      GDRIVE_FOLDER_URL: ${{ vars.GDRIVE_DEV_DATA_FOLDER_URL }}
 
     steps:
       - name: check out repository
@@ -43,7 +42,6 @@ jobs:
           set -euo pipefail
 
           [ -n "$GDRIVE_FOLDER_ID" ] || { echo "GDRIVE_DEV_DATA_FOLDER_ID is not configured" >&2; exit 1; }
-          [ -n "$GDRIVE_FOLDER_URL" ] || { echo "GDRIVE_DEV_DATA_FOLDER_URL is not configured" >&2; exit 1; }
 
       - name: create remote development workspace
         id: remote-workspace
@@ -155,7 +153,9 @@ jobs:
 
       - name: add download link to workflow summary
         run: |
-          printf 'Development copy available for download at: https://drive.google.com/drive/folders/1dltxdqQjfUfGwEEXVxUrOw5fuv9nk_ex"
+          cat >> "$GITHUB_STEP_SUMMARY" <<'EOF'
+          Development /data/ copy available for download at: [https://drive.google.com/drive/folders/1dltxdqQjfUfGwEEXVxUrOw5fuv9nk_ex](https://drive.google.com/drive/folders/1dltxdqQjfUfGwEEXVxUrOw5fuv9nk_ex)
+          EOF
 
       - name: remove temporary files
         if: always()

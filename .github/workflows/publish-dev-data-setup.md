@@ -52,13 +52,15 @@ In that example, the folder ID is:
 
 This is the same rclone config used by the private backup workflow. It must contain a remote named `gdrive`.
 
-## Required GitHub Variable
+## Public Developer Data Folder
 
-Create this repository variable in `Settings` -> `Secrets and variables` -> `Actions` -> `Variables`.
+The public developer data folder is:
 
-### `GDRIVE_DEV_DATA_FOLDER_URL`
+```text
+https://drive.google.com/drive/folders/1dltxdqQjfUfGwEEXVxUrOw5fuv9nk_ex
+```
 
-Set this to the public Google Drive folder URL. The workflow writes it into the run summary so developers can find the latest archives without digging through repo settings.
+The workflow writes this into the run summary so developers can find the latest archives without digging through repo settings.
 
 ## Sanitized Paths
 

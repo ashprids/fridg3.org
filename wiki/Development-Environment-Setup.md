@@ -85,9 +85,9 @@ this matters a lot.
 
 the repo ignores `/data`, but the site expects it to exist. if you want more than static wrapper pages, you need local runtime data.
 
-the easiest path is downloading one of the sanitized developer copy zips from the public Google Drive folder linked in the `publish development /data/ copy` workflow summary. unzip it into the repo root so it creates `data/`.
+the easiest path is downloading one of the sanitized developer copy zips from the public Google Drive folder: <https://drive.google.com/drive/folders/1dltxdqQjfUfGwEEXVxUrOw5fuv9nk_ex>. unzip it into the repo root so it creates `data/`.
 
-if that workflow link is missing, check `.github/workflows/publish-dev-data-setup.md`; the repo variable `GDRIVE_DEV_DATA_FOLDER_URL` is probably not configured yet.
+setup details for the sanitized copy live in `.github/workflows/publish-dev-data-setup.md`.
 
 minimum useful structure:
 

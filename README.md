@@ -33,7 +33,7 @@ http://localhost:8000
 
 the site expects a local `data/` directory. without it, static-ish pages may load, but anything backed by posts, accounts, music, images, guestbook entries, chat, or Toast state will be missing or weird.
 
-download a sanitized developer copy from the public Google Drive folder linked in the latest [`publish development /data/ copy`](https://github.com/ashprids/fridg3.org/actions/workflows/publish-dev-data.yml) workflow run summary.
+download a sanitized developer copy from the public Google Drive folder: <https://drive.google.com/drive/folders/1dltxdqQjfUfGwEEXVxUrOw5fuv9nk_ex>.
 
 unzip one of the archives into the repo root so it creates:
 
