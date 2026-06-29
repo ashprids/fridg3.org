@@ -126,6 +126,83 @@ if (!function_exists('fridg3_feed_filter_tooltip_text')) {
     }
 }
 
+if (!function_exists('fridg3_feed_non_whitespace_count')) {
+    function fridg3_feed_non_whitespace_count(string $value): int
+    {
+        if (preg_match_all('/\S/u', $value, $matches) !== false) {
+            return count($matches[0]);
+        }
+        return strlen(preg_replace('/\s+/', '', $value) ?? '');
+    }
+}
+
+if (!function_exists('fridg3_feed_filter_visible_text')) {
+    function fridg3_feed_filter_visible_text(string $text): string
+    {
+        $withoutTags = preg_replace('/\[[^\]]+\]/', ' ', $text);
+        return is_string($withoutTags) ? $withoutTags : $text;
+    }
+}
+
+if (!function_exists('fridg3_feed_filter_stats')) {
+    function fridg3_feed_filter_stats(string $text): array
+    {
+        $terms = fridg3_feed_filter_terms();
+        $scanText = fridg3_feed_filter_visible_text($text);
+        $stats = [
+            'totalChars' => fridg3_feed_non_whitespace_count($scanText),
+            'matchedChars' => 0,
+            'matchedTerms' => 0,
+        ];
+
+        if ($scanText === '' || empty($terms)) {
+            return $stats;
+        }
+
+        foreach ($terms as $term) {
+            $next = preg_replace_callback(fridg3_feed_filter_term_pattern($term), static function (array $match) use (&$stats): string {
+                $prefix = (string)($match[1] ?? '');
+                $matchedTerm = (string)($match[2] ?? '');
+                $stats['matchedChars'] += fridg3_feed_non_whitespace_count($matchedTerm);
+                $stats['matchedTerms']++;
+                return $prefix . str_repeat('★', fridg3_feed_star_count($matchedTerm));
+            }, $scanText);
+            if (is_string($next)) {
+                $scanText = $next;
+            }
+        }
+
+        return $stats;
+    }
+}
+
+if (!function_exists('fridg3_feed_guest_filter_is_mostly_filtered')) {
+    function fridg3_feed_guest_filter_is_mostly_filtered(string $text): bool
+    {
+        $stats = fridg3_feed_filter_stats($text);
+        if ($stats['totalChars'] <= 0 || $stats['matchedTerms'] <= 0) {
+            return false;
+        }
+
+        return ($stats['matchedChars'] / $stats['totalChars']) >= 0.5;
+    }
+}
+
+if (!function_exists('fridg3_feed_guest_reply_has_filtered_text')) {
+    function fridg3_feed_guest_reply_has_filtered_text(array $reply): bool
+    {
+        $body = (string)($reply['body'] ?? '');
+        if ($body === '') {
+            return false;
+        }
+        if (strpos($body, fridg3_feed_filter_tooltip_text()) !== false) {
+            return true;
+        }
+
+        return fridg3_feed_apply_guest_filter($body, true) !== $body;
+    }
+}
+
 if (!function_exists('fridg3_feed_apply_guest_filter')) {
     function fridg3_feed_apply_guest_filter(string $text, bool $withTooltip = false): string
     {

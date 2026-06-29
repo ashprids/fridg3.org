@@ -33,6 +33,7 @@ Related:
 - single-post thread view for a feed item
 - logged-in users can reply with BBCode, image uploads, and recorded voice notes using the same inline speed-toggle playback controls
 - guests can reply without creating feed posts; they are identified by plaintext IP, may enter an optional display name that falls back to italic `Anonymous`, cannot use a registered account username as that display name, can link images but cannot upload files or voice notes, and do not get heading or tooltip BBCode controls; guest display names and reply bodies are filtered through `/feed/filters/*.txt`, matching body text is replaced with `★` plus the tooltip `this phrase was automatically filtered.`, and the BBCode preview shows the same filtering
+- guest replies that are mostly filter-list terms are rejected, and guest replies containing filtered text cannot be edited by guests after posting
 - reply edit/delete is allowed for the reply author, same-IP guest replies, admins, the original post owner, or accounts with `allowedPages` containing `comments`
 - replies persist under `data/feed/replies/{postId}.json`
 - deleting a reply removes voice note files referenced by that reply

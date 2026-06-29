@@ -149,6 +149,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $replyError = 'Your IP address has been blacklisted from posting replies to the feed. To appeal this, <a href="/contact">send a message here</a> or log into your account.';
     } elseif (!$isLoggedIn && $replyAction === 'create' && $guestDisplayName !== '' && fridg3_feed_registered_username_exists($guestDisplayName)) {
         $replyError = 'that username belongs to a registered account. please choose another name or log in.';
+    } elseif (!$isLoggedIn && $replyAction === 'create' && fridg3_feed_guest_filter_is_mostly_filtered($replyBody)) {
+        $replyError = 'that reply is mostly filtered words. please rewrite it.';
     } elseif (!$isLoggedIn && preg_match('/\[(?:img|voice):\d+\]/i', $replyBody) === 1) {
         $replyError = 'Guest replies can link images, but cannot upload files.';
     } elseif ($replyError !== '' && $replyAction === 'create') {
@@ -191,6 +193,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif ($replyAction === 'update') {
         if (!$canManageTargetReply) {
             $replyEditError = 'you do not have permission to edit replies.';
+        } elseif (!$isLoggedIn && $targetReply !== null && ($targetReply['isGuest'] ?? false) === true && fridg3_feed_guest_reply_has_filtered_text($targetReply)) {
+            $replyEditError = 'guest replies with filtered words cannot be edited.';
         } elseif ($replyBody === '') {
             $replyEditError = 'reply cannot be empty.';
         } elseif (strlen($replyBody) > 4000) {
@@ -467,11 +471,13 @@ foreach ($replies as $reply) {
         continue;
     }
     $canManageThisReply = fridg3_feed_current_visitor_can_manage_reply($username, $reply, $clientIp);
-    $isEditingReply = $canManageThisReply && $replyEditTargetId !== '' && $replyId === $replyEditTargetId;
+    $guestFilteredEditLocked = !$isLoggedIn && $isGuestReply && fridg3_feed_guest_reply_has_filtered_text($reply);
+    $canEditThisReply = $canManageThisReply && !$guestFilteredEditLocked;
+    $isEditingReply = $canEditThisReply && $replyEditTargetId !== '' && $replyId === $replyEditTargetId;
     $replyActionsHtml = '';
     if ($replyId !== '' && ($canManageThisReply || (!empty($_SESSION['user']['isAdmin']) && $isGuestReply && $replyIp !== ''))) {
         $replyActionsHtml = '<span class="feed-reply-actions">';
-        if ($canManageThisReply) {
+        if ($canEditThisReply) {
             $replyActionsHtml .= '<a class="feed-reply-action-link" href="/feed/posts/' . rawurlencode((string)$postIdNoExt) . '?edit_reply=' . rawurlencode($replyId) . '" data-tooltip="edit reply"><i class="fa-solid fa-pencil"></i></a>';
         }
         if (!empty($_SESSION['user']['isAdmin']) && $isGuestReply && $replyIp !== '') {
