@@ -155,7 +155,7 @@ jobs:
 
       - name: add download link to workflow summary
         run: |
-          printf 'development data copy: %s\n' "$GDRIVE_FOLDER_URL" >> "$GITHUB_STEP_SUMMARY"
+          printf 'Development copy available for download at: https://drive.google.com/drive/folders/1dltxdqQjfUfGwEEXVxUrOw5fuv9nk_ex"
 
       - name: remove temporary files
         if: always()
