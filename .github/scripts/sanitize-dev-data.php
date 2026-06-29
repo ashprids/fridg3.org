@@ -122,7 +122,7 @@ writeJson($root, 'accounts/accounts.json', [
     'accounts' => [
         [
             'username' => 'admin',
-            'name' => 'Development Admin',
+            'name' => 'Administrator',
             'password' => '',
             'isAdmin' => true,
             'mustResetPassword' => false,
@@ -130,9 +130,9 @@ writeJson($root, 'accounts/accounts.json', [
             'allowedPages' => ['feed', 'journal', 'comments', 'chat'],
             'bookmarks' => [],
             'theme' => 'default',
-            'glowIntensity' => 'medium',
+            'glowIntensity' => 'none',
             'mobileFriendlyView' => false,
-            'onekoEnabled' => true,
+            'onekoEnabled' => false,
             'reduceMotion' => false,
             'colors' => [
                 'bg' => '#000000',

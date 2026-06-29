@@ -94,23 +94,23 @@ if (!isset($_SESSION['csrf_token'])) {
     $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 }
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (!isset($_SESSION['user']) || !isset($_SESSION['user']['username'])) {
-        header('Location: /account/login');
-        exit;
-    }
+$clientIp = fridg3_feed_client_ip();
+$isLoggedIn = isset($_SESSION['user']) && isset($_SESSION['user']['username']);
+$isClientIpBanned = fridg3_feed_is_ip_banned($clientIp);
 
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $submittedToken = (string)($_POST['csrf_token'] ?? '');
     $replyBody = trim((string)($_POST['reply_content'] ?? ''));
     $replyAction = (string)($_POST['reply_action'] ?? 'create');
     $replyId = trim((string)($_POST['reply_id'] ?? ''));
+    $guestDisplayName = trim((string)($_POST['guest_username'] ?? ''));
     $imageMap = [];
     $voiceMap = [];
-    if (isset($_FILES['images']) && is_array($_FILES['images'])) {
+    if ($isLoggedIn && isset($_FILES['images']) && is_array($_FILES['images'])) {
         $imageMap = fridg3_feed_process_uploaded_images($_FILES['images']);
         $replyBody = fridg3_feed_replace_image_placeholders($replyBody, $imageMap);
     }
-    if ($replyAction === 'create' && isset($_FILES['voice_notes']) && is_array($_FILES['voice_notes'])) {
+    if ($isLoggedIn && $replyAction === 'create' && isset($_FILES['voice_notes']) && is_array($_FILES['voice_notes'])) {
         $voiceMap = fridg3_feed_process_uploaded_voice_notes($_FILES['voice_notes']);
         $replyBody = fridg3_feed_replace_voice_placeholders($replyBody, $voiceMap);
         if (preg_match('/\[voice:\d+\]/i', $replyBody) === 1) {
@@ -130,15 +130,46 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
     $canManageTargetReply = $targetReply !== null
-        && fridg3_feed_current_user_can_manage_reply($username, (string)($targetReply['username'] ?? ''));
+        && fridg3_feed_current_visitor_can_manage_reply($username, $targetReply, $clientIp);
 
     if (!hash_equals((string)$_SESSION['csrf_token'], $submittedToken)) {
         foreach ($voiceMap as $voice) {
             fridg3_feed_delete_voice_files_from_content('[audio=' . ($voice['url'] ?? '') . ']');
         }
         $replyError = 'invalid request. try again.';
+    } elseif (!$isLoggedIn && $replyAction !== 'create' && !$canManageTargetReply) {
+        $replyEditError = 'You do not have permission to manage replies.';
+    } elseif (!$isLoggedIn && $isClientIpBanned) {
+        $replyError = 'Your IP address has been blacklisted from posting replies to the feed. To appeal this, <a href="/contact">send a message here</a> or log into your account.';
+    } elseif (!$isLoggedIn && preg_match('/\[(?:img|voice):\d+\]/i', $replyBody) === 1) {
+        $replyError = 'Guest replies can link images, but cannot upload files.';
     } elseif ($replyError !== '' && $replyAction === 'create') {
         // Keep the validation error set above.
+    } elseif ($replyAction === 'ban_ip') {
+        if (empty($_SESSION['user']['isAdmin'])) {
+            $replyEditError = 'you do not have permission to ban IP addresses.';
+        } elseif ($targetReply === null || ($targetReply['isGuest'] ?? false) !== true || !filter_var((string)($targetReply['ip'] ?? ''), FILTER_VALIDATE_IP)) {
+            $replyEditError = 'could not find a guest IP to ban.';
+        } elseif (!fridg3_feed_ban_guest_ip((string)$targetReply['ip'], (string)$_SESSION['user']['username'], (string)($targetReply['username'] ?? 'Anonymous'))) {
+            $replyEditError = 'failed to ban IP.';
+        } else {
+            $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+            header('Location: /feed/posts/' . rawurlencode((string)$postIdNoExt) . '?ip_banned=1');
+            exit;
+        }
+    } elseif ($replyAction === 'purge_ip_replies') {
+        if (empty($_SESSION['user']['isAdmin'])) {
+            $replyEditError = 'you do not have permission to purge IP replies.';
+        } elseif (!fridg3_feed_verify_current_admin_password((string)($_POST['admin_password'] ?? ''))) {
+            $replyEditError = 'admin password did not match. purge cancelled.';
+        } elseif ($targetReply === null || ($targetReply['isGuest'] ?? false) !== true || !filter_var((string)($targetReply['ip'] ?? ''), FILTER_VALIDATE_IP)) {
+            $replyEditError = 'could not find a guest IP to purge.';
+        } else {
+            $purgeResult = fridg3_feed_purge_guest_replies_by_ip((string)$targetReply['ip']);
+            $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+            header('Location: /feed/posts/' . rawurlencode((string)$postIdNoExt) . '?ip_purged=' . rawurlencode((string)$purgeResult['deleted']) . '&ip_purge_failed=' . rawurlencode((string)$purgeResult['failed']));
+            exit;
+        }
     } elseif ($replyAction === 'delete') {
         if (!$canManageTargetReply) {
             $replyEditError = 'you do not have permission to delete replies.';
@@ -167,19 +198,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $replyError = 'reply cannot be empty.';
     } elseif (strlen($replyBody) > 4000) {
         $replyError = 'reply is too long.';
-    } elseif (!fridg3_feed_save_reply($postIdNoExt ?? '', (string)$_SESSION['user']['username'], $replyBody)) {
+    } elseif ($isLoggedIn && !fridg3_feed_save_reply($postIdNoExt ?? '', (string)$_SESSION['user']['username'], $replyBody)) {
+        $replyError = 'failed to save reply.';
+    } elseif (!$isLoggedIn && !fridg3_feed_save_guest_reply($postIdNoExt ?? '', $guestDisplayName, $clientIp, $replyBody)) {
         $replyError = 'failed to save reply.';
     } else {
         $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
         header('Location: /feed/posts/' . rawurlencode((string)$postIdNoExt) . '?reply_posted=1');
-        $shouldQueueToastAutoReply = strcasecmp((string)$_SESSION['user']['username'], 'toast') !== 0
+        $triggerUsername = $isLoggedIn ? (string)$_SESSION['user']['username'] : ($guestDisplayName !== '' ? $guestDisplayName : 'Anonymous');
+        $shouldQueueToastAutoReply = strcasecmp($triggerUsername, 'toast') !== 0
             && (strcasecmp(ltrim($username, '@'), 'toast') === 0 || fridg3_toast_feed_mentions_toast($replyBody));
         if ($shouldQueueToastAutoReply) {
             $toastReplyPostId = (string)($postIdNoExt ?? '');
             $toastReplyPostUsername = $username;
             $toastReplyPostDate = $dateLine;
             $toastReplyPostBody = $body;
-            $toastReplyTriggerUsername = (string)$_SESSION['user']['username'];
+            $toastReplyTriggerUsername = $triggerUsername;
             $toastReplyTriggerBody = $replyBody;
             fridg3_toast_run_auto_reply_after_response(static function () use (
                 $toastReplyPostId,
@@ -212,7 +246,11 @@ $safeBody = htmlspecialchars($body, ENT_QUOTES, 'UTF-8');
 $replySuccess = isset($_GET['reply_posted']) && $_GET['reply_posted'] === '1';
 $replyUpdated = isset($_GET['reply_updated']) && $_GET['reply_updated'] === '1';
 $replyDeleted = isset($_GET['reply_deleted']) && $_GET['reply_deleted'] === '1';
+$ipBanned = isset($_GET['ip_banned']) && $_GET['ip_banned'] === '1';
+$ipPurged = isset($_GET['ip_purged']) ? max(0, (int)$_GET['ip_purged']) : null;
+$ipPurgeFailed = isset($_GET['ip_purge_failed']) ? max(0, (int)$_GET['ip_purge_failed']) : 0;
 $replyFormValue = isset($_POST['reply_content']) ? htmlspecialchars((string)$_POST['reply_content'], ENT_QUOTES, 'UTF-8') : '';
+$guestUsernameValue = isset($_POST['guest_username']) ? htmlspecialchars((string)$_POST['guest_username'], ENT_QUOTES, 'UTF-8') : '';
 $replies = fridg3_feed_load_replies((string)$postIdNoExt);
 $canModerateReplies = fridg3_feed_current_user_can_moderate_replies($username);
 $editReplyBodyValue = '';
@@ -334,6 +372,16 @@ if ($replySuccess) {
     $replyNotice = '<div class="feed-reply-notice success">reply updated.</div>';
 } elseif ($replyDeleted) {
     $replyNotice = '<div class="feed-reply-notice success">reply deleted.</div>';
+} elseif ($ipBanned) {
+    $replyNotice = '<div class="feed-reply-notice success">IP banned.</div>';
+} elseif ($ipPurged !== null) {
+    if ($ipPurgeFailed > 0) {
+        $replyNotice = '<div class="feed-reply-notice error">purged ' . $ipPurged . ' guest repl' . ($ipPurged === 1 ? 'y' : 'ies') . ', but ' . $ipPurgeFailed . ' file' . ($ipPurgeFailed === 1 ? '' : 's') . ' failed.</div>';
+    } elseif ($ipPurged === 0) {
+        $replyNotice = '<div class="feed-reply-notice success">no guest feed replies found for this IP.</div>';
+    } else {
+        $replyNotice = '<div class="feed-reply-notice success">purged ' . $ipPurged . ' guest repl' . ($ipPurged === 1 ? 'y' : 'ies') . '.</div>';
+    }
 } elseif ($replyError !== '') {
     $replyNotice = '<div class="feed-reply-notice error">' . htmlspecialchars($replyError, ENT_QUOTES, 'UTF-8') . '</div>';
 }
@@ -344,42 +392,53 @@ if ($replyEditError !== '') {
 }
 
 $replyFormHtml = '';
-if (isset($_SESSION['user']) && isset($_SESSION['user']['username'])) {
+$replyToolbarHtml = '<div class="bbcode-toolbar">'
+    . '<button type="button" class="bbcode-btn" data-tag="b" data-tooltip="bold"><i class="fa-solid fa-bold"></i></button>'
+    . '<button type="button" class="bbcode-btn" data-tag="i" data-tooltip="italic"><i class="fa-solid fa-italic"></i></button>'
+    . '<button type="button" class="bbcode-btn" data-tag="u" data-tooltip="underline"><i class="fa-solid fa-underline"></i></button>'
+    . '<button type="button" class="bbcode-btn" data-tag="s" data-tooltip="strikethrough"><i class="fa-solid fa-strikethrough"></i></button>'
+    . '<button type="button" id="bbcode-spoiler-btn" class="bbcode-btn" data-tooltip="spoiler"><i class="fa-solid fa-eye-slash"></i></button>'
+    . '<button type="button" id="bbcode-color-btn" class="bbcode-btn" data-tooltip="color"><i class="fa-solid fa-palette"></i></button>'
+    . '<input id="bbcode-color-input" type="color" style="display: none;">'
+    . '<label for="bbcode-image-input">'
+    . '<button type="button" id="bbcode-image-btn" class="bbcode-btn" data-tooltip="attach image"><i class="fa-solid fa-image"></i></button>'
+    . '</label>'
+    . ($isLoggedIn
+        ? '<input id="bbcode-image-input" name="images[]" type="file" accept="image/*" multiple style="display: none;">'
+        : '<input id="bbcode-image-input" type="file" accept="image/*" multiple disabled style="display: none;">')
+    . ($isLoggedIn
+        ? '<button type="button" id="bbcode-voice-btn" class="bbcode-btn bbcode-voice-btn" data-tooltip="record voice note"><i class="fa-solid fa-microphone"></i></button>'
+            . '<input id="bbcode-voice-input" name="voice_notes[]" type="file" accept="audio/*" multiple style="display: none;">'
+        : '')
+    . '<button type="button" class="bbcode-btn" data-tag="code=python" data-tooltip="code block"><i class="fa-solid fa-code"></i></button>'
+    . '<button type="button" id="bbcode-list-btn" class="bbcode-btn" data-tag="list" data-tooltip="list"><i class="fa-solid fa-list-ul"></i></button>'
+    . ($isLoggedIn ? '<button type="button" id="bbcode-tooltip-btn" class="bbcode-btn" data-tooltip="tooltip"><i class="fa-solid fa-comment-dots"></i></button>' : '')
+    . '<button type="button" id="bbcode-link-btn" class="bbcode-btn" data-tooltip="link"><i class="fa-solid fa-link"></i></button>'
+    . ($isLoggedIn
+        ? '<select id="bbcode-header-dropdown" class="bbcode-dropdown" data-tooltip="heading">'
+            . '<option value="">headings</option>'
+            . '<option value="h3">heading</option>'
+            . '<option value="h4">sub-heading</option>'
+            . '<option value="h5">caption</option>'
+            . '</select>'
+        : '')
+    . '<button type="button" id="bbcode-preview-toggle" class="bbcode-btn" data-tooltip="toggle preview"><i class="fa-solid fa-eye"></i></button>'
+    . '</div>';
+if (!$isClientIpBanned || $isLoggedIn) {
     $replyFormHtml = '<form id="feed-reply-form" method="POST" enctype="multipart/form-data" action="/feed/posts/' . rawurlencode((string)$postIdNoExt) . '">'
         . '<input type="hidden" name="csrf_token" value="' . htmlspecialchars((string)$_SESSION['csrf_token'], ENT_QUOTES, 'UTF-8') . '">'
+        . (!$isLoggedIn ? '<input id="textbox" class="feed-guest-username" name="guest_username" type="text" maxlength="50" placeholder="name (optional)" value="' . $guestUsernameValue . '">' : '')
+        . (!$isLoggedIn ? '<br><br>' : '')
         . '<div class="bbcode-editor">'
-        . '<div class="bbcode-toolbar">'
-        . '<button type="button" class="bbcode-btn" data-tag="b" data-tooltip="bold"><i class="fa-solid fa-bold"></i></button>'
-        . '<button type="button" class="bbcode-btn" data-tag="i" data-tooltip="italic"><i class="fa-solid fa-italic"></i></button>'
-        . '<button type="button" class="bbcode-btn" data-tag="u" data-tooltip="underline"><i class="fa-solid fa-underline"></i></button>'
-        . '<button type="button" class="bbcode-btn" data-tag="s" data-tooltip="strikethrough"><i class="fa-solid fa-strikethrough"></i></button>'
-        . '<button type="button" id="bbcode-spoiler-btn" class="bbcode-btn" data-tooltip="spoiler"><i class="fa-solid fa-eye-slash"></i></button>'
-        . '<button type="button" id="bbcode-color-btn" class="bbcode-btn" data-tooltip="color"><i class="fa-solid fa-palette"></i></button>'
-        . '<input id="bbcode-color-input" type="color" style="display: none;">'
-        . '<label for="bbcode-image-input">'
-        . '<button type="button" id="bbcode-image-btn" class="bbcode-btn" data-tooltip="attach image"><i class="fa-solid fa-image"></i></button>'
-        . '</label>'
-        . '<input id="bbcode-image-input" name="images[]" type="file" accept="image/*" multiple style="display: none;">'
-        . '<button type="button" id="bbcode-voice-btn" class="bbcode-btn bbcode-voice-btn" data-tooltip="record voice note"><i class="fa-solid fa-microphone"></i></button>'
-        . '<input id="bbcode-voice-input" name="voice_notes[]" type="file" accept="audio/*" multiple style="display: none;">'
-        . '<button type="button" class="bbcode-btn" data-tag="code=python" data-tooltip="code block"><i class="fa-solid fa-code"></i></button>'
-        . '<button type="button" id="bbcode-list-btn" class="bbcode-btn" data-tag="list" data-tooltip="list"><i class="fa-solid fa-list-ul"></i></button>'
-        . '<button type="button" id="bbcode-tooltip-btn" class="bbcode-btn" data-tooltip="tooltip"><i class="fa-solid fa-comment-dots"></i></button>'
-        . '<button type="button" id="bbcode-link-btn" class="bbcode-btn" data-tooltip="link"><i class="fa-solid fa-link"></i></button>'
-        . '<select id="bbcode-header-dropdown" class="bbcode-dropdown" data-tooltip="heading">'
-        . '<option value="">headings</option>'
-        . '<option value="h3">heading</option>'
-        . '<option value="h4">sub-heading</option>'
-        . '<option value="h5">caption</option>'
-        . '</select>'
-        . '<button type="button" id="bbcode-preview-toggle" class="bbcode-btn" data-tooltip="toggle preview"><i class="fa-solid fa-eye"></i></button>'
-        . '</div>'
-        . '<div class="bbcode-voice-recorder" hidden></div>'
+        . $replyToolbarHtml
+        . ($isLoggedIn ? '<div class="bbcode-voice-recorder" hidden></div>' : '')
         . '<textarea id="bbcode-textbox" class="feed-reply-textbox" name="reply_content" placeholder="write a reply..." maxlength="4000">{reply_form_value}</textarea>'
         . '<div id="bbcode-preview" style="display: none;"></div>'
         . '</div>'
         . '<button id="form-button" type="submit">reply</button>'
         . '</form>';
+} elseif (!$isLoggedIn && $isClientIpBanned) {
+    $replyNotice = '<div class="feed-reply-notice error">guest replies from your IP address are banned.</div>';
 }
 
 $repliesHtml = '';
@@ -388,19 +447,43 @@ foreach ($replies as $reply) {
     $replyDate = htmlspecialchars(fridg3_feed_humanize_datetime((string)$reply['date']), ENT_QUOTES, 'UTF-8');
     $replyBody = htmlspecialchars((string)$reply['body'], ENT_QUOTES, 'UTF-8');
     $replyId = (string)($reply['id'] ?? '');
-    $canManageThisReply = fridg3_feed_current_user_can_manage_reply($username, (string)$reply['username']);
+    $isGuestReply = ($reply['isGuest'] ?? false) === true;
+    $replyIp = (string)($reply['ip'] ?? '');
+    $replyIpBanned = $isGuestReply && $replyIp !== '' && fridg3_feed_is_ip_banned($replyIp);
+    if (!$canModerateReplies && $replyIpBanned) {
+        continue;
+    }
+    $canManageThisReply = fridg3_feed_current_visitor_can_manage_reply($username, $reply, $clientIp);
     $isEditingReply = $canManageThisReply && $replyEditTargetId !== '' && $replyId === $replyEditTargetId;
     $replyActionsHtml = '';
-    if ($canManageThisReply && $replyId !== '') {
-        $replyActionsHtml = '<span class="feed-reply-actions">'
-            . '<a class="feed-reply-action-link" href="/feed/posts/' . rawurlencode((string)$postIdNoExt) . '?edit_reply=' . rawurlencode($replyId) . '"><i class="fa-solid fa-pencil"></i></a>'
-            . '<form class="feed-reply-delete-form" method="post" action="/feed/posts/' . rawurlencode((string)$postIdNoExt) . '" data-site-confirm="1" data-confirm-title="delete reply?" data-confirm-detail="this removes the reply from this feed post." data-confirm-text="delete" data-cancel-text="cancel">'
+    if ($replyId !== '' && ($canManageThisReply || (!empty($_SESSION['user']['isAdmin']) && $isGuestReply && $replyIp !== ''))) {
+        $replyActionsHtml = '<span class="feed-reply-actions">';
+        if ($canManageThisReply) {
+            $replyActionsHtml .= '<a class="feed-reply-action-link" href="/feed/posts/' . rawurlencode((string)$postIdNoExt) . '?edit_reply=' . rawurlencode($replyId) . '" data-tooltip="edit reply"><i class="fa-solid fa-pencil"></i></a>';
+        }
+        if (!empty($_SESSION['user']['isAdmin']) && $isGuestReply && $replyIp !== '') {
+            $replyActionsHtml .= '<form class="feed-reply-delete-form" method="post" action="/feed/posts/' . rawurlencode((string)$postIdNoExt) . '" data-site-confirm="1" data-confirm-title="ban IP?" data-confirm-detail="this blocks new guest replies from this IP." data-confirm-text="ban IP" data-cancel-text="cancel">'
+                . '<input type="hidden" name="csrf_token" value="' . htmlspecialchars((string)$_SESSION['csrf_token'], ENT_QUOTES, 'UTF-8') . '">'
+                . '<input type="hidden" name="reply_action" value="ban_ip">'
+                . '<input type="hidden" name="reply_id" value="' . htmlspecialchars($replyId, ENT_QUOTES, 'UTF-8') . '">'
+                . '<button type="submit" class="feed-reply-action-button" data-tooltip="ban IP"><i class="fa-solid fa-ban"></i></button>'
+                . '</form>'
+                . '<form class="feed-reply-delete-form" method="post" action="/feed/posts/' . rawurlencode((string)$postIdNoExt) . '" data-site-confirm="1" data-admin-password-confirm="1" data-confirm-title="purge replies from this IP?" data-confirm-detail="this deletes guest feed replies from this IP. it does not ban or unban the IP." data-confirm-text="purge replies" data-cancel-text="cancel" data-password-title="confirm reply purge" data-password-detail="enter your admin password to purge guest feed replies from this IP.">'
+                . '<input type="hidden" name="csrf_token" value="' . htmlspecialchars((string)$_SESSION['csrf_token'], ENT_QUOTES, 'UTF-8') . '">'
+                . '<input type="hidden" name="reply_action" value="purge_ip_replies">'
+                . '<input type="hidden" name="reply_id" value="' . htmlspecialchars($replyId, ENT_QUOTES, 'UTF-8') . '">'
+                . '<button type="submit" class="feed-reply-action-button" data-tooltip="purge IP replies"><i class="fa-solid fa-broom"></i></button>'
+                . '</form>';
+        }
+        if ($canManageThisReply) {
+            $replyActionsHtml .= '<form class="feed-reply-delete-form" method="post" action="/feed/posts/' . rawurlencode((string)$postIdNoExt) . '" data-site-confirm="1" data-confirm-title="delete reply?" data-confirm-detail="this removes the reply from this feed post." data-confirm-text="delete" data-cancel-text="cancel">'
             . '<input type="hidden" name="csrf_token" value="' . htmlspecialchars((string)$_SESSION['csrf_token'], ENT_QUOTES, 'UTF-8') . '">'
             . '<input type="hidden" name="reply_action" value="delete">'
             . '<input type="hidden" name="reply_id" value="' . htmlspecialchars($replyId, ENT_QUOTES, 'UTF-8') . '">'
             . '<button type="submit" class="feed-reply-action-button" data-tooltip="delete reply"><i class="fa-solid fa-trash"></i></button>'
-            . '</form>'
-            . '</span>';
+            . '</form>';
+        }
+        $replyActionsHtml .= '</span>';
     }
 
     $replyEditFormHtml = '';
@@ -426,17 +509,21 @@ foreach ($replies as $reply) {
             . '<label for="bbcode-image-input">'
             . '<button type="button" id="bbcode-image-btn" class="bbcode-btn" data-tooltip="attach image"><i class="fa-solid fa-image"></i></button>'
             . '</label>'
-            . '<input id="bbcode-image-input" name="images[]" type="file" accept="image/*" multiple style="display: none;">'
+            . ($isLoggedIn
+                ? '<input id="bbcode-image-input" name="images[]" type="file" accept="image/*" multiple style="display: none;">'
+                : '<input id="bbcode-image-input" type="file" accept="image/*" multiple disabled style="display: none;">')
             . '<button type="button" class="bbcode-btn" data-tag="code=python" data-tooltip="code block"><i class="fa-solid fa-code"></i></button>'
             . '<button type="button" id="bbcode-list-btn" class="bbcode-btn" data-tag="list" data-tooltip="list"><i class="fa-solid fa-list-ul"></i></button>'
-            . '<button type="button" id="bbcode-tooltip-btn" class="bbcode-btn" data-tooltip="tooltip"><i class="fa-solid fa-comment-dots"></i></button>'
+            . ($isLoggedIn ? '<button type="button" id="bbcode-tooltip-btn" class="bbcode-btn" data-tooltip="tooltip"><i class="fa-solid fa-comment-dots"></i></button>' : '')
             . '<button type="button" id="bbcode-link-btn" class="bbcode-btn" data-tooltip="link"><i class="fa-solid fa-link"></i></button>'
-            . '<select id="bbcode-header-dropdown" class="bbcode-dropdown" data-tooltip="heading">'
-            . '<option value="">headings</option>'
-            . '<option value="h3">heading</option>'
-            . '<option value="h4">sub-heading</option>'
-            . '<option value="h5">caption</option>'
-            . '</select>'
+            . ($isLoggedIn
+                ? '<select id="bbcode-header-dropdown" class="bbcode-dropdown" data-tooltip="heading">'
+                    . '<option value="">headings</option>'
+                    . '<option value="h3">heading</option>'
+                    . '<option value="h4">sub-heading</option>'
+                    . '<option value="h5">caption</option>'
+                    . '</select>'
+                : '')
             . '<button type="button" id="bbcode-preview-toggle" class="bbcode-btn" data-tooltip="toggle preview"><i class="fa-solid fa-eye"></i></button>'
             . '</div>'
             . '<textarea id="bbcode-textbox" class="feed-reply-textbox" name="reply_content" maxlength="4000">' . htmlspecialchars($currentEditValue, ENT_QUOTES, 'UTF-8') . '</textarea>'
@@ -446,9 +533,18 @@ foreach ($replies as $reply) {
             . '</form>'
             . '</div>';
     }
+    $replyUserHtml = $isGuestReply
+        ? '<em>' . $replyUser . '</em>'
+        : '@' . $replyUser;
+    if ($canModerateReplies && $isGuestReply && $replyIp !== '') {
+        $replyUserHtml .= ' <span class="feed-reply-ip" style="color: var(--subtle);">(' . htmlspecialchars($replyIp, ENT_QUOTES, 'UTF-8') . ')</span>';
+        if ($replyIpBanned) {
+            $replyUserHtml .= ' <span class="feed-reply-ip" style="color: var(--subtle);">(banned)</span>';
+        }
+    }
     $repliesHtml .= '<div class="feed-reply">'
         . '<div class="feed-reply-header">'
-        . '<span class="feed-reply-username">@' . $replyUser . '</span>'
+        . '<span class="feed-reply-username">' . $replyUserHtml . '</span>'
         . '<span class="feed-reply-date">' . $replyDate . $replyActionsHtml . '</span>'
         . '</div>'
         . '<div class="post-content feed-reply-body">' . $replyBody . '</div>'

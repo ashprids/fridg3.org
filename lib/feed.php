@@ -35,6 +35,41 @@ if (!function_exists('fridg3_feed_voice_dir')) {
     }
 }
 
+if (!function_exists('fridg3_feed_banned_ips_path')) {
+    function fridg3_feed_banned_ips_path(): string
+    {
+        return fridg3_feed_posts_dir() . DIRECTORY_SEPARATOR . 'banned_ips.json';
+    }
+}
+
+if (!function_exists('fridg3_feed_client_ip')) {
+    function fridg3_feed_client_ip(): string
+    {
+        $headerCandidates = [
+            'HTTP_CF_CONNECTING_IP',
+            'HTTP_TRUE_CLIENT_IP',
+            'HTTP_X_REAL_IP',
+            'HTTP_X_FORWARDED_FOR',
+            'REMOTE_ADDR',
+        ];
+
+        foreach ($headerCandidates as $header) {
+            if (!isset($_SERVER[$header]) || $_SERVER[$header] === '') {
+                continue;
+            }
+
+            foreach (explode(',', (string)$_SERVER[$header]) as $part) {
+                $candidate = trim($part);
+                if ($candidate !== '' && filter_var($candidate, FILTER_VALIDATE_IP)) {
+                    return $candidate;
+                }
+            }
+        }
+
+        return '0.0.0.0';
+    }
+}
+
 if (!function_exists('fridg3_feed_humanize_datetime')) {
     function fridg3_feed_humanize_datetime(string $dtStr): string
     {
@@ -129,6 +164,19 @@ if (!function_exists('fridg3_feed_current_user_can_manage_reply')) {
     }
 }
 
+if (!function_exists('fridg3_feed_current_visitor_can_manage_reply')) {
+    function fridg3_feed_current_visitor_can_manage_reply(string $postOwnerUsername, array $reply, string $clientIp): bool
+    {
+        if (isset($_SESSION['user']['username'])) {
+            return fridg3_feed_current_user_can_manage_reply($postOwnerUsername, (string)($reply['username'] ?? ''));
+        }
+
+        return ($reply['isGuest'] ?? false) === true
+            && $clientIp !== ''
+            && (string)($reply['ip'] ?? '') === $clientIp;
+    }
+}
+
 if (!function_exists('fridg3_feed_reply_fallback_id')) {
     function fridg3_feed_reply_fallback_id(array $reply, int $index): string
     {
@@ -157,6 +205,129 @@ if (!function_exists('fridg3_feed_write_replies')) {
 
         $replyFile = $repliesDir . DIRECTORY_SEPARATOR . $safePostId . '.json';
         return @file_put_contents($replyFile, $payload, LOCK_EX) !== false;
+    }
+}
+
+if (!function_exists('fridg3_feed_load_banned_ips')) {
+    function fridg3_feed_load_banned_ips(): array
+    {
+        $path = fridg3_feed_banned_ips_path();
+        if (!is_file($path)) {
+            return [];
+        }
+
+        $decoded = json_decode((string)@file_get_contents($path), true);
+        if (!is_array($decoded)) {
+            return [];
+        }
+
+        return $decoded;
+    }
+}
+
+if (!function_exists('fridg3_feed_write_banned_ips')) {
+    function fridg3_feed_write_banned_ips(array $bannedIps): bool
+    {
+        $path = fridg3_feed_banned_ips_path();
+        $dir = dirname($path);
+        if (!is_dir($dir) && !@mkdir($dir, 0777, true) && !is_dir($dir)) {
+            return false;
+        }
+
+        $payload = json_encode($bannedIps, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+        if ($payload === false) {
+            return false;
+        }
+
+        return @file_put_contents($path, $payload, LOCK_EX) !== false;
+    }
+}
+
+if (!function_exists('fridg3_feed_is_ip_banned')) {
+    function fridg3_feed_is_ip_banned(string $ip): bool
+    {
+        $targetIp = trim($ip);
+        if ($targetIp === '') {
+            return false;
+        }
+
+        foreach (fridg3_feed_load_banned_ips() as $key => $entry) {
+            if (is_string($key) && $key === $targetIp) {
+                return true;
+            }
+            if (is_string($entry) && $entry === $targetIp) {
+                return true;
+            }
+            if (is_array($entry) && (string)($entry['ip'] ?? '') === $targetIp) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+}
+
+if (!function_exists('fridg3_feed_ban_guest_ip')) {
+    function fridg3_feed_ban_guest_ip(string $ip, string $adminUsername, string $guestUsername): bool
+    {
+        $targetIp = trim($ip);
+        if (!filter_var($targetIp, FILTER_VALIDATE_IP)) {
+            return false;
+        }
+
+        $bannedIps = fridg3_feed_load_banned_ips();
+        $existing = isset($bannedIps[$targetIp]) && is_array($bannedIps[$targetIp])
+            ? $bannedIps[$targetIp]
+            : [];
+        $usernames = [];
+        foreach ((array)($existing['usernames'] ?? []) as $name) {
+            $name = trim((string)$name);
+            if ($name !== '') {
+                $usernames[$name] = true;
+            }
+        }
+        $guestUsername = trim($guestUsername);
+        if ($guestUsername !== '') {
+            $usernames[$guestUsername] = true;
+        }
+
+        $bannedIps[$targetIp] = array_merge($existing, [
+            'ip' => $targetIp,
+            'bannedAt' => date('Y-m-d H:i:s'),
+            'bannedBy' => $adminUsername,
+            'usernames' => array_keys($usernames),
+        ]);
+
+        return fridg3_feed_write_banned_ips($bannedIps);
+    }
+}
+
+if (!function_exists('fridg3_feed_verify_current_admin_password')) {
+    function fridg3_feed_verify_current_admin_password(string $password): bool
+    {
+        $currentUsername = isset($_SESSION['user']['username']) ? (string)$_SESSION['user']['username'] : '';
+        if ($currentUsername === '' || empty($_SESSION['user']['isAdmin'])) {
+            return false;
+        }
+
+        $accountsData = fridg3_feed_load_accounts();
+        foreach ($accountsData['accounts'] as $account) {
+            if (!isset($account['username']) || (string)$account['username'] !== $currentUsername) {
+                continue;
+            }
+            if (empty($account['password'])) {
+                return $password === '';
+            }
+
+            $storedPassword = (string)$account['password'];
+            if (password_get_info($storedPassword)['algo'] !== null) {
+                return password_verify($password, $storedPassword);
+            }
+
+            return hash_equals($storedPassword, $password);
+        }
+
+        return false;
     }
 }
 
@@ -248,17 +419,190 @@ if (!function_exists('fridg3_feed_load_replies')) {
                 continue;
             }
 
-            $normalized[] = [
-                'id' => isset($reply['id']) && (string)$reply['id'] !== ''
-                    ? (string)$reply['id']
-                    : fridg3_feed_reply_fallback_id($reply, $index),
-                'username' => $username,
-                'date' => $date,
-                'body' => $body,
-            ];
+            $normalizedReply = $reply;
+            $normalizedReply['id'] = isset($reply['id']) && (string)$reply['id'] !== ''
+                ? (string)$reply['id']
+                : fridg3_feed_reply_fallback_id($reply, $index);
+            $normalizedReply['username'] = $username;
+            $normalizedReply['date'] = $date;
+            $normalizedReply['body'] = $body;
+            $normalized[] = $normalizedReply;
         }
 
         return $normalized;
+    }
+}
+
+if (!function_exists('fridg3_feed_collect_guest_usernames_by_ip')) {
+    function fridg3_feed_collect_guest_usernames_by_ip(): array
+    {
+        $repliesDir = fridg3_feed_replies_dir();
+        if (!is_dir($repliesDir)) {
+            return [];
+        }
+
+        $files = glob($repliesDir . DIRECTORY_SEPARATOR . '*.json');
+        if ($files === false) {
+            return [];
+        }
+
+        $usernamesByIp = [];
+        foreach ($files as $replyFile) {
+            $postId = pathinfo(basename((string)$replyFile), PATHINFO_FILENAME);
+            foreach (fridg3_feed_load_replies($postId) as $reply) {
+                if (($reply['isGuest'] ?? false) !== true) {
+                    continue;
+                }
+
+                $ip = trim((string)($reply['ip'] ?? ''));
+                if ($ip === '') {
+                    continue;
+                }
+
+                $username = trim((string)($reply['username'] ?? 'Anonymous'));
+                if ($username === '') {
+                    $username = 'Anonymous';
+                }
+
+                if (!isset($usernamesByIp[$ip])) {
+                    $usernamesByIp[$ip] = [];
+                }
+                $usernamesByIp[$ip][$username] = true;
+            }
+        }
+
+        $result = [];
+        foreach ($usernamesByIp as $ip => $usernames) {
+            $result[$ip] = array_keys($usernames);
+            sort($result[$ip], SORT_NATURAL | SORT_FLAG_CASE);
+        }
+
+        return $result;
+    }
+}
+
+if (!function_exists('fridg3_feed_collect_guest_replies_by_ip')) {
+    function fridg3_feed_collect_guest_replies_by_ip(): array
+    {
+        $repliesDir = fridg3_feed_replies_dir();
+        if (!is_dir($repliesDir)) {
+            return [];
+        }
+
+        $files = glob($repliesDir . DIRECTORY_SEPARATOR . '*.json');
+        if ($files === false) {
+            return [];
+        }
+
+        $repliesByIp = [];
+        foreach ($files as $replyFile) {
+            $postId = pathinfo(basename((string)$replyFile), PATHINFO_FILENAME);
+            foreach (fridg3_feed_load_replies($postId) as $reply) {
+                if (($reply['isGuest'] ?? false) !== true) {
+                    continue;
+                }
+
+                $ip = trim((string)($reply['ip'] ?? ''));
+                if ($ip === '') {
+                    continue;
+                }
+
+                if (!isset($repliesByIp[$ip])) {
+                    $repliesByIp[$ip] = [];
+                }
+
+                $repliesByIp[$ip][] = [
+                    'postId' => $postId,
+                    'replyId' => (string)($reply['id'] ?? ''),
+                    'username' => (string)($reply['username'] ?? 'Anonymous'),
+                    'date' => (string)($reply['date'] ?? ''),
+                    'body' => (string)($reply['body'] ?? ''),
+                ];
+            }
+        }
+
+        foreach ($repliesByIp as $ip => $replies) {
+            usort($replies, static function (array $a, array $b): int {
+                return strcmp((string)($b['date'] ?? ''), (string)($a['date'] ?? ''));
+            });
+            $repliesByIp[$ip] = $replies;
+        }
+        ksort($repliesByIp, SORT_NATURAL);
+
+        return $repliesByIp;
+    }
+}
+
+if (!function_exists('fridg3_feed_purge_guest_replies_by_ip')) {
+    function fridg3_feed_purge_guest_replies_by_ip(string $ip): array
+    {
+        $targetIp = trim($ip);
+        $deleted = 0;
+        $failed = 0;
+        $touchedFiles = 0;
+
+        if ($targetIp === '' || !filter_var($targetIp, FILTER_VALIDATE_IP)) {
+            return [
+                'deleted' => 0,
+                'failed' => 0,
+                'touchedFiles' => 0,
+            ];
+        }
+
+        $repliesDir = fridg3_feed_replies_dir();
+        if (!is_dir($repliesDir)) {
+            return [
+                'deleted' => 0,
+                'failed' => 0,
+                'touchedFiles' => 0,
+            ];
+        }
+
+        $files = glob($repliesDir . DIRECTORY_SEPARATOR . '*.json');
+        if ($files === false) {
+            return [
+                'deleted' => 0,
+                'failed' => 1,
+                'touchedFiles' => 0,
+            ];
+        }
+
+        foreach ($files as $replyFile) {
+            $postId = pathinfo(basename((string)$replyFile), PATHINFO_FILENAME);
+            $replies = fridg3_feed_load_replies($postId);
+            $updatedReplies = [];
+            $removedFromFile = 0;
+
+            foreach ($replies as $reply) {
+                $isTargetGuestReply = ($reply['isGuest'] ?? false) === true
+                    && (string)($reply['ip'] ?? '') === $targetIp;
+
+                if ($isTargetGuestReply) {
+                    fridg3_feed_delete_voice_files_from_content((string)($reply['body'] ?? ''));
+                    $removedFromFile++;
+                    continue;
+                }
+
+                $updatedReplies[] = $reply;
+            }
+
+            if ($removedFromFile === 0) {
+                continue;
+            }
+
+            if (fridg3_feed_write_replies($postId, $updatedReplies)) {
+                $deleted += $removedFromFile;
+                $touchedFiles++;
+            } else {
+                $failed++;
+            }
+        }
+
+        return [
+            'deleted' => $deleted,
+            'failed' => $failed,
+            'touchedFiles' => $touchedFiles,
+        ];
     }
 }
 
@@ -293,6 +637,36 @@ if (!function_exists('fridg3_feed_save_reply')) {
         }
 
         return @file_put_contents($replyFile, $payload, LOCK_EX) !== false;
+    }
+}
+
+if (!function_exists('fridg3_feed_save_guest_reply')) {
+    function fridg3_feed_save_guest_reply(string $postId, string $displayName, string $ip, string $body): bool
+    {
+        $safePostId = preg_replace('/[^a-zA-Z0-9_\-]/', '', basename($postId));
+        $safeIp = trim($ip);
+        $trimmedBody = trim($body);
+        $name = trim((string)preg_replace('/\s+/', ' ', strip_tags($displayName)));
+        if ($name === '') {
+            $name = 'Anonymous';
+        }
+        $name = function_exists('mb_substr') ? mb_substr($name, 0, 50) : substr($name, 0, 50);
+
+        if ($safePostId === '' || !filter_var($safeIp, FILTER_VALIDATE_IP) || $trimmedBody === '') {
+            return false;
+        }
+
+        $existingReplies = fridg3_feed_load_replies($safePostId);
+        $existingReplies[] = [
+            'id' => date('YmdHis') . '_' . bin2hex(random_bytes(4)),
+            'username' => $name,
+            'date' => date('Y-m-d H:i:s'),
+            'body' => $trimmedBody,
+            'isGuest' => true,
+            'ip' => $safeIp,
+        ];
+
+        return fridg3_feed_write_replies($safePostId, $existingReplies);
     }
 }
 

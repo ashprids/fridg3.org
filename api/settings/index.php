@@ -45,25 +45,6 @@ function is_truthy_setting($value) {
     return in_array($normalized, ['1', 'true', 'yes', 'y', 'on', 'enabled'], true);
 }
 
-function get_mobile_cookie_options() {
-    $host = strtolower((string)($_SERVER['HTTP_HOST'] ?? ''));
-    $host = preg_replace('/:\d+$/', '', $host);
-    $isSubdomain = strlen($host) > strlen('.fridg3.org') && substr($host, -strlen('.fridg3.org')) === '.fridg3.org';
-    $options = [
-        'expires' => time() + (86400 * 365),
-        'path' => '/',
-        'secure' => isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on',
-        'httponly' => false,
-        'samesite' => 'Lax',
-    ];
-
-    if ($host === 'fridg3.org' || $host === 'm.fridg3.org' || $isSubdomain) {
-        $options['domain'] = '.fridg3.org';
-    }
-
-    return $options;
-}
-
 // Allow GET to fetch current user settings
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     if (!isset($_SESSION['user']) || !isset($_SESSION['user']['username'])) {
@@ -85,7 +66,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             'theme' => 'default',
             'glowIntensity' => null,
             'colors' => null,
-            'mobileFriendlyView' => null,
             'onekoEnabled' => null,
             'reduceMotion' => null,
         ],
@@ -106,9 +86,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             }
             if (isset($account['colors']) && is_array($account['colors'])) {
                 $result['settings']['colors'] = $account['colors'];
-            }
-            if (array_key_exists('mobileFriendlyView', $account)) {
-                $result['settings']['mobileFriendlyView'] = is_truthy_setting($account['mobileFriendlyView']);
             }
             if (array_key_exists('onekoEnabled', $account)) {
                 $result['settings']['onekoEnabled'] = is_truthy_setting($account['onekoEnabled']);
@@ -150,9 +127,6 @@ $theme = $themeProvided ? (string)$_POST['theme'] : null;
 
 $maintenanceProvided = array_key_exists('maintenanceMode', $_POST);
 $maintenanceRaw = $maintenanceProvided ? (string)$_POST['maintenanceMode'] : null;
-
-$mobileViewProvided = array_key_exists('mobileFriendlyView', $_POST);
-$mobileViewRaw = $mobileViewProvided ? (string)$_POST['mobileFriendlyView'] : null;
 
 $reduceMotionProvided = array_key_exists('reduceMotion', $_POST);
 $reduceMotionRaw = $reduceMotionProvided ? (string)$_POST['reduceMotion'] : null;
@@ -201,48 +175,6 @@ if ($toastPersonalityProvided) {
     }
 
     $didWork = true;
-}
-
-if ($mobileViewProvided) {
-    $truthy = ['1', 'true', 'yes', 'y', 'on', 'enabled'];
-    $falsy  = ['0', 'false', 'no', 'n', 'off', 'disabled'];
-    $lower = strtolower(trim((string)$mobileViewRaw));
-    if (!in_array($lower, $truthy, true) && !in_array($lower, $falsy, true)) {
-        http_response_code(400);
-        echo json_encode(['ok' => false, 'error' => 'invalid_mobile_view_value']);
-        exit;
-    }
-
-    $mobileEnabled = in_array($lower, $truthy, true);
-    setcookie('mobile_friendly_view', $mobileEnabled ? '1' : '0', get_mobile_cookie_options());
-    $_COOKIE['mobile_friendly_view'] = $mobileEnabled ? '1' : '0';
-
-    $accountsPath = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'data' . DIRECTORY_SEPARATOR . 'accounts' . DIRECTORY_SEPARATOR . 'accounts.json';
-    $data = load_accounts_data($accountsPath);
-    if ($data === null) {
-        http_response_code(500);
-        echo json_encode(['ok' => false, 'error' => 'accounts_invalid']);
-        exit;
-    }
-
-    $updated = false;
-    foreach ($data['accounts'] as &$account) {
-        if (isset($account['username']) && (string)$account['username'] === $username) {
-            $account['mobileFriendlyView'] = $mobileEnabled;
-            $updated = true;
-            break;
-        }
-    }
-    unset($account);
-
-    if ($updated) {
-        if (!save_accounts_data($accountsPath, $data)) {
-            http_response_code(500);
-            echo json_encode(['ok' => false, 'error' => 'write_failed']);
-            exit;
-        }
-        $didWork = true;
-    }
 }
 
 if ($onekoProvided) {
@@ -523,7 +455,7 @@ if ($maintenanceProvided) {
     $didWork = true;
 }
 
-if ($didWork || $intensityProvided || $themeProvided || $maintenanceProvided || $mobileViewProvided || $reduceMotionProvided || $onekoProvided || $toastPersonalityProvided) {
+if ($didWork || $intensityProvided || $themeProvided || $maintenanceProvided || $reduceMotionProvided || $onekoProvided || $toastPersonalityProvided) {
     echo json_encode(['ok' => true]);
     exit;
 }

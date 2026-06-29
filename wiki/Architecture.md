@@ -38,7 +38,8 @@ mobile mode is enabled when any of these are true:
 
 - host is `m.fridg3.org`
 - cookie `mobile_friendly_view` is truthy
-- logged-in account has `mobileFriendlyView: true` in `data/accounts/accounts.json`
+
+the `mobile_friendly_view` preference is browser-only and is not stored in account JSON.
 
 if the mobile template is requested but missing, routes fall back to `template.html`.
 

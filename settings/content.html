@@ -1,10 +1,10 @@
 <pre id="ascii" style="color:#bc7c55;font-size:12px">
-   ___     ___    _____   _____    ___    _  _     ___     ___  
-  / __|   | __|  |_   _| |_   _|  |_ _|  | \| |   / __|   / __| 
-  \__ \   | _|     | |     | |     | |   | .` |  | (_ |   \__ \ 
-  |___/   |___|   _|_|_   _|_|_   |___|  |_|\_|   \___|   |___/ 
-_|"""""|_|"""""|_|"""""|_|"""""|_|"""""|_|"""""|_|"""""|_|"""""|
-"`-0-0-'"`-0-0-'"`-0-0-'"`-0-0-'"`-0-0-'"`-0-0-'"`-0-0-'"`-0-0-'
+   ___     ___    _  _      ___    ___     ___  
+  / __|   / _ \  | \| |    | __|  |_ _|   / __| 
+ | (__   | (_) | | .` |    | _|    | |   | (_ | 
+  \___|   \___/  |_|\_|   _|_|_   |___|   \___| 
+_|"""""|_|"""""|_|"""""|_| """ |_|"""""|_|"""""|
+"`-0-0-'"`-0-0-'"`-0-0-'"`-0-0-'"`-0-0-'"`-0-0-'
 </pre>
 <br><br>
 {dev_admin_bootstrap}
@@ -31,6 +31,7 @@ _|"""""|_|"""""|_|"""""|_|"""""|_|"""""|_|"""""|_|"""""|_|"""""|
 <h4>account management</h4>
 <button id="form-button" type="button" data-tooltip="(admin-only) generate a new account with a random password" onclick="window.location='/account/create'">create new account</button>
 <button id="form-button" type="button" data-tooltip="(admin-only) configure all made accounts" onclick="window.location='/account/admin'">manage accounts</button>
+<button id="form-button" type="button" data-tooltip="review guest replies and manage guest IP moderation" onclick="window.location='/settings/guests'">manage guests</button>
 <br><br><hr><br>
 </span>
 <span id="toast-settings">
@@ -117,4 +118,4 @@ _|"""""|_|"""""|_|"""""|_|"""""|_|"""""|_|"""""|_|"""""|_|"""""|
 </div>
 <br><br><hr><br>
 </span>
-<button style="background-color: #206420" id="settings-save" data-tooltip="save your configuration.\nwill save to your account if you're logged in">save changes</button>
+<button style="background-color: #206420" id="settings-save" data-tooltip="save your configuration.\naccount-backed options save to your account if you're logged in">save changes</button>

@@ -3281,10 +3281,6 @@ function initSettingsPage() {
 
                 applyThemeSelection(currentTheme);
 
-                if (typeof data.settings.mobileFriendlyView === 'boolean' && readMobileViewCookie() === null && host !== 'm.fridg3.org') {
-                    setMobileViewToggle(data.settings.mobileFriendlyView);
-                    setMobileViewCookie(data.settings.mobileFriendlyView);
-                }
                 const serverAccessibilityPrefs = {};
                 ['reduceMotion'].forEach(key => {
                     if (typeof data.settings[key] === 'boolean') {
@@ -3343,7 +3339,6 @@ function initSettingsPage() {
             if (isToastSession) {
                 if (isLoggedIn && window.fetch) {
                     const params = new URLSearchParams();
-                    params.append('mobileFriendlyView', mobileViewEnabled ? 'on' : 'off');
                     params.append('reduceMotion', accessibilityPrefs.reduceMotion ? 'on' : 'off');
                     fetch('/api/settings', {
                         method: 'POST',
@@ -3387,7 +3382,6 @@ function initSettingsPage() {
                 const params = new URLSearchParams();
                 params.append('glowIntensity', selected);
                 params.append('theme', selectedTheme);
-                params.append('mobileFriendlyView', mobileViewEnabled ? 'on' : 'off');
                 params.append('reduceMotion', accessibilityPrefs.reduceMotion ? 'on' : 'off');
                 params.append('onekoEnabled', onekoEnabled ? 'on' : 'off');
 
@@ -5912,7 +5906,11 @@ function initBBCodeEditor() {
 
     if (bbcodeImageBtn && bbcodeImageInput) {
         bbcodeImageBtn.addEventListener('click', function() {
-            showSitePrompt('add image', 'enter an image URL, or leave blank to select a file.', '').then(function(imageUrl) {
+            const canSelectFile = !bbcodeImageInput.disabled;
+            const promptDetail = canSelectFile
+                ? 'enter an image URL, or leave blank to select a file.'
+                : 'enter an image URL.';
+            showSitePrompt('add image', promptDetail, '').then(function(imageUrl) {
                 if (imageUrl === null) return;
 
                 if (imageUrl.trim()) {
@@ -5928,7 +5926,7 @@ function initBBCodeEditor() {
                     bbcodeTextbox.value = beforeText + newText + afterText;
                     bbcodeTextbox.focus();
                     bbcodeTextbox.setSelectionRange(start + newText.length, start + newText.length);
-                } else {
+                } else if (canSelectFile) {
                     // Open file picker
                     bbcodeImageInput.click();
                 }

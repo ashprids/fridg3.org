@@ -32,9 +32,11 @@ Related:
 
 - single-post thread view for a feed item
 - logged-in users can reply with BBCode, image uploads, and recorded voice notes using the same inline speed-toggle playback controls
-- reply edit/delete is allowed for the reply author, admins, the original post owner, or accounts with `allowedPages` containing `comments`
+- guests can reply without creating feed posts; they are identified by plaintext IP, may enter an optional display name that falls back to italic `Anonymous`, can link images but cannot upload files or voice notes, and do not get heading or tooltip BBCode controls
+- reply edit/delete is allowed for the reply author, same-IP guest replies, admins, the original post owner, or accounts with `allowedPages` containing `comments`
 - replies persist under `data/feed/replies/{postId}.json`
 - deleting a reply removes voice note files referenced by that reply
+- admin IP moderation actions appear beside guest reply edit/delete icons; admins can ban an IP or purge guest replies by exact plaintext IP without deleting the feed post or changing the IP ban list
 - when a non-Toast user replies to a Toast-owned post or mentions `@toast` in a reply, Toast may automatically reply after a 1 minute delay with a short old-style Twitter-sized response and starts by mentioning that user
 
 ### `/journal`
@@ -101,6 +103,7 @@ Related:
 - local dev mode can bootstrap a blank-password `admin` / `Administrator` account when no admin accounts exist
 - shows a Discord linking action for logged-in users and disables it once `discordUserId` is already linked
 - when logged in as hardcoded `toast`, shows a JSON editor for shared Toast personalities stored in `data/etc/toast-personality.json`
+- admins can open `/settings/banned-ips`, labeled as manage guests, to review all guest feed replies grouped by IP, see ban state, unban IPs, or purge guest feed replies from an IP after password confirmation
 
 ## Account Routes
 

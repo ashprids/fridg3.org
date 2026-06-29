@@ -32,7 +32,6 @@ expected top-level shape:
       "bookmarks": ["2026-01-01_12-00-00", "journal:12"],
       "theme": "default|classic|theme-id",
       "glowIntensity": "none|medium",
-      "mobileFriendlyView": true,
       "onekoEnabled": true,
       "reduceMotion": false,
       "colors": {
@@ -150,9 +149,11 @@ per-post replies live in `{postId}.json` files shaped roughly like:
   "replies": [
     {
       "id": "20260413153000_deadbeef",
-      "username": "toast",
+      "username": "Anonymous",
       "date": "2026-04-13 15:30:00",
-      "body": "reply body with BBCode"
+      "body": "reply body with BBCode",
+      "isGuest": true,
+      "ip": "203.0.113.10"
     }
   ]
 }
@@ -163,7 +164,16 @@ notes:
 - reply ids are generated on write; older data may be normalized into `legacy_*` ids at read time
 - reply bodies can contain image BBCode that points at `/data/images/*`
 - new reply bodies can also contain voice note audio BBCode that points at `/data/audio/voice/*`
+- guest replies include `isGuest: true` plus a plaintext `ip`; guest display names are stored in `username`, default to `Anonymous`, and admin moderation can purge all guest replies with a matching IP without changing the IP ban list
 - automatic Toast replies are stored as normal `username: "toast"` replies when a user replies to Toast's post or mentions `@toast`; generated Toast replies begin by mentioning the triggering user and are delayed by 1 minute before posting
+
+### `data/feed/banned_ips.json`
+
+IP-keyed guest reply ban list used by the `/settings/banned-ips` manage guests page.
+
+- entries can record ban metadata and usernames seen for that IP
+- purging an IP's guest feed replies is a separate action and does not add, remove, or mutate ban entries
+- the manage guests page also scans `data/feed/replies/*.json` for `isGuest: true` replies and groups them by plaintext `ip`
 
 ## `data/journal/`
 

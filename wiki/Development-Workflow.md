@@ -43,7 +43,7 @@ this setup is simple but honestly pretty smart for a repo with lots of inline ma
 - feed and journal have different storage models
 - bookmarks have both server and localStorage behavior
 - some old code still references legacy bookmark storage patterns
-- mobile view is both a cookie and an account setting
+- mobile view is browser-only via the `mobile_friendly_view` cookie
 - `.nginx/fridg3.org` is live nginx config source via symlink, so route changes need nginx sanity checks too
 - native JS `alert()`, `confirm()`, and `prompt()` are not used; use the on-site popup helpers in `main.js`
 - external links are guarded by the shared on-site popup unless a link explicitly opts out with `data-no-external-popup`

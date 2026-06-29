@@ -1687,7 +1687,7 @@ hr {
 
 .feed-reply {
     border: 1px solid var(--border);
-    border-radius: 8px;
+    border-radius: 0px;
     padding: 12px;
     background: rgba(255, 255, 255, 0.02);
 }
@@ -2428,6 +2428,29 @@ hr {
 .account-admin-card span,
 .chat-admin-card span {
     margin-top: 4px;
+}
+
+.account-admin-card .guest-management-replies .feed-reply {
+    color: var(--fg);
+    text-decoration: none;
+}
+
+.account-admin-card .guest-management-replies .feed-reply-username,
+.account-admin-card .guest-management-replies .feed-reply-date,
+.account-admin-card .guest-management-replies .feed-reply-body {
+    margin-top: 0;
+}
+
+.account-admin-card .guest-management-replies .feed-reply-username {
+    display: block;
+}
+
+.account-admin-card .guest-management-replies .feed-reply-date {
+    display: inline-flex;
+}
+
+.account-admin-card .guest-management-replies .feed-reply-body {
+    display: block;
 }
 
 .chat-copy-link {
@@ -6056,6 +6079,29 @@ body.blackprint-theme .danger-button:hover {
     border-color: #c76873 !important;
 }
 
+body.blackprint-theme .feed-reply-action-link,
+body.blackprint-theme .feed-reply-action-button,
+body.blackprint-theme button.feed-reply-action-button,
+body.blackprint-theme .feed-reply-action-button:hover,
+body.blackprint-theme button.feed-reply-action-button:hover {
+    color: #6caaa7 !important;
+    background: transparent !important;
+    background-image: none !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    width: auto !important;
+    height: auto !important;
+}
+
+body.blackprint-theme .feed-reply-action-link:hover,
+body.blackprint-theme .feed-reply-action-button:hover,
+body.blackprint-theme button.feed-reply-action-button:hover {
+    color: #80bfbc !important;
+}
+
 body.blackprint-theme .chat-view{
     --chat-bg: rgba(11, 13, 15, 0.96);
     --chat-fg: #eeeaf4;
@@ -6142,6 +6188,19 @@ body.blackprint-theme.mobile-template .color-input{
     background: rgba(11, 13, 15, 0.96) !important;
     color: var(--fg) !important;
     border-color: var(--border) !important;
+}
+
+body.mobile-template input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]),
+body.mobile-template textarea,
+body.mobile-template select,
+body.mobile-template .dropdown,
+body.mobile-template .text-input,
+body.mobile-template .site-popup-input,
+body.mobile-template #textbox,
+body.mobile-template #search-box,
+body.mobile-template #bbcode-textbox,
+body.mobile-template .bbcode-dropdown {
+    font-size: 16px !important;
 }
 
 body.blackprint-theme .radio,

@@ -71,42 +71,6 @@ if (!function_exists('fridg3_get_mobile_cookie_domain')) {
     }
 }
 
-if (!function_exists('fridg3_get_account_mobile_preference')) {
-    function fridg3_get_account_mobile_preference($startDir) {
-        if (!isset($_SESSION['user']['username'])) {
-            return null;
-        }
-
-        $accountsPath = fridg3_find_relative_upward($startDir, 'data/accounts/accounts.json');
-        if (!$accountsPath || !is_file($accountsPath)) {
-            return null;
-        }
-
-        $raw = @file_get_contents($accountsPath);
-        if ($raw === false) {
-            return null;
-        }
-
-        $data = json_decode($raw, true);
-        if (!is_array($data) || !isset($data['accounts']) || !is_array($data['accounts'])) {
-            return null;
-        }
-
-        $username = (string)$_SESSION['user']['username'];
-        foreach ($data['accounts'] as $account) {
-            if (!isset($account['username']) || (string)$account['username'] !== $username) {
-                continue;
-            }
-            if (!array_key_exists('mobileFriendlyView', $account)) {
-                return null;
-            }
-            return fridg3_is_truthy_value($account['mobileFriendlyView']);
-        }
-
-        return null;
-    }
-}
-
 if (!function_exists('fridg3_normalize_theme_id')) {
     function fridg3_normalize_theme_id($theme) {
         $theme = strtolower(trim((string)$theme));
@@ -345,8 +309,7 @@ if (!function_exists('should_use_mobile_template')) {
             return true;
         }
 
-        $accountPreference = fridg3_get_account_mobile_preference($startDir);
-        return $accountPreference === true;
+        return false;
     }
 }
 

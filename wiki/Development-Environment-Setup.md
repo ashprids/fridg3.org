@@ -167,7 +167,6 @@ example:
       "bookmarks": [],
       "theme": "default",
       "glowIntensity": "medium",
-      "mobileFriendlyView": false,
       "colors": {
         "bg": "#000000",
         "fg": "#EEEEEE",
