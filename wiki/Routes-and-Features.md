@@ -240,9 +240,19 @@ misc landing page for routes that do not fit elsewhere.
 
 Subroutes:
 
+- `/others/firefox-theme`
 - `/others/off-topic-archive`
 - `/others/toast-discord-bot`
 - `/others/fridge-builds-websites`
+
+### `/others/firefox-theme`
+
+- public page for the fridg3.org blackprint Firefox theme
+- explains the two-step install flow: install the signed theme from Mozilla Add-ons, then run the local userChrome setup for square chrome styling
+- `build-downloads.sh` refreshes the downloadable userChrome setup package and the AMO-ready source zip
+- the userChrome setup package extracts to a `fridg3-firefox-userchrome` folder containing `userChrome.css`, `install-linux.sh`, `install-windows.bat`, and `install-windows.ps1`
+- userChrome setup scripts prompt for install/update or uninstall; uninstall removes only the fridg3.org profile CSS file and import line
+- `userChrome.css` remains outside the add-ons upload package because Firefox WebExtension themes cannot install profile chrome stylesheets
 
 ### `/tools`
 
