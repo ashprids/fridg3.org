@@ -191,9 +191,8 @@
             <button id="two-buttons" type="button" data-copy-link>copy link</button>
         </div>
     </section>
-
+    <br><br>
     <section class="upload-transfer upload-hidden" data-sender-panel>
-        <p>max 100gb.</p>
         <label id="two-buttons" class="upload-file-picker">
             <span data-file-label>choose file</span>
             <input class="upload-file-input" type="file" data-file-input>
@@ -274,6 +273,7 @@
         selectedFile: null,
         outgoingFile: null,
         receiving: null,
+        receiveQueue: Promise.resolve(),
     };
 
     function show(el, visible = true) {
@@ -339,7 +339,7 @@
     }
 
     function formatBytes(bytes) {
-        const units = ['b', 'kb', 'mb', 'gb'];
+        const units = ['B', 'KB', 'MB', 'GB'];
         let value = bytes;
         let unit = 0;
         while (value >= 1024 && unit < units.length - 1) {
@@ -615,7 +615,7 @@
             updateSendReadiness();
         };
         state.dc.onerror = () => log('data channel error.');
-        state.dc.onmessage = receiveMessage;
+        state.dc.onmessage = queueReceivedMessage;
     }
 
     async function maybeCreateOffer() {
@@ -641,7 +641,7 @@
     function notifyServerSessionEnded() {
         if (!state.token || !state.side) return;
         const body = new URLSearchParams({ side: state.side });
-        const url = `/tools/upload?api=end&r=${encodeURIComponent(state.token)}`;
+        const url = `/tools/upload/?api=end&r=${encodeURIComponent(state.token)}`;
         const blob = new Blob([body.toString()], { type: 'application/x-www-form-urlencoded' });
         if (navigator.sendBeacon) {
             navigator.sendBeacon(url, blob);
@@ -678,7 +678,7 @@
         if (!state.token || !state.side || state.ended) return;
         try {
             const params = new URLSearchParams({ api: 'signals', r: state.token, since: String(state.lastSignalId) });
-            const response = await fetch(`/tools/upload?${params.toString()}`, { cache: 'no-store' });
+            const response = await fetch(`/tools/upload/?${params.toString()}`, { cache: 'no-store' });
             const data = await response.json().catch(() => ({ ok: false, error: 'bad_json' }));
             if (!data.ok) {
                 if (data.error === 'room_ended') {
@@ -821,9 +821,23 @@
         log(`sent ${file.name}. checksum ${checksum}. waiting for receiver ack.`);
     }
 
-    async function receiveMessage(event) {
-        if (typeof event.data === 'string') {
-            const message = JSON.parse(event.data);
+    function queueReceivedMessage(event) {
+        const data = event.data;
+        state.receiveQueue = state.receiveQueue
+            .then(() => receiveMessage(data))
+            .catch(error => {
+                setStatus(`receive failed: ${error.message}`);
+                log(`receive failed: ${error.message}`);
+                state.dc?.send(JSON.stringify({
+                    kind: 'failed',
+                    reason: error.message || 'receive failed',
+                }));
+            });
+    }
+
+    async function receiveMessage(data) {
+        if (typeof data === 'string') {
+            const message = JSON.parse(data);
             if (message.kind === 'meta') {
                 await startReceive(message);
             } else if (message.kind === 'done') {
@@ -848,7 +862,7 @@
         }
 
         if (!state.receiving || !state.sharedKey) return;
-        const frame = new Uint8Array(event.data);
+        const frame = new Uint8Array(data);
         const iv = frame.slice(0, 12);
         const ciphertext = frame.slice(12);
         const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, state.sharedKey, ciphertext);

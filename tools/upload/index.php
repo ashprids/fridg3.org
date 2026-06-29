@@ -43,7 +43,7 @@ function upload_cookie_options() {
     $isSubdomain = strlen($host) > strlen('.fridg3.org') && substr($host, -strlen('.fridg3.org')) === '.fridg3.org';
     $options = [
         'expires' => time() + (86400 * 365),
-        'path' => UPLOAD_ROUTE_PATH,
+        'path' => rtrim(UPLOAD_ROUTE_PATH, '/'),
         'secure' => isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on',
         'httponly' => true,
         'samesite' => 'Lax',
