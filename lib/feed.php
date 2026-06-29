@@ -42,6 +42,118 @@ if (!function_exists('fridg3_feed_banned_ips_path')) {
     }
 }
 
+if (!function_exists('fridg3_feed_filters_dir')) {
+    function fridg3_feed_filters_dir(): string
+    {
+        return fridg3_feed_find_root() . DIRECTORY_SEPARATOR . 'feed' . DIRECTORY_SEPARATOR . 'filters';
+    }
+}
+
+if (!function_exists('fridg3_feed_filter_terms')) {
+    function fridg3_feed_filter_terms(): array
+    {
+        static $terms = null;
+        if (is_array($terms)) {
+            return $terms;
+        }
+
+        $terms = [];
+        $seen = [];
+        $files = glob(fridg3_feed_filters_dir() . DIRECTORY_SEPARATOR . '*.txt');
+        if ($files === false) {
+            return $terms;
+        }
+
+        foreach ($files as $file) {
+            $lines = @file($file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+            if ($lines === false) {
+                continue;
+            }
+            foreach ($lines as $line) {
+                $term = trim((string)$line);
+                if ($term === '' || str_starts_with($term, '#')) {
+                    continue;
+                }
+                $key = function_exists('mb_strtolower') ? mb_strtolower($term) : strtolower($term);
+                if (isset($seen[$key])) {
+                    continue;
+                }
+                $seen[$key] = true;
+                $terms[] = $term;
+            }
+        }
+
+        usort($terms, static function (string $a, string $b): int {
+            $aLength = function_exists('mb_strlen') ? mb_strlen($a) : strlen($a);
+            $bLength = function_exists('mb_strlen') ? mb_strlen($b) : strlen($b);
+            return $bLength <=> $aLength;
+        });
+
+        return $terms;
+    }
+}
+
+if (!function_exists('fridg3_feed_star_count')) {
+    function fridg3_feed_star_count(string $value): int
+    {
+        if (function_exists('mb_strlen')) {
+            return max(1, mb_strlen($value));
+        }
+        if (preg_match_all('/./us', $value, $matches) !== false) {
+            return max(1, count($matches[0]));
+        }
+        return max(1, strlen($value));
+    }
+}
+
+if (!function_exists('fridg3_feed_filter_term_pattern')) {
+    function fridg3_feed_filter_term_pattern(string $term): string
+    {
+        $escaped = preg_quote($term, '/');
+        $needsStartBoundary = preg_match('/^[\p{L}\p{N}_]/u', $term) === 1;
+        $needsEndBoundary = preg_match('/[\p{L}\p{N}_]$/u', $term) === 1;
+        $prefix = $needsStartBoundary ? '(^|[^\p{L}\p{N}_])' : '()';
+        $suffix = $needsEndBoundary ? '(?=$|[^\p{L}\p{N}_])' : '';
+
+        return '/' . $prefix . '(' . $escaped . ')' . $suffix . '/iu';
+    }
+}
+
+if (!function_exists('fridg3_feed_filter_tooltip_text')) {
+    function fridg3_feed_filter_tooltip_text(): string
+    {
+        return 'this phrase was automatically filtered.';
+    }
+}
+
+if (!function_exists('fridg3_feed_apply_guest_filter')) {
+    function fridg3_feed_apply_guest_filter(string $text, bool $withTooltip = false): string
+    {
+        $terms = fridg3_feed_filter_terms();
+        if ($text === '' || empty($terms)) {
+            return $text;
+        }
+
+        $filtered = $text;
+        foreach ($terms as $term) {
+            $next = preg_replace_callback(fridg3_feed_filter_term_pattern($term), static function (array $match) use ($withTooltip): string {
+                $prefix = (string)($match[1] ?? '');
+                $matchedTerm = (string)($match[2] ?? '');
+                $stars = str_repeat('★', fridg3_feed_star_count($matchedTerm));
+                if ($withTooltip) {
+                    return $prefix . '[tooltip="' . fridg3_feed_filter_tooltip_text() . '"]' . $stars . '[/tooltip]';
+                }
+                return $prefix . $stars;
+            }, $filtered);
+            if (is_string($next)) {
+                $filtered = $next;
+            }
+        }
+
+        return $filtered;
+    }
+}
+
 if (!function_exists('fridg3_feed_client_ip')) {
     function fridg3_feed_client_ip(): string
     {
@@ -108,6 +220,25 @@ if (!function_exists('fridg3_feed_load_accounts')) {
         }
 
         return $decoded;
+    }
+}
+
+if (!function_exists('fridg3_feed_registered_username_exists')) {
+    function fridg3_feed_registered_username_exists(string $username): bool
+    {
+        $target = strtolower(ltrim(trim($username), '@'));
+        if ($target === '') {
+            return false;
+        }
+
+        foreach (fridg3_feed_load_accounts()['accounts'] as $account) {
+            $accountUsername = strtolower(trim((string)($account['username'] ?? '')));
+            if ($accountUsername !== '' && $accountUsername === $target) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }
 
@@ -651,6 +782,11 @@ if (!function_exists('fridg3_feed_save_guest_reply')) {
             $name = 'Anonymous';
         }
         $name = function_exists('mb_substr') ? mb_substr($name, 0, 50) : substr($name, 0, 50);
+        if (fridg3_feed_registered_username_exists($name)) {
+            return false;
+        }
+        $name = fridg3_feed_apply_guest_filter($name);
+        $trimmedBody = fridg3_feed_apply_guest_filter($trimmedBody, true);
 
         if ($safePostId === '' || !filter_var($safeIp, FILTER_VALIDATE_IP) || $trimmedBody === '') {
             return false;

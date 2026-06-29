@@ -104,6 +104,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $replyAction = (string)($_POST['reply_action'] ?? 'create');
     $replyId = trim((string)($_POST['reply_id'] ?? ''));
     $guestDisplayName = trim((string)($_POST['guest_username'] ?? ''));
+    $guestDisplayNameForSave = $guestDisplayName;
+    $replyBodyForSave = $replyBody;
     $imageMap = [];
     $voiceMap = [];
     if ($isLoggedIn && isset($_FILES['images']) && is_array($_FILES['images'])) {
@@ -120,6 +122,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $replyBody = '';
             $replyError = 'voice note failed. keep it under 2 minutes and try again.';
         }
+    }
+    if (!$isLoggedIn && $replyAction === 'create') {
+        $guestDisplayNameForSave = fridg3_feed_apply_guest_filter($guestDisplayNameForSave);
+        $replyBodyForSave = fridg3_feed_apply_guest_filter($replyBodyForSave, true);
     }
     $canModerateReplies = fridg3_feed_current_user_can_moderate_replies($username);
     $targetReply = null;
@@ -141,6 +147,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $replyEditError = 'You do not have permission to manage replies.';
     } elseif (!$isLoggedIn && $isClientIpBanned) {
         $replyError = 'Your IP address has been blacklisted from posting replies to the feed. To appeal this, <a href="/contact">send a message here</a> or log into your account.';
+    } elseif (!$isLoggedIn && $replyAction === 'create' && $guestDisplayName !== '' && fridg3_feed_registered_username_exists($guestDisplayName)) {
+        $replyError = 'that username belongs to a registered account. please choose another name or log in.';
     } elseif (!$isLoggedIn && preg_match('/\[(?:img|voice):\d+\]/i', $replyBody) === 1) {
         $replyError = 'Guest replies can link images, but cannot upload files.';
     } elseif ($replyError !== '' && $replyAction === 'create') {
@@ -200,12 +208,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $replyError = 'reply is too long.';
     } elseif ($isLoggedIn && !fridg3_feed_save_reply($postIdNoExt ?? '', (string)$_SESSION['user']['username'], $replyBody)) {
         $replyError = 'failed to save reply.';
-    } elseif (!$isLoggedIn && !fridg3_feed_save_guest_reply($postIdNoExt ?? '', $guestDisplayName, $clientIp, $replyBody)) {
+    } elseif (!$isLoggedIn && !fridg3_feed_save_guest_reply($postIdNoExt ?? '', $guestDisplayNameForSave, $clientIp, $replyBodyForSave)) {
         $replyError = 'failed to save reply.';
     } else {
         $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
         header('Location: /feed/posts/' . rawurlencode((string)$postIdNoExt) . '?reply_posted=1');
-        $triggerUsername = $isLoggedIn ? (string)$_SESSION['user']['username'] : ($guestDisplayName !== '' ? $guestDisplayName : 'Anonymous');
+        $triggerUsername = $isLoggedIn ? (string)$_SESSION['user']['username'] : ($guestDisplayNameForSave !== '' ? $guestDisplayNameForSave : 'Anonymous');
         $shouldQueueToastAutoReply = strcasecmp($triggerUsername, 'toast') !== 0
             && (strcasecmp(ltrim($username, '@'), 'toast') === 0 || fridg3_toast_feed_mentions_toast($replyBody));
         if ($shouldQueueToastAutoReply) {
@@ -214,7 +222,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $toastReplyPostDate = $dateLine;
             $toastReplyPostBody = $body;
             $toastReplyTriggerUsername = $triggerUsername;
-            $toastReplyTriggerBody = $replyBody;
+            $toastReplyTriggerBody = $isLoggedIn ? $replyBody : $replyBodyForSave;
             fridg3_toast_run_auto_reply_after_response(static function () use (
                 $toastReplyPostId,
                 $toastReplyPostUsername,
@@ -251,6 +259,10 @@ $ipPurged = isset($_GET['ip_purged']) ? max(0, (int)$_GET['ip_purged']) : null;
 $ipPurgeFailed = isset($_GET['ip_purge_failed']) ? max(0, (int)$_GET['ip_purge_failed']) : 0;
 $replyFormValue = isset($_POST['reply_content']) ? htmlspecialchars((string)$_POST['reply_content'], ENT_QUOTES, 'UTF-8') : '';
 $guestUsernameValue = isset($_POST['guest_username']) ? htmlspecialchars((string)$_POST['guest_username'], ENT_QUOTES, 'UTF-8') : '';
+$guestFilterTermsJson = json_encode(fridg3_feed_filter_terms(), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
+if (!is_string($guestFilterTermsJson)) {
+    $guestFilterTermsJson = '[]';
+}
 $replies = fridg3_feed_load_replies((string)$postIdNoExt);
 $canModerateReplies = fridg3_feed_current_user_can_moderate_replies($username);
 $editReplyBodyValue = '';
@@ -430,6 +442,7 @@ if (!$isClientIpBanned || $isLoggedIn) {
         . (!$isLoggedIn ? '<input id="textbox" class="feed-guest-username" name="guest_username" type="text" maxlength="50" placeholder="name (optional)" value="' . $guestUsernameValue . '">' : '')
         . (!$isLoggedIn ? '<br><br>' : '')
         . '<div class="bbcode-editor">'
+        . (!$isLoggedIn ? '<script type="application/json" data-feed-guest-filter-terms>' . $guestFilterTermsJson . '</script>' : '')
         . $replyToolbarHtml
         . ($isLoggedIn ? '<div class="bbcode-voice-recorder" hidden></div>' : '')
         . '<textarea id="bbcode-textbox" class="feed-reply-textbox" name="reply_content" placeholder="write a reply..." maxlength="4000">{reply_form_value}</textarea>'

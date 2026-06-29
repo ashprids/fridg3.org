@@ -5698,6 +5698,41 @@ function initBBCodeEditor() {
     if (!bbcodeTextbox || bbcodeTextbox.dataset.bbcodeInitialized === '1') return;
     bbcodeTextbox.dataset.bbcodeInitialized = '1';
 
+    const guestFilterTermsScript = bbcodeScope.querySelector('[data-feed-guest-filter-terms]');
+    let guestFilterTerms = [];
+    if (guestFilterTermsScript) {
+        try {
+            const parsed = JSON.parse(guestFilterTermsScript.textContent || '[]');
+            guestFilterTerms = Array.isArray(parsed)
+                ? parsed.map(term => String(term || '').trim()).filter(Boolean)
+                : [];
+        } catch (_) {
+            guestFilterTerms = [];
+        }
+        guestFilterTerms.sort((a, b) => Array.from(b).length - Array.from(a).length);
+    }
+
+    const escapeFilterTerm = (term) => term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const filterWordEdge = /^[\p{L}\p{N}_]/u;
+    const filterWordEnd = /[\p{L}\p{N}_]$/u;
+    const filteredPhraseTooltip = 'this phrase was automatically filtered.';
+    const applyGuestPreviewFilter = (text) => {
+        if (!guestFilterTerms.length || !text) return text;
+        let filtered = text;
+        guestFilterTerms.forEach(term => {
+            const needsStartBoundary = filterWordEdge.test(term);
+            const needsEndBoundary = filterWordEnd.test(term);
+            const prefix = needsStartBoundary ? '(^|[^\\p{L}\\p{N}_])' : '()';
+            const suffix = needsEndBoundary ? '(?=$|[^\\p{L}\\p{N}_])' : '';
+            const pattern = new RegExp(prefix + '(' + escapeFilterTerm(term) + ')' + suffix, 'giu');
+            filtered = filtered.replace(pattern, (_match, before, matchedTerm) => {
+                const stars = '★'.repeat(Math.max(1, Array.from(matchedTerm || '').length));
+                return (before || '') + `[tooltip="${filteredPhraseTooltip}"]${stars}[/tooltip]`;
+            });
+        });
+        return filtered;
+    };
+
     bbcodeButtons.forEach(button => {
         button.addEventListener('click', function() {
             if (this.id === 'bbcode-preview-toggle' || this.id === 'bbcode-image-btn' || this.id === 'bbcode-voice-btn' || this.id === 'bbcode-color-btn' || this.id === 'bbcode-tooltip-btn' || this.id === 'bbcode-link-btn' || this.id === 'bbcode-spoiler-btn') return;
@@ -6073,7 +6108,7 @@ function initBBCodeEditor() {
             if (isPreviewMode) {
                 // Show preview
                 const bbcodeText = bbcodeTextbox.value;
-                const htmlText = parseBBCode(bbcodeText);
+                const htmlText = parseBBCode(applyGuestPreviewFilter(bbcodeText));
                 bbcodePreview.innerHTML = htmlText;
                 initInlineMediaPlayers(bbcodePreview);
                 bbcodeTextbox.style.display = 'none';
