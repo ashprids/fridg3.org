@@ -1,6 +1,7 @@
 [![deploy to fridg3.org](https://github.com/ashprids/fridg3.org/actions/workflows/deploy.yml/badge.svg?branch=main)](https://github.com/ashprids/fridg3.org/actions/workflows/deploy.yml)
 [![code lint](https://github.com/ashprids/fridg3.org/actions/workflows/code-lint.yml/badge.svg?branch=main)](https://github.com/ashprids/fridg3.org/actions/workflows/code-lint.yml)
 [![backup data directory](https://github.com/ashprids/fridg3.org/actions/workflows/backup-data.yml/badge.svg?branch=main)](https://github.com/ashprids/fridg3.org/actions/workflows/backup-data.yml)
+[![publish development data copy](https://github.com/ashprids/fridg3.org/actions/workflows/publish-dev-data.yml/badge.svg?branch=main)](https://github.com/ashprids/fridg3.org/actions/workflows/publish-dev-data.yml)
 
 # fridg3.org
 
@@ -46,3 +47,5 @@ If you wish to develop for or work on fridg3.org, I've made a developer wiki tha
 You can view the Wiki on GitHub or on the website at <https://fridg3.org/wiki>.
 
 The GitHub Wiki is a mirror of the website's Wiki.
+
+A sanitized developer copy of `/data` is published by GitHub Actions. Setup details live in [`.github/workflows/publish-dev-data-setup.md`](.github/workflows/publish-dev-data-setup.md), and the latest public folder link is shown in the workflow run summary.

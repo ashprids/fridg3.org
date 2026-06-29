@@ -3,8 +3,6 @@
 - sitemap.xml
 - README.md
 - AGENTS.md
-- TECHNICAL_REFERENCE_AI.md
-- TECHNICAL_REFERENCE_DEV.md
 - .rsyncignore
 - .gitignore
 - .github/**
