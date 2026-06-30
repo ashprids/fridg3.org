@@ -119,30 +119,7 @@ function replaceKeys(mixed $value, array $replacements): mixed
  * account details, IP logs, webhook URLs, or private drafts.
  */
 writeJson($root, 'accounts/accounts.json', [
-    'accounts' => [
-        [
-            'username' => 'admin',
-            'name' => 'Administrator',
-            'password' => '',
-            'isAdmin' => true,
-            'mustResetPassword' => false,
-            'discordUserId' => '',
-            'allowedPages' => ['feed', 'journal', 'comments', 'chat'],
-            'bookmarks' => [],
-            'theme' => 'default',
-            'glowIntensity' => 'none',
-            'mobileFriendlyView' => false,
-            'onekoEnabled' => false,
-            'reduceMotion' => false,
-            'colors' => [
-                'bg' => '#000000',
-                'fg' => '#EEEEEE',
-                'border' => '#3C7895',
-                'subtle' => '#917DAA',
-                'links' => '#415FAD',
-            ],
-        ],
-    ],
+    'accounts' => [],
 ]);
 
 writeJson($root, 'accounts/login_attempts.json', new stdClass());

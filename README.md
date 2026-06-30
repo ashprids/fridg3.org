@@ -1,5 +1,6 @@
 [![deploy](https://github.com/ashprids/fridg3.org/actions/workflows/deploy.yml/badge.svg?branch=main)](https://github.com/ashprids/fridg3.org/actions/workflows/deploy.yml)
 [![lint](https://github.com/ashprids/fridg3.org/actions/workflows/code-lint.yml/badge.svg?branch=main)](https://github.com/ashprids/fridg3.org/actions/workflows/code-lint.yml)
+[![backup data directory](https://github.com/ashprids/fridg3.org/actions/workflows/backup-data.yml/badge.svg?branch=main)](https://github.com/ashprids/fridg3.org/actions/workflows/backup-data.yml)
 [![dev data](https://github.com/ashprids/fridg3.org/actions/workflows/publish-dev-data.yml/badge.svg?branch=main)](https://github.com/ashprids/fridg3.org/actions/workflows/publish-dev-data.yml)
 
 # fridg3.org

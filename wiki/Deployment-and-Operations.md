@@ -74,7 +74,7 @@ when adding routes, APIs, uploads, redirects, or private data folders, check `.n
 
 production nginx needs explicit rewrites for PHP routes that accept path-style ids. without these, nginx falls through to the root `/index.php` fallback before the route can parse the URL.
 
-POST-only API directory routes also need POST-safe rewrites when called without `index.php`; otherwise nginx can normalize the directory URL with a redirect and the browser may retry as `GET`. `/api/toast-feed-generate` is included in that rewrite list.
+POST-only API directory routes also need POST-safe rewrites when called without `index.php`; otherwise nginx can normalize the directory URL with a redirect and the browser may retry as `GET`. `/api/dev-bootstrap` and `/api/toast-feed-generate` are included in that rewrite list.
 
 the contact route is configured POST-safe at `/contact`, old `/email` paths redirect to `/contact`, and `/data/contact/` is blocked from direct web access.
 
@@ -131,7 +131,7 @@ on the same daily schedule as the private backup workflow, this workflow:
 5. keeps only the 10 newest zip files in that folder
 6. removes temporary server and runner files
 
-the sanitizer currently replaces accounts with a placeholder admin account, clears login/page-view/IP/rate-limit logs, blanks Toast bot and Groq credentials, blanks Toast private lore, clears Toast DM/notification state, clears webhooks, removes upload room tokens, clears encrypted mdpaste records, clears encrypted chat data and local chat keys, replaces the off-topic Discord archive with an empty placeholder, and replaces private journal drafts with a harmless placeholder draft.
+the sanitizer currently clears accounts, login/page-view/IP/rate-limit logs, blanks Toast bot and Groq credentials, blanks Toast private lore, clears Toast DM/notification state, clears webhooks, removes upload room tokens, clears encrypted mdpaste records, clears encrypted chat data and local chat keys, replaces the off-topic Discord archive with an empty placeholder, and replaces private journal drafts with a harmless placeholder draft.
 
 setup notes live in `/.github/workflows/publish-dev-data-setup.md`.
 

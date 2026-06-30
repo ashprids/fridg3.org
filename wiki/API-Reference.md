@@ -30,6 +30,15 @@ all API routes live under `/api/*` and are handled by PHP.
 - admin users can also toggle maintenance mode through the settings flow
 - the hardcoded `toast` session can save `toastPersonalityJson` to `data/etc/toast-personality.json`
 
+### `/api/dev-bootstrap`
+
+`POST`
+
+- developer-mode-only route used by `/settings`
+- allowed for admin sessions, or for local setups with no admin account yet
+- streams newline-delimited JSON progress while it finds the latest sanitized Google Drive developer data zip, downloads it, extracts it, deletes existing local `data/`, and installs the new copy
+- progress events may include a `log` field for the settings popup; download logs show byte counts/percentages, and extraction logs include entry counts/percentages
+
 ### `/api/themes`
 
 `GET`

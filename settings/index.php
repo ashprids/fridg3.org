@@ -192,8 +192,10 @@ if ($hasLinkedDiscord) {
     $disabledDiscordButton = '<button id="form-button" type="button" class="form-button-disabled" data-tooltip="your discord account is already linked" disabled aria-disabled="true">link discord account</button>';
     $content = str_replace($activeDiscordButton, $disabledDiscordButton, $content);
 }
+$hasAdminAccountForBootstrap = settings_has_admin_account($accountsDataForBootstrap);
 $devAdminBootstrap = '';
-if ($isLocalDevServer && !settings_has_admin_account($accountsDataForBootstrap)) {
+// This block uses the same developer-mode check that powers the dev-mode banner.
+if ($isLocalDevServer) {
     $noticeHtml = '';
     if ($devBootstrapError !== '') {
         $noticeHtml = '<div id="error">' . htmlspecialchars($devBootstrapError, ENT_QUOTES, 'UTF-8') . '</div><br>';
@@ -204,11 +206,16 @@ if ($isLocalDevServer && !settings_has_admin_account($accountsDataForBootstrap))
     $devAdminBootstrap = $noticeHtml
         . '<div class="dev-admin-bootstrap">'
         . '<h3>dev bootstrap</h3>'
-        . '<h4>no admin accounts exist</h4>'
-        . '<form method="post" data-no-spa="1">'
-        . '<button id="form-button" type="submit" name="create_dev_admin" value="1">create blank admin account</button>'
-        . '</form>'
-        . '</div><br><hr><br>';
+        . '<h4>local data</h4>'
+        . '<button id="form-button" type="button" data-action="dev-data-bootstrap" data-tooltip="deletes local /data, then downloads and installs the latest developer data zip from Google Drive">download latest dev data</button>';
+    if (!$hasAdminAccountForBootstrap) {
+        $devAdminBootstrap .= '<br><br>'
+            . '<h4>no admin accounts exist</h4>'
+            . '<form method="post" data-no-spa="1">'
+            . '<button id="form-button" type="submit" name="create_dev_admin" value="1">create blank admin account</button>'
+            . '</form>';
+    }
+    $devAdminBootstrap .= '</div><br><hr><br>';
 } elseif ($devBootstrapError !== '') {
     $devAdminBootstrap = '<div id="error">' . htmlspecialchars($devBootstrapError, ENT_QUOTES, 'UTF-8') . '</div><br>';
 } elseif ($devBootstrapMessage !== '') {

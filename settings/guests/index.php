@@ -111,6 +111,29 @@ function settings_banned_ips_remove_ip(array $bannedIps, string $targetIp): arra
     return $wasList ? array_values($updated) : $updated;
 }
 
+function settings_guests_ip_matches_search(string $ip, array $usernames, string $searchQuery): bool {
+    $query = trim($searchQuery);
+    if ($query === '') {
+        return true;
+    }
+
+    if (stripos($ip, $query) !== false) {
+        return true;
+    }
+
+    $usernameQuery = ltrim($query, '@');
+    foreach ($usernames as $username) {
+        if (stripos((string)$username, $query) !== false) {
+            return true;
+        }
+        if ($usernameQuery !== '' && stripos((string)$username, $usernameQuery) !== false) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 $title = 'manage guests';
 $description = 'manage guest feed replies and IP moderation.';
 $noticeHtml = '';
@@ -164,17 +187,29 @@ $allIps = array_fill_keys(array_merge(array_keys($rows), array_keys($guestReplie
 $allIps = array_keys($allIps);
 sort($allIps, SORT_NATURAL);
 $csrf = htmlspecialchars((string)$_SESSION['csrf_token'], ENT_QUOTES, 'UTF-8');
+$searchQuery = isset($_GET['q']) ? trim((string)$_GET['q']) : '';
+$safeSearchQuery = htmlspecialchars($searchQuery, ENT_QUOTES, 'UTF-8');
+$formAction = '/settings/guests/';
+if ($searchQuery !== '') {
+    $formAction .= '?q=' . rawurlencode($searchQuery);
+}
+$safeFormAction = htmlspecialchars($formAction, ENT_QUOTES, 'UTF-8');
 
 $content = '<h1>manage guests</h1>'
     . '<h2>guest feed reply moderation</h2>'
     . $noticeHtml
     . '<p style="color: var(--subtle);">guest replies are grouped by IP. purging replies deletes guest feed replies from an IP. it does not ban or unban the IP.</p>'
+    . '<form id="search" action="/settings/guests/" method="GET">'
+    . '<input id="search-box" name="q" type="text" placeholder="search IPs or usernames..." value="' . $safeSearchQuery . '">'
+    . '<button id="search-button" type="submit"><i class="fa-solid fa-magnifying-glass"></i></button>'
+    . '</form>'
     . '<br>';
 
 if (empty($allIps)) {
     $content .= '<p>no guest replies or banned IP addresses.</p>';
 } else {
     $content .= '<div class="account-admin-grid">';
+    $visibleCount = 0;
     foreach ($allIps as $ip) {
         $entry = $rows[$ip] ?? [];
         $isBanned = array_key_exists($ip, $rows);
@@ -188,6 +223,10 @@ if (empty($allIps)) {
         }
         $usernameList = array_keys($usernames);
         sort($usernameList, SORT_NATURAL | SORT_FLAG_CASE);
+        if (!settings_guests_ip_matches_search($ip, $usernameList, $searchQuery)) {
+            continue;
+        }
+        $visibleCount++;
         $usernameText = empty($usernameList)
             ? 'no usernames recorded'
             : implode(', ', array_map(static function ($name) {
@@ -202,14 +241,14 @@ if (empty($allIps)) {
             . '<span>' . ($isBanned ? 'banned' : 'not banned') . ' &middot; ' . htmlspecialchars($replyLabel, ENT_QUOTES, 'UTF-8') . '</span>'
             . '<span>usernames: ' . $usernameText . '</span>'
             . '<span class="account-admin-meta">'
-            . '<form method="post" action="/settings/guests/" data-no-spa="1" data-site-confirm="1" data-admin-password-confirm="1" data-confirm-title="purge replies from this IP?" data-confirm-detail="this deletes guest feed replies from this IP. it does not ban or unban the IP." data-confirm-text="purge replies" data-cancel-text="cancel" data-password-title="confirm reply purge" data-password-detail="enter your admin password to purge guest feed replies from this IP." style="display:inline-block; margin-right: 8px;">'
+            . '<form method="post" action="' . $safeFormAction . '" data-no-spa="1" data-site-confirm="1" data-admin-password-confirm="1" data-confirm-title="purge replies from this IP?" data-confirm-detail="this deletes guest feed replies from this IP. it does not ban or unban the IP." data-confirm-text="purge replies" data-cancel-text="cancel" data-password-title="confirm reply purge" data-password-detail="enter your admin password to purge guest feed replies from this IP." style="display:inline-block; margin-right: 8px;">'
             . '<input type="hidden" name="csrf_token" value="' . $csrf . '">'
             . '<input type="hidden" name="action" value="purge_replies">'
             . '<input type="hidden" name="ip" value="' . $safeIp . '">'
             . '<button class="danger-button" type="submit">purge replies</button>'
             . '</form>';
         if ($isBanned) {
-            $content .= '<form method="post" action="/settings/guests/" data-no-spa="1" data-site-confirm="1" data-confirm-title="unban IP?" data-confirm-detail="this allows new guest replies from this IP again." data-confirm-text="unban" data-cancel-text="cancel" style="display:inline-block;">'
+            $content .= '<form method="post" action="' . $safeFormAction . '" data-no-spa="1" data-site-confirm="1" data-confirm-title="unban IP?" data-confirm-detail="this allows new guest replies from this IP again." data-confirm-text="unban" data-cancel-text="cancel" style="display:inline-block;">'
                 . '<input type="hidden" name="csrf_token" value="' . $csrf . '">'
                 . '<input type="hidden" name="action" value="unban">'
                 . '<input type="hidden" name="ip" value="' . $safeIp . '">'
@@ -241,6 +280,9 @@ if (empty($allIps)) {
         }
 
         $content .= '</div>';
+    }
+    if ($visibleCount === 0) {
+        $content .= '<p>no guest IPs or usernames matched your search.</p>';
     }
     $content .= '</div>';
 }

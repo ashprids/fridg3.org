@@ -62,7 +62,7 @@ The workflow writes this into the run summary so developers can find the latest 
 
 The sanitizer currently changes:
 
-- `data/accounts/accounts.json`: replaces all accounts with a placeholder `admin` account
+- `data/accounts/accounts.json`: clears all accounts
 - `data/accounts/login_attempts.json`: clears contents
 - `data/etc/page_views.json`: clears page counts
 - `data/etc/toast.json`: clears `bot.token`, `bot.client_id`, and `groq.api_key`

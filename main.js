@@ -2179,6 +2179,7 @@ const ONEKO_SIZE = 32;
 const ONEKO_SPEED = 10;
 const ONEKO_FRAME_MS = 100;
 const ONEKO_SLEEP_AFTER_MS = 15000;
+const ONEKO_SLEEP_FRAME_TICKS = 4;
 let onekoController = null;
 
 // Apply saved color prefs early on page load for themes that expose color controls.
@@ -2452,11 +2453,14 @@ function startOneko() {
 
         if (distance < ONEKO_SPEED || distance < 48) {
             state.idleTime += ONEKO_FRAME_MS;
-            if (state.idleTime >= ONEKO_SLEEP_AFTER_MS && Math.floor((state.idleTime - ONEKO_SLEEP_AFTER_MS) / 2000) % 2 === 1) {
-                setSprite('sleeping', state.idleAnimationFrame++);
-            } else if (state.idleTime >= ONEKO_SLEEP_AFTER_MS) {
+            if (state.idleTime >= ONEKO_SLEEP_AFTER_MS) {
+                setSprite('sleeping', Math.floor(state.idleAnimationFrame / ONEKO_SLEEP_FRAME_TICKS));
+                state.idleAnimationFrame++;
+            } else if (state.idleTime >= ONEKO_SLEEP_AFTER_MS - 2000) {
+                state.idleAnimationFrame = 0;
                 setSprite('tired');
             } else {
+                state.idleAnimationFrame = 0;
                 setSprite('idle');
             }
             setPosition();
@@ -2737,6 +2741,7 @@ function initSettingsPage() {
         const onekoToggle = document.getElementById('oneko-toggle');
         const saveBtn = document.getElementById('settings-save');
         const sitemapBtn = document.querySelector('[data-action="generate-sitemap"]');
+        const devDataBootstrapBtn = document.querySelector('[data-action="dev-data-bootstrap"]');
         const toastPersonalityTextarea = document.getElementById('toast-personality-json');
         const toastPersonalityHighlight = document.getElementById('toast-personality-highlight');
         const toastPersonalitySaveBtn = document.querySelector('[data-action="save-toast-personality"]');
@@ -3131,6 +3136,147 @@ function initSettingsPage() {
             });
         };
 
+        const showDevBootstrapProgressPopup = () => {
+            const overlay = document.createElement('div');
+            overlay.className = 'site-popup-overlay';
+            overlay.setAttribute('role', 'dialog');
+            overlay.setAttribute('aria-modal', 'true');
+
+            const dialog = document.createElement('div');
+            dialog.className = 'site-popup-dialog dev-bootstrap-progress-dialog';
+
+            const title = document.createElement('div');
+            title.className = 'site-popup-title';
+            title.textContent = 'dev bootstrap';
+
+            const detail = document.createElement('div');
+            detail.className = 'site-popup-detail';
+            detail.textContent = 'starting...';
+
+            const logLine = document.createElement('div');
+            logLine.className = 'dev-bootstrap-progress-log';
+            logLine.textContent = 'waiting for server...';
+
+            const meter = document.createElement('div');
+            meter.className = 'dev-bootstrap-progress';
+            const bar = document.createElement('div');
+            bar.className = 'dev-bootstrap-progress-bar';
+            meter.appendChild(bar);
+
+            const percent = document.createElement('div');
+            percent.className = 'dev-bootstrap-progress-percent';
+            percent.textContent = '0%';
+
+            const actions = document.createElement('div');
+            actions.className = 'site-popup-actions';
+            const close = document.createElement('button');
+            close.type = 'button';
+            close.className = 'site-popup-button site-popup-ok';
+            close.textContent = 'close';
+            close.disabled = true;
+            actions.appendChild(close);
+
+            close.addEventListener('click', () => overlay.remove());
+            dialog.append(title, detail, logLine, meter, percent, actions);
+            overlay.append(dialog);
+            document.body.append(overlay);
+
+            return {
+                setProgress(value, message, isError = false, logMessage = '') {
+                    const progress = Math.max(0, Math.min(100, Number(value) || 0));
+                    bar.style.width = progress + '%';
+                    percent.textContent = Math.round(progress) + '%';
+                    detail.textContent = message || '';
+                    detail.style.color = isError ? 'red' : 'var(--subtle)';
+                    if (logMessage) {
+                        logLine.textContent = logMessage;
+                    }
+                    logLine.style.color = isError ? 'red' : 'var(--subtle)';
+                },
+                finish(message, isError = false) {
+                    this.setProgress(100, message, isError, isError ? 'failed: ' + message : 'done: ' + message);
+                    close.disabled = false;
+                    close.focus();
+                },
+            };
+        };
+
+        const bindDevDataBootstrapButton = () => {
+            if (!devDataBootstrapBtn || devDataBootstrapBtn.dataset.bound === '1') return;
+            devDataBootstrapBtn.dataset.bound = '1';
+            devDataBootstrapBtn.addEventListener('click', async () => {
+                const confirmed = await showSitePopup({
+                    title: 'replace local data?',
+                    detail: 'this action will delete your existing local data directory, download the latest developer copy, and install it. this cannot be undone!',
+                    okText: 'download',
+                    cancelText: 'cancel',
+                });
+                if (!confirmed) return;
+
+                const originalText = devDataBootstrapBtn.textContent;
+                devDataBootstrapBtn.disabled = true;
+                devDataBootstrapBtn.textContent = 'bootstrapping...';
+                const progressPopup = showDevBootstrapProgressPopup();
+
+                try {
+                    const res = await fetch('/api/dev-bootstrap/', {
+                        method: 'POST',
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                    });
+
+                    if (!res.body || !res.body.getReader) {
+                        const text = await res.text();
+                        const lines = text.trim().split('\n').filter(Boolean);
+                        const last = lines.length ? JSON.parse(lines[lines.length - 1]) : null;
+                        if (!res.ok || !last || last.ok === false) {
+                            throw new Error(last && last.message ? last.message : 'bootstrap failed');
+                        }
+                        progressPopup.finish(last.message || 'dev data installed.');
+                        return;
+                    }
+
+                    const reader = res.body.getReader();
+                    const decoder = new TextDecoder();
+                    let buffer = '';
+                    let lastMessage = '';
+                    let failedMessage = '';
+                    while (true) {
+                        const chunk = await reader.read();
+                        if (chunk.done) break;
+                        buffer += decoder.decode(chunk.value, { stream: true });
+                        const lines = buffer.split('\n');
+                        buffer = lines.pop() || '';
+                        lines.forEach(line => {
+                            if (!line.trim()) return;
+                            const event = JSON.parse(line);
+                            lastMessage = event.message || lastMessage;
+                            progressPopup.setProgress(event.progress, lastMessage, event.ok === false, event.log || ((event.stage ? event.stage + ': ' : '') + lastMessage));
+                            if (event.ok === false) {
+                                failedMessage = lastMessage || 'bootstrap failed';
+                            }
+                        });
+                    }
+                    if (buffer.trim()) {
+                        const event = JSON.parse(buffer);
+                        lastMessage = event.message || lastMessage;
+                        progressPopup.setProgress(event.progress, lastMessage, event.ok === false, event.log || ((event.stage ? event.stage + ': ' : '') + lastMessage));
+                        if (event.ok === false) {
+                            failedMessage = lastMessage || 'bootstrap failed';
+                        }
+                    }
+                    if (!res.ok || failedMessage) {
+                        throw new Error(failedMessage || 'bootstrap failed');
+                    }
+                    progressPopup.finish(lastMessage || 'dev data installed.');
+                } catch (err) {
+                    progressPopup.finish((err && err.message) ? err.message : 'bootstrap failed.', true);
+                } finally {
+                    devDataBootstrapBtn.textContent = originalText;
+                    devDataBootstrapBtn.disabled = false;
+                }
+            });
+        };
+
         const setToastPersonalityStatus = (message, isError) => {
             if (!toastPersonalityStatus) return;
             toastPersonalityStatus.textContent = message || '';
@@ -3427,12 +3573,14 @@ function initSettingsPage() {
             if (adminSection) {
                 adminSection.style.display = isAdmin ? 'block' : 'none';
             }
+            bindDevDataBootstrapButton();
             if (isAdmin) {
                 loadMaintenanceState();
                 bindSitemapButton();
             }
         }).catch(() => {
             if (adminSection) adminSection.style.display = 'none';
+            bindDevDataBootstrapButton();
         });
     } catch (_) { /* no-op */ }
 }

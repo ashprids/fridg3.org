@@ -1,4 +1,5 @@
 /data/**/*
+/.bootstrap/
 /others/toast-discord-bot/bot/venv/**/*
 /others/toast-discord-bot/bot/__pycache__/**/*
 sitemap.xml

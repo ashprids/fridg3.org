@@ -101,10 +101,10 @@ Related:
 - UI shell only
 - persistence handled by `/api/settings`
 - includes accessibility toggles for mobile view and reduced motion, plus theme selection, a text glow toggle, and optional cursor cat
-- local dev mode can bootstrap a blank-password `admin` / `Administrator` account when no admin accounts exist
+- developer mode can bootstrap a blank-password `admin` / `Administrator` account when no admin accounts exist, and can download the latest sanitized developer data zip, delete local `data/`, and install the new copy
 - shows a Discord linking action for logged-in users and disables it once `discordUserId` is already linked
 - when logged in as hardcoded `toast`, shows a JSON editor for shared Toast personalities stored in `data/etc/toast-personality.json`
-- admins can open `/settings/guests`, labeled as manage guests, to review all guest feed replies grouped by IP, see ban state, unban IPs, or purge guest feed replies from an IP after password confirmation; `/settings/banned-ips` is kept as a compatibility alias
+- admins can open `/settings/guests`, labeled as manage guests, to review all guest feed replies grouped by IP, search by IP or username, see ban state, unban IPs, or purge guest feed replies from an IP after password confirmation; `/settings/banned-ips` is kept as a compatibility alias
 
 ## Account Routes
 
