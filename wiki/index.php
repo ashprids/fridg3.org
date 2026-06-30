@@ -27,6 +27,53 @@ function wiki_escape($value) {
     return htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8');
 }
 
+function wiki_label_from_slug($slug) {
+    $label = str_replace(['-', '_'], ' ', (string)$slug);
+    $label = preg_replace('/\s+/', ' ', $label);
+    $label = trim((string)$label);
+    if ($label === '') {
+        return 'Untitled';
+    }
+
+    $words = explode(' ', $label);
+    $smallWords = ['and', 'or', 'the', 'a', 'an', 'to', 'of', 'in', 'for'];
+    $words = array_map(function ($word, $index) use ($smallWords) {
+        $upper = strtoupper($word);
+        if (in_array($upper, ['API', 'PHP', 'HTML', 'CSS', 'JS', 'JSON'], true)) {
+            return $upper;
+        }
+        $lower = strtolower($word);
+        if ($index > 0 && in_array($lower, $smallWords, true)) {
+            return $lower;
+        }
+        return ucfirst(strtolower($word));
+    }, $words, array_keys($words));
+
+    return implode(' ', $words);
+}
+
+function wiki_sidebar_order($wikiDir) {
+    $sidebarPath = $wikiDir . DIRECTORY_SEPARATOR . '_Sidebar.md';
+    if (!is_file($sidebarPath)) {
+        return [];
+    }
+
+    $markdown = (string)file_get_contents($sidebarPath);
+    if (!preg_match_all('/\[[^\]]+\]\(([^)]+)\)/', $markdown, $matches)) {
+        return [];
+    }
+
+    $order = [];
+    foreach ($matches[1] as $target) {
+        $slug = wiki_normalize_page_slug($target);
+        if ($slug !== '_Sidebar' && !isset($order[$slug])) {
+            $order[$slug] = count($order);
+        }
+    }
+
+    return $order;
+}
+
 function wiki_get_markdown_files($wikiDir) {
     $files = glob($wikiDir . DIRECTORY_SEPARATOR . '*.md');
     if ($files === false) {
@@ -34,6 +81,7 @@ function wiki_get_markdown_files($wikiDir) {
     }
 
     $pages = [];
+    $sidebarOrder = wiki_sidebar_order($wikiDir);
     foreach ($files as $file) {
         $basename = basename($file);
         $slug = preg_replace('/\.md$/i', '', $basename);
@@ -47,14 +95,13 @@ function wiki_get_markdown_files($wikiDir) {
         $pages[$slug] = [
             'file' => $basename,
             'slug' => $slug,
-            'label' => str_replace('-', ' ', $slug),
+            'label' => wiki_label_from_slug($slug),
         ];
     }
 
-    uksort($pages, function ($a, $b) {
-        $priority = ['Home' => 0, '_Sidebar' => 9999];
-        $aPriority = $priority[$a] ?? 100;
-        $bPriority = $priority[$b] ?? 100;
+    uksort($pages, function ($a, $b) use ($sidebarOrder) {
+        $aPriority = $sidebarOrder[$a] ?? ($a === 'Home' ? -1 : 1000);
+        $bPriority = $sidebarOrder[$b] ?? ($b === 'Home' ? -1 : 1000);
         if ($aPriority !== $bPriority) {
             return $aPriority <=> $bPriority;
         }
@@ -336,7 +383,7 @@ $content = str_replace(
     ['{wiki_page_list}', '{wiki_page_title}', '{wiki_page_name}', '{wiki_page_content}'],
     [
         implode("\n", $pageLinks),
-        wiki_escape(str_replace('-', ' ', $selectedSlug)),
+        wiki_escape($selectedPage['label'] ?? wiki_label_from_slug($selectedSlug)),
         wiki_escape($selectedPage['file'] ?? 'unknown.md'),
         $renderedMarkdown,
     ],

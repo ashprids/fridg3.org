@@ -1,6 +1,6 @@
 # fridg3.org Developer Wiki
 
-this wiki serves to provide documentation to developers and AI agents developing the website. 
+this wiki serves to provide documentation to developers and AI agents developing the website.
 
 these pages are mirrored on the GitHub repository's wiki (https://github.com/ashprids/fridg3.org/wiki) and the website itself (https://fridg3.org/wiki).
 

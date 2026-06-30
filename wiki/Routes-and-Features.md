@@ -258,6 +258,15 @@ Subroutes:
 - userChrome setup scripts prompt for install/update or uninstall; uninstall removes only the fridg3.org profile CSS file and import line
 - `userChrome.css` remains outside the add-ons upload package because Firefox WebExtension themes cannot install profile chrome stylesheets
 
+### `/wiki`
+
+developer-facing documentation rendered from Markdown files in `/wiki/`.
+
+- uses the site shell while hiding normal navigation so the docs can use a full-height two-column layout
+- sidebar ordering follows `_Sidebar.md`, with any extra Markdown pages appended after the listed pages
+- renderer supports headings, paragraphs, links, inline code, fenced code blocks, blockquotes, horizontal rules, and simple ordered/unordered lists
+- blackprint-specific styling lives in `wiki/content.html`, with a sticky sidebar, constrained reading width, themed code blocks, and a compact mobile page grid
+
 ### `/tools`
 
 tools and utilities landing page.
