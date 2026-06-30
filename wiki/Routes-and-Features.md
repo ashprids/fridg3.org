@@ -104,7 +104,7 @@ Related:
 - local dev mode can bootstrap a blank-password `admin` / `Administrator` account when no admin accounts exist
 - shows a Discord linking action for logged-in users and disables it once `discordUserId` is already linked
 - when logged in as hardcoded `toast`, shows a JSON editor for shared Toast personalities stored in `data/etc/toast-personality.json`
-- admins can open `/settings/banned-ips`, labeled as manage guests, to review all guest feed replies grouped by IP, see ban state, unban IPs, or purge guest feed replies from an IP after password confirmation
+- admins can open `/settings/guests`, labeled as manage guests, to review all guest feed replies grouped by IP, see ban state, unban IPs, or purge guest feed replies from an IP after password confirmation; `/settings/banned-ips` is kept as a compatibility alias
 
 ## Account Routes
 

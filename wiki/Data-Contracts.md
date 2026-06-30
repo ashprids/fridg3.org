@@ -169,7 +169,7 @@ notes:
 
 ### `data/feed/banned_ips.json`
 
-IP-keyed guest reply ban list used by the `/settings/banned-ips` manage guests page.
+IP-keyed guest reply ban list used by the `/settings/guests` manage guests page; `/settings/banned-ips` is a compatibility alias.
 
 - entries can record ban metadata and usernames seen for that IP
 - purging an IP's guest feed replies is a separate action and does not add, remove, or mutate ban entries
